@@ -19,6 +19,7 @@ imports fine on a machine that only wants the simulator.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -66,6 +67,16 @@ class Layout:
     roll_button: tuple = (170, 620)
     end_turn_button: tuple = (1500, 800)
     sell_zone: tuple = (960, 900)  # drag a team pet here to sell it
+    # Regions (left, top, w, h) to OCR each pet's strength number.
+    shop_stat_regions: list = field(
+        default_factory=lambda: [(300, 665, 60, 30), (430, 665, 60, 30), (560, 665, 60, 30)]
+    )
+    team_stat_regions: list = field(
+        default_factory=lambda: [
+            (700, 425, 55, 28), (820, 425, 55, 28), (940, 425, 55, 28),
+            (1060, 425, 55, 28), (1180, 425, 55, 28),
+        ]
+    )
 
 
 LAYOUT = Layout()
@@ -94,11 +105,19 @@ def read_text(image) -> str:
     return pytesseract.image_to_string(image).strip()
 
 
+def parse_int(text, default: int = 0) -> int:
+    """Extract the first integer from OCR text (pure; no screen access).
+
+    Returns the first run of digits, so a stat rendered like "3 / 5" reads as 3
+    rather than 35.
+    """
+    match = re.search(r"\d+", str(text))
+    return int(match.group()) if match else default
+
+
 def read_number(region, default: int = 0) -> int:
     """OCR a region and return the first integer found (gold, hearts, ...)."""
-    text = read_text(capture_screen(region))
-    digits = "".join(ch for ch in text if ch.isdigit())
-    return int(digits) if digits else default
+    return parse_int(read_text(capture_screen(region)), default)
 
 
 def read_state() -> dict:
@@ -107,6 +126,28 @@ def read_state() -> dict:
         "gold": read_number(LAYOUT.gold_region),
         "hearts": read_number(LAYOUT.hearts_region),
     }
+
+
+def build_observation(gold, shop, team, turn: int = 0) -> np.ndarray:
+    """Assemble a game.SuperAutoPetsEnv-shaped observation (pure; no screen).
+
+    Layout: ``[gold, turn, shop(3), team(5)]``. Short lists are zero-padded.
+    """
+    shop = list(shop)[:3] + [0] * (3 - len(shop))
+    team = list(team)[:5] + [0] * (5 - len(team))
+    return np.array([gold, turn, *shop, *team], dtype=np.float32)
+
+
+def read_board(turn: int = 0) -> np.ndarray:
+    """OCR gold + shop + team strengths into an observation vector.
+
+    ``turn`` can't be read from the board, so the caller passes it (e.g. a
+    counter incremented on each end-turn).
+    """
+    gold = read_number(LAYOUT.gold_region)
+    shop = [read_number(r) for r in LAYOUT.shop_stat_regions]
+    team = [read_number(r) for r in LAYOUT.team_stat_regions]
+    return build_observation(gold, shop, team, turn)
 
 
 # --- control ----------------------------------------------------------------
