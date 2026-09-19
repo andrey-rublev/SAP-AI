@@ -63,7 +63,8 @@ python -m pytest          # 57 tests across the env, agents, and runners
 ## Live play
 
 Super Auto Pets is a Steam desktop game, so live play goes through
-[`autogui.py`](autogui.py). Calibrate the screen coordinates in its `LAYOUT` for
-your resolution first (run `python autogui.py` to see what the OCR reads). Full
-board perception (reading every shop/team pet from the screen) is still a work
-in progress, so live play currently reads only gold/hearts.
+[`autogui.py`](autogui.py): `read_board()` OCRs gold and the shop/team pet
+strengths into an observation, and `play.py` runs the policy against it with
+action masking. The screen regions in `LAYOUT` are placeholders — **calibrate
+them for your resolution first** (run `python autogui.py` to see what the OCR
+reads), then `python play.py` to let a policy drive the live game.

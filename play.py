@@ -22,8 +22,6 @@ from __future__ import annotations
 import argparse
 import time
 
-import numpy as np
-
 from agent import QLearningAgent
 from game import SuperAutoPetsEnv
 from heuristic import HeuristicAgent
@@ -65,14 +63,15 @@ def run_live(policy, max_steps: int, delay: float):
     import autogui  # imported lazily; needs pyautogui/pytesseract
 
     print("Live mode - focus Super Auto Pets. Slam the mouse into a screen corner to abort.")
-    print("WARNING: board perception is a stub; the bot only reads gold/hearts for now.")
-    for t in range(max_steps):
-        state = autogui.read_state()
-        # Best-effort observation: gold is real, the rest is unknown (zeros).
-        obs = np.zeros(10, dtype=np.float32)
-        obs[0] = state.get("gold", 0)
-        action = policy.choose_action(obs, greedy=True)
+    print("Calibrate autogui.LAYOUT for your resolution first (run: python autogui.py).")
+    turn = 0
+    for _ in range(max_steps):
+        obs = autogui.read_board(turn)
+        mask = SuperAutoPetsEnv.mask_from_obs(obs)
+        action = policy.choose_action(obs, greedy=True, mask=mask)
         autogui.perform_action(action, obs=obs)
+        if action == 5:  # ended the turn -> next round
+            turn += 1
         time.sleep(delay)
 
 
