@@ -41,13 +41,13 @@ class ReplayBuffer:
         self.buffer = deque(maxlen=capacity)
         self._rng = random.Random(seed)
 
-    def push(self, state, action, reward, next_state, done):
-        self.buffer.append((state, action, reward, next_state, done))
+    def push(self, state, action, reward, next_state, done, next_mask):
+        self.buffer.append((state, action, reward, next_state, done, next_mask))
 
     def sample(self, batch_size: int):
         batch = self._rng.sample(self.buffer, batch_size)
-        state, action, reward, next_state, done = zip(*batch)
-        return state, action, reward, next_state, done
+        state, action, reward, next_state, done, next_mask = zip(*batch)
+        return state, action, reward, next_state, done, next_mask
 
     def __len__(self):
         return len(self.buffer)
@@ -118,26 +118,34 @@ class DQNAgent:
             q_values = torch.where(legal_mask, q_values, torch.full_like(q_values, float("-inf")))
         return int(torch.argmax(q_values).item())
 
-    def remember(self, state, action, reward, next_state, done):
+    def remember(self, state, action, reward, next_state, done, next_mask=None):
+        # A concrete mask is always stored so batches stack cleanly; None -> all legal.
+        if next_mask is None:
+            next_mask = np.ones(self.n_actions, dtype=bool)
         self.buffer.push(
             np.asarray(state, dtype=np.float32), action, reward,
             np.asarray(next_state, dtype=np.float32), done,
+            np.asarray(next_mask, dtype=bool),
         )
 
     def learn(self):
         """One gradient step on a replay minibatch. Returns the loss, or None."""
         if len(self.buffer) < self.batch_size:
             return None
-        state, action, reward, next_state, done = self.buffer.sample(self.batch_size)
+        state, action, reward, next_state, done, next_mask = self.buffer.sample(self.batch_size)
         state = torch.as_tensor(np.array(state) / self.obs_scale, device=self.device, dtype=torch.float32)
         next_state = torch.as_tensor(np.array(next_state) / self.obs_scale, device=self.device, dtype=torch.float32)
         action = torch.as_tensor(action, device=self.device, dtype=torch.int64).unsqueeze(1)
         reward = torch.as_tensor(reward, device=self.device, dtype=torch.float32).unsqueeze(1)
         done = torch.as_tensor(done, device=self.device, dtype=torch.float32).unsqueeze(1)
+        next_mask = torch.as_tensor(np.array(next_mask), device=self.device, dtype=torch.bool)
 
         q = self.q(state).gather(1, action)
         with torch.no_grad():
-            next_q = self.target(next_state).max(dim=1, keepdim=True)[0]
+            next_q_all = self.target(next_state)
+            # Mask illegal next actions so the bootstrap only uses trainable Q-values.
+            next_q_all = torch.where(next_mask, next_q_all, torch.full_like(next_q_all, float("-inf")))
+            next_q = next_q_all.max(dim=1, keepdim=True)[0]
             target = reward + self.gamma * next_q * (1.0 - done)
         loss = F.mse_loss(q, target)
 
@@ -163,10 +171,11 @@ class DQNAgent:
                 action = self.choose_action(obs, mask=mask)
                 nxt, reward, terminated, truncated, info = env.step(action)
                 done = terminated or truncated
-                self.remember(obs, action, reward, nxt, done)
+                next_mask = info.get("action_mask")
+                self.remember(obs, action, reward, nxt, done, next_mask)
                 self.learn()
                 obs = nxt
-                mask = info.get("action_mask")
+                mask = next_mask
                 total += reward
                 if done:
                     break

@@ -77,7 +77,7 @@ def test_save_load_reproduces_q_values(agent, env, tmp_path):
 def test_replay_buffer_capacity_and_sample():
     buf = ReplayBuffer(capacity=5, seed=0)
     for i in range(10):
-        buf.push([i], i % 6, float(i), [i + 1], False)
+        buf.push([i], i % 6, float(i), [i + 1], False, [True] * 6)
     assert len(buf) == 5  # oldest entries evicted
-    s, a, r, ns, d = buf.sample(3)
-    assert len(s) == len(a) == len(r) == 3
+    s, a, r, ns, d, m = buf.sample(3)
+    assert len(s) == len(a) == len(r) == len(m) == 3
