@@ -9,3 +9,6 @@ sapai
 pyautogui
 pytesseract
 opencv-python
+
+# Deep Q-Network agent (dqn.py) - optional, only needed for the neural agent
+torch
