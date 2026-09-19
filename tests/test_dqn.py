@@ -30,6 +30,14 @@ def test_choose_action_in_range(agent, env):
     assert agent.choose_action(obs, greedy=True) in range(6)
 
 
+def test_choose_action_respects_mask(agent, env):
+    obs, _ = env.reset(seed=0)
+    only_end_turn = [False, False, False, False, False, True]
+    for _ in range(20):
+        assert agent.choose_action(obs, mask=only_end_turn) == 5
+    assert agent.choose_action(obs, greedy=True, mask=only_end_turn) == 5
+
+
 def test_learn_none_until_buffer_fills(agent, env):
     assert agent.learn() is None
     obs, _ = env.reset(seed=0)

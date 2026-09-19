@@ -105,12 +105,18 @@ class DQNAgent:
     def _tensor(self, obs):
         return torch.as_tensor(np.asarray(obs, dtype=np.float32) / self.obs_scale, device=self.device)
 
-    def choose_action(self, obs, greedy: bool = False) -> int:
+    def choose_action(self, obs, greedy: bool = False, mask=None) -> int:
+        legal = list(range(self.n_actions)) if mask is None else [i for i in range(self.n_actions) if mask[i]]
+        if not legal:
+            legal = list(range(self.n_actions))
         if not greedy and self._rng.random() < self.epsilon:
-            return self._rng.randrange(self.n_actions)
+            return self._rng.choice(legal)
         with torch.no_grad():
-            q_values = self.q(self._tensor(obs).unsqueeze(0))
-            return int(q_values.argmax(dim=1).item())
+            q_values = self.q(self._tensor(obs).unsqueeze(0)).squeeze(0)
+        if mask is not None:
+            legal_mask = torch.as_tensor(np.asarray(mask, dtype=bool), device=q_values.device)
+            q_values = torch.where(legal_mask, q_values, torch.full_like(q_values, float("-inf")))
+        return int(torch.argmax(q_values).item())
 
     def remember(self, state, action, reward, next_state, done):
         self.buffer.push(
@@ -150,15 +156,17 @@ class DQNAgent:
     def train(self, env, num_episodes: int = 500, max_steps: int = 300, log_every: int = 0):
         history = []
         for ep in range(1, num_episodes + 1):
-            obs, _ = env.reset()
+            obs, info = env.reset()
+            mask = info.get("action_mask")
             total = 0.0
             for _ in range(max_steps):
-                action = self.choose_action(obs)
-                nxt, reward, terminated, truncated, _ = env.step(action)
+                action = self.choose_action(obs, mask=mask)
+                nxt, reward, terminated, truncated, info = env.step(action)
                 done = terminated or truncated
                 self.remember(obs, action, reward, nxt, done)
                 self.learn()
                 obs = nxt
+                mask = info.get("action_mask")
                 total += reward
                 if done:
                     break
