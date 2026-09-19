@@ -8,3 +8,5 @@ env/
 
 # Trained artifacts
 qtable*.json
+*.pt
+*.png
