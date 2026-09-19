@@ -49,6 +49,7 @@ class SuperAutoPetsEnv(gym.Env):
     BUY_COST = 3
     ROLL_COST = 1
     SELL_VALUE = 1
+    STEP_PENALTY = 0.05   # small cost per shop action, so dithering never pays
 
     def __init__(self, render_mode: str | None = None):
         super().__init__()
@@ -109,13 +110,13 @@ class SuperAutoPetsEnv(gym.Env):
         truncated = False
 
         if action in (0, 1, 2):
-            reward = self._buy(action)
+            reward = self._buy(action) - self.STEP_PENALTY
         elif action == 3:
-            reward = self._roll()
+            reward = self._roll() - self.STEP_PENALTY
         elif action == 4:
-            reward = self._sell_weakest()
+            reward = self._sell_weakest() - self.STEP_PENALTY
         elif action == 5:
-            reward, terminated = self._end_turn()
+            reward, terminated = self._end_turn()  # ending the turn isn't penalised
         else:
             raise ValueError(f"invalid action {action}")
 

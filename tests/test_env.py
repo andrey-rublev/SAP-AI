@@ -147,3 +147,20 @@ def test_invalid_action_raises(env):
     env.reset(seed=0)
     with pytest.raises(ValueError):
         env.step(99)
+
+
+def test_step_penalty_applied_to_shop_actions(env):
+    env.reset(seed=0)
+    env.gold = env.MAX_GOLD
+    env.team_pets[:] = 0
+    env.shop_pets[0] = 4
+    _, reward, *_ = env.step(0)  # legal buy of a tier-4 pet into an empty slot
+    assert reward == pytest.approx(0.1 * 4 - env.STEP_PENALTY)
+
+
+def test_end_turn_is_not_step_penalised(env):
+    env.reset(seed=0)
+    env.team_pets[:] = 0
+    env.team_pets[0] = 100  # guaranteed win -> reward is exactly +1, no penalty
+    _, reward, *_ = env.step(5)
+    assert reward == pytest.approx(1.0)
