@@ -40,18 +40,24 @@ python train.py                      # train vs. the sapai rules engine (pip ins
 
 | Policy | run-win rate | avg wins/run |
 | --- | --- | --- |
-| Random | ~5% | ~2.9 |
-| Tabular Q-learning | ~30% | ~7.2 |
-| DQN (neural) | ~17% | ~7.8 |
+| Random | ~5% | ~3.0 |
+| Tabular Q-learning | ~54% | ~9.1 |
+| DQN (neural) | ~99% | ~10.0 |
 | Heuristic (rule-based) | ~100% | ~10 |
 
-The heuristic shows the arena is solvable with good play, which is the bar the
-learned agents are working toward. (Numbers vary run to run.)
+The heuristic shows the arena is solvable with good play; with **action masking**
+(the env marks illegal moves in `info['action_mask']` and the agents skip them)
+the DQN essentially matches it. (Numbers vary run to run.)
+
+Two mechanics did most of the work: a small per-step penalty on shop actions so
+agents can't dither, and action masking so they never waste a turn on an illegal
+move — masking alone roughly doubled the tabular agent and took the DQN from a
+collapsed 0% to ~99%.
 
 ## Tests
 
 ```bash
-python -m pytest          # 46 tests across the env, agents, and runners
+python -m pytest          # 57 tests across the env, agents, and runners
 ```
 
 ## Live play
