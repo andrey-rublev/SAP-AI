@@ -164,3 +164,35 @@ def test_end_turn_is_not_step_penalised(env):
     env.team_pets[0] = 100  # guaranteed win -> reward is exactly +1, no penalty
     _, reward, *_ = env.step(5)
     assert reward == pytest.approx(1.0)
+
+
+def test_action_mask_in_info_and_end_turn_always_legal(env):
+    _, info = env.reset(seed=0)
+    mask = info["action_mask"]
+    assert mask.shape == (6,)
+    assert mask.dtype == bool
+    assert mask[5]  # end turn always legal
+
+
+def test_action_mask_blocks_unaffordable_and_useless_actions(env):
+    env.reset(seed=0)
+    env.gold = 0
+    env.shop_pets[:] = [5, 5, 5]
+    env.team_pets[:] = 0  # empty team -> selling is illegal
+    mask = env._action_mask()
+    assert not mask[0] and not mask[1] and not mask[2]  # no gold -> no buys
+    assert not mask[3]  # no gold -> no roll
+    assert not mask[4]  # empty team -> no sell
+    assert mask[5]      # end turn still legal
+
+
+def test_action_mask_blocks_buy_when_team_full_without_combine(env):
+    env.reset(seed=0)
+    env.gold = env.MAX_GOLD
+    env.team_pets[:] = [1, 2, 3, 4, 5]  # full, no value equals shop's 6
+    env.shop_pets[:] = [6, 6, 6]
+    mask = env._action_mask()
+    assert not mask[0]  # can't place (full) and can't combine a 6
+    # but a matching shop pet enables the combine buy
+    env.shop_pets[0] = 3
+    assert env._action_mask()[0]

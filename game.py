@@ -84,6 +84,19 @@ class SuperAutoPetsEnv(gym.Env):
             ([self.gold, self.turn], self.shop_pets, self.team_pets)
         ).astype(np.float32)
 
+    def _action_mask(self) -> np.ndarray:
+        """Boolean mask (len 6) of actions that aren't illegal / no-ops."""
+        mask = np.zeros(6, dtype=bool)
+        has_empty = bool((self.team_pets == 0).any())
+        for i in range(self.SHOP_SLOTS):
+            pet = int(self.shop_pets[i])
+            can_combine = pet > 0 and bool((self.team_pets == pet).any())
+            mask[i] = self.gold >= self.BUY_COST and pet > 0 and (has_empty or can_combine)
+        mask[3] = self.gold >= self.ROLL_COST                 # roll
+        mask[4] = bool((self.team_pets > 0).any())            # sell weakest
+        mask[5] = True                                        # end turn is always legal
+        return mask
+
     def _info(self) -> dict:
         return {
             "turn": int(self.turn),
@@ -91,6 +104,7 @@ class SuperAutoPetsEnv(gym.Env):
             "wins": int(self.wins),
             "lives": int(self.lives),
             "team_strength": int(self.team_pets.sum()),
+            "action_mask": self._action_mask(),
         }
 
     # --------------------------------------------------------------- gym API
