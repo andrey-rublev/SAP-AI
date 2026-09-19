@@ -12,3 +12,6 @@ opencv-python
 
 # Deep Q-Network agent (dqn.py) - optional, only needed for the neural agent
 torch
+
+# Plotting training curves (metrics.py, main.py --plot) - optional
+matplotlib

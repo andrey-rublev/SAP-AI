@@ -60,6 +60,7 @@ def parse_args(argv=None):
     p.add_argument("--epsilon-decay", type=float, default=0.999, help="per-episode epsilon decay (default: 0.999)")
     p.add_argument("--output", default="qtable.json", help="where to save the Q-table (default: qtable.json)")
     p.add_argument("--no-save", action="store_true", help="don't write the Q-table to disk")
+    p.add_argument("--plot", metavar="PATH", help="save a training-reward curve PNG to PATH")
     return p.parse_args(argv)
 
 
@@ -81,7 +82,13 @@ def main(argv=None):
         actions, epsilon_decay=args.epsilon_decay, state_fn=compact_state, seed=args.seed
     )
     print(f"\nTraining for {args.episodes} episodes ...")
-    agent.train(env, num_episodes=args.episodes, log_every=max(1, args.episodes // 4))
+    history = agent.train(env, num_episodes=args.episodes, log_every=max(1, args.episodes // 4))
+
+    if args.plot:
+        from metrics import plot_training_curve
+
+        plot_training_curve(history, args.plot, title="Q-learning training reward")
+        print(f"Saved training curve to {args.plot}")
 
     # 3) Evaluate the learned greedy policy.
     rate, wins = evaluate(env, agent=agent, episodes=args.eval_episodes)
