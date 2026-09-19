@@ -65,6 +65,7 @@ class Layout:
     )
     roll_button: tuple = (170, 620)
     end_turn_button: tuple = (1500, 800)
+    sell_zone: tuple = (960, 900)  # drag a team pet here to sell it
 
 
 LAYOUT = Layout()
@@ -128,28 +129,49 @@ def roll() -> None:
     click(*LAYOUT.roll_button)
 
 
+def sell(slot: int) -> None:
+    """Sell the team pet in ``slot`` by dragging it to the sell zone."""
+    _require(pyautogui, "pyautogui")
+    tx, ty = LAYOUT.team_slots[slot]
+    zx, zy = LAYOUT.sell_zone
+    pyautogui.moveTo(tx, ty, duration=0.15)
+    pyautogui.dragTo(zx, zy, duration=0.3, button="left")
+
+
 def end_turn() -> None:
     click(*LAYOUT.end_turn_button)
 
 
-# Maps the discrete actions from game.SuperAutoPetsEnv onto the live client.
-# Action 4 (sell) needs a sell-zone drag that depends on which pet to sell, so it
-# is intentionally left out until the board is being tracked.
-ACTION_TABLE = {
-    0: lambda: buy(0),
-    1: lambda: buy(1),
-    2: lambda: buy(2),
-    3: roll,
-    5: end_turn,
-}
+def _weakest_team_slot(obs):
+    """Index of the weakest (lowest-strength) occupied team slot, or None."""
+    if obs is None:
+        return None
+    team = np.asarray(obs)[5:10]  # team slots occupy obs[5:10]
+    occupied = np.where(team > 0)[0]
+    if occupied.size == 0:
+        return None
+    return int(occupied[int(np.argmin(team[occupied]))])
 
 
-def perform_action(action: int) -> None:
-    """Execute one discrete agent action against the live Steam client."""
-    fn = ACTION_TABLE.get(action)
-    if fn is None:
+def perform_action(action: int, obs=None) -> None:
+    """Execute one discrete agent action against the live Steam client.
+
+    ``obs`` is the current observation (see :class:`game.SuperAutoPetsEnv`); it is
+    only needed for the sell action, which must know which team slot is weakest.
+    """
+    if action in (0, 1, 2):
+        buy(action)
+    elif action == 3:
+        roll()
+    elif action == 4:
+        slot = _weakest_team_slot(obs)
+        if slot is None:
+            raise ValueError("sell action needs a team observation to pick a slot")
+        sell(slot)
+    elif action == 5:
+        end_turn()
+    else:
         raise ValueError(f"no client mapping for action {action}")
-    fn()
 
 
 if __name__ == "__main__":
