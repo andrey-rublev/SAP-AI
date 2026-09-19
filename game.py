@@ -84,18 +84,31 @@ class SuperAutoPetsEnv(gym.Env):
             ([self.gold, self.turn], self.shop_pets, self.team_pets)
         ).astype(np.float32)
 
-    def _action_mask(self) -> np.ndarray:
-        """Boolean mask (len 6) of actions that aren't illegal / no-ops."""
+    @classmethod
+    def mask_from_obs(cls, obs) -> np.ndarray:
+        """Legal-action mask (len 6) computed from an observation vector.
+
+        Lets callers that only have an observation (e.g. the live client, where
+        the board is read off the screen) compute the same mask the env reports.
+        """
+        obs = np.asarray(obs, dtype=float)
+        gold = obs[0]
+        shop = obs[2 : 2 + cls.SHOP_SLOTS]
+        team = obs[2 + cls.SHOP_SLOTS :]
         mask = np.zeros(6, dtype=bool)
-        has_empty = bool((self.team_pets == 0).any())
-        for i in range(self.SHOP_SLOTS):
-            pet = int(self.shop_pets[i])
-            can_combine = pet > 0 and bool((self.team_pets == pet).any())
-            mask[i] = self.gold >= self.BUY_COST and pet > 0 and (has_empty or can_combine)
-        mask[3] = self.gold >= self.ROLL_COST                 # roll
-        mask[4] = bool((self.team_pets > 0).any())            # sell weakest
+        has_empty = bool((team == 0).any())
+        for i in range(cls.SHOP_SLOTS):
+            pet = float(shop[i])
+            can_combine = pet > 0 and bool((team == pet).any())
+            mask[i] = gold >= cls.BUY_COST and pet > 0 and (has_empty or can_combine)
+        mask[3] = gold >= cls.ROLL_COST                       # roll
+        mask[4] = bool((team > 0).any())                      # sell weakest
         mask[5] = True                                        # end turn is always legal
         return mask
+
+    def _action_mask(self) -> np.ndarray:
+        """Boolean mask (len 6) of actions that aren't illegal / no-ops."""
+        return self.mask_from_obs(self._obs())
 
     def _info(self) -> dict:
         return {

@@ -196,3 +196,21 @@ def test_action_mask_blocks_buy_when_team_full_without_combine(env):
     # but a matching shop pet enables the combine buy
     env.shop_pets[0] = 3
     assert env._action_mask()[0]
+
+
+def test_mask_from_obs_matches_env_mask(env):
+    # mask_from_obs on the env's own observation must equal the internal mask.
+    obs, info = env.reset(seed=1)
+    assert np.array_equal(SuperAutoPetsEnv.mask_from_obs(obs), info["action_mask"])
+    for _ in range(15):
+        obs, _, term, trunc, info = env.step(env.action_space.sample())
+        assert np.array_equal(SuperAutoPetsEnv.mask_from_obs(obs), info["action_mask"])
+        if term or trunc:
+            obs, info = env.reset()
+
+
+def test_mask_from_obs_standalone():
+    # gold 10, empty team, one non-empty shop slot -> only that buy, roll, end turn.
+    obs = np.array([10, 0, 0, 4, 0, 0, 0, 0, 0, 0], dtype=np.float32)
+    mask = SuperAutoPetsEnv.mask_from_obs(obs)
+    assert list(mask) == [False, True, False, True, False, True]
