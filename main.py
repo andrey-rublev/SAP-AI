@@ -9,6 +9,8 @@ no ``sapai``), so it always runs::
 """
 from __future__ import annotations
 
+import argparse
+
 from agent import QLearningAgent
 from game import SuperAutoPetsEnv
 
@@ -50,7 +52,19 @@ def evaluate(env, agent=None, episodes=200, max_steps=500):
     return victories / episodes, total_wins / episodes
 
 
-def main():
+def parse_args(argv=None):
+    p = argparse.ArgumentParser(description="Train a Q-learning agent on the built-in SAP arena.")
+    p.add_argument("--episodes", type=int, default=4000, help="training episodes (default: 4000)")
+    p.add_argument("--eval-episodes", type=int, default=200, help="episodes per evaluation (default: 200)")
+    p.add_argument("--seed", type=int, default=0, help="random seed (default: 0)")
+    p.add_argument("--epsilon-decay", type=float, default=0.999, help="per-episode epsilon decay (default: 0.999)")
+    p.add_argument("--output", default="qtable.json", help="where to save the Q-table (default: qtable.json)")
+    p.add_argument("--no-save", action="store_true", help="don't write the Q-table to disk")
+    return p.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
     env = SuperAutoPetsEnv()
     actions = list(range(env.action_space.n))
 
@@ -59,24 +73,27 @@ def main():
     print("=" * 62)
 
     # 1) Random baseline (also serves as an environment smoke test).
-    base_rate, base_wins = evaluate(env, agent=None, episodes=200)
+    base_rate, base_wins = evaluate(env, agent=None, episodes=args.eval_episodes)
     print(f"\nRandom baseline : run-win rate {base_rate:5.1%} | avg wins/run {base_wins:4.2f}")
 
     # 2) Train.
-    agent = QLearningAgent(actions, epsilon_decay=0.999, state_fn=compact_state, seed=0)
-    print("\nTraining ...")
-    agent.train(env, num_episodes=4000, log_every=1000)
+    agent = QLearningAgent(
+        actions, epsilon_decay=args.epsilon_decay, state_fn=compact_state, seed=args.seed
+    )
+    print(f"\nTraining for {args.episodes} episodes ...")
+    agent.train(env, num_episodes=args.episodes, log_every=max(1, args.episodes // 4))
 
     # 3) Evaluate the learned greedy policy.
-    rate, wins = evaluate(env, agent=agent, episodes=200)
+    rate, wins = evaluate(env, agent=agent, episodes=args.eval_episodes)
     print(f"\nLearned policy  : run-win rate {rate:5.1%} | avg wins/run {wins:4.2f}")
     print(
         f"Improvement     : {rate - base_rate:+.1%} run-win rate, "
         f"{wins - base_wins:+.2f} wins/run"
     )
 
-    agent.save("qtable.json")
-    print("\nSaved learned Q-table to qtable.json")
+    if not args.no_save:
+        agent.save(args.output)
+        print(f"\nSaved learned Q-table to {args.output}")
 
 
 if __name__ == "__main__":
