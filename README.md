@@ -38,12 +38,13 @@ python train.py                      # train vs. the sapai rules engine (pip ins
 
 | Policy | run-win rate | avg wins/run |
 | --- | --- | --- |
-| Random | ~6% | ~2.9 |
-| Tabular Q-learning | ~16% | ~5.9 |
+| Random | ~5% | ~2.9 |
+| Tabular Q-learning | ~30% | ~7.2 |
+| DQN (neural) | ~17% | ~7.8 |
 | Heuristic (rule-based) | ~100% | ~10 |
 
 The heuristic shows the arena is solvable with good play, which is the bar the
-learned agents are working toward.
+learned agents are working toward. (Numbers vary run to run.)
 
 ## Tests
 
