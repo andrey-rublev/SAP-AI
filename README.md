@@ -11,20 +11,50 @@ layer uses screen capture + OCR + mouse control rather than a browser.
 
 | File | Role |
 | --- | --- |
-| [`game.py`](game.py) | `SuperAutoPetsEnv` — a lightweight Gymnasium environment (gold, shop, team, battles) |
-| [`agent.py`](agent.py) | `QLearningAgent` — a tabular Q-learning agent |
-| [`main.py`](main.py) | Dependency-free demo: trains on the built-in env and reports win rate |
+| [`game.py`](game.py) | `SuperAutoPetsEnv` — a Gymnasium environment (gold, shop, team, battles) |
+| [`agent.py`](agent.py) | `QLearningAgent` — tabular Q-learning |
+| [`dqn.py`](dqn.py) | `DQNAgent` — a PyTorch DQN that learns from the full observation |
+| [`heuristic.py`](heuristic.py) | `HeuristicAgent` — a rule-based baseline (wins ~100% of runs) |
 | [`train.py`](train.py) | Trains against the real rules via the `sapai` simulator |
-| [`autogui.py`](autogui.py) | Plays the actual Steam client (screen capture + OCR + mouse) |
+| [`play.py`](play.py) | Runs a policy through the game loop (simulator `--dry-run` or live client) |
+| [`autogui.py`](autogui.py) | Drives the actual Steam client (screen capture + OCR + mouse) |
+| [`main.py`](main.py) | Dependency-free demo: trains on the built-in env and reports win rate |
+| [`metrics.py`](metrics.py) | Training-curve plotting |
 
 ## Quickstart
 
 ```bash
 pip install -r requirements.txt
-python main.py      # headless demo — needs only gymnasium + numpy
-python train.py     # train vs. the sapai rules engine — needs: pip install sapai
+
+python main.py                       # train tabular Q-learning on the built-in env
+python main.py --episodes 8000 --plot curve.png
+python dqn.py                        # train the neural (DQN) agent
+python heuristic.py                  # evaluate the rule-based baseline
+python play.py --dry-run             # watch a policy play the simulator
+python train.py                      # train vs. the sapai rules engine (pip install sapai)
 ```
 
-Before letting `autogui.py` control the live game, calibrate the screen
-coordinates in its `LAYOUT` for your resolution (run `python autogui.py` to see
-what the OCR currently reads).
+## Results (built-in env)
+
+| Policy | run-win rate | avg wins/run |
+| --- | --- | --- |
+| Random | ~6% | ~2.9 |
+| Tabular Q-learning | ~16% | ~5.9 |
+| Heuristic (rule-based) | ~100% | ~10 |
+
+The heuristic shows the arena is solvable with good play, which is the bar the
+learned agents are working toward.
+
+## Tests
+
+```bash
+python -m pytest          # 46 tests across the env, agents, and runners
+```
+
+## Live play
+
+Super Auto Pets is a Steam desktop game, so live play goes through
+[`autogui.py`](autogui.py). Calibrate the screen coordinates in its `LAYOUT` for
+your resolution first (run `python autogui.py` to see what the OCR reads). Full
+board perception (reading every shop/team pet from the screen) is still a work
+in progress, so live play currently reads only gold/hearts.
