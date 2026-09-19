@@ -1,5 +1,11 @@
+# Core RL environment + agent (game.py, agent.py, main.py)
 gymnasium
+numpy
+
+# Training against the real Super Auto Pets rules (train.py)
+sapai
+
+# Driving the real Steam client (autogui.py)
 pyautogui
 pytesseract
 opencv-python
-numpy
