@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install core dependencies
+        # Only the deps the tests need; torch-based DQN tests importorskip when
+        # torch is absent, and the autogui optional deps are guarded at import.
+        run: |
+          python -m pip install --upgrade pip
+          pip install gymnasium numpy matplotlib pytest
+      - name: Run tests
+        run: python -m pytest -q
