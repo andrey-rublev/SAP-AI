@@ -116,6 +116,8 @@ class QLearningAgent:
 
     # --------------------------------------------------------- persistence
     def save(self, path: str):
+        # Store each row as a list of values aligned to ``self.actions`` so that
+        # non-string action keys (e.g. ints) survive the JSON round-trip.
         data = {
             "actions": self.actions,
             "params": {
@@ -125,7 +127,10 @@ class QLearningAgent:
                 "epsilon_min": self.epsilon_min,
                 "epsilon_decay": self.epsilon_decay,
             },
-            "q": {json.dumps(k): v for k, v in self.q.items()},
+            "q": {
+                json.dumps(k): [row[a] for a in self.actions]
+                for k, row in self.q.items()
+            },
         }
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f)
@@ -137,8 +142,8 @@ class QLearningAgent:
         for name, value in data.get("params", {}).items():
             setattr(self, name, value)
         self.q = defaultdict(lambda: {a: 0.0 for a in self.actions})
-        for encoded, row in data["q"].items():
+        for encoded, values in data["q"].items():
             decoded = json.loads(encoded)
             key = tuple(decoded) if isinstance(decoded, list) else decoded
-            self.q[key] = row
+            self.q[key] = {a: v for a, v in zip(self.actions, values)}
         return self
