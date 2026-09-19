@@ -1,5 +1,7 @@
 # SAP-AI
 
+[![CI](https://github.com/andrey-rublev/SAP-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/andrey-rublev/SAP-AI/actions/workflows/ci.yml)
+
 A reinforcement-learning bot for **Super Auto Pets** (the Steam game).
 
 It learns to shop, build a team, and win battles — first in a fast headless
