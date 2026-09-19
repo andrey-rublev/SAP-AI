@@ -45,7 +45,7 @@ def run_dry(policy, episodes: int, max_steps: int, seed: int = 0, verbose: bool 
     for ep in range(episodes):
         obs, info = env.reset(seed=seed + ep)
         for t in range(max_steps):
-            action = policy.choose_action(obs, greedy=True)
+            action = policy.choose_action(obs, greedy=True, mask=info.get("action_mask"))
             obs, reward, terminated, truncated, info = env.step(action)
             if verbose:
                 print(
