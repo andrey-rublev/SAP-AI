@@ -38,12 +38,11 @@ def evaluate(env, agent=None, episodes=200, max_steps=500):
     victories, total_wins = 0, 0
     for _ in range(episodes):
         obs, info = env.reset()
-        done = False
         for _ in range(max_steps):
             if agent is None:
                 action = env.action_space.sample()
             else:
-                action = agent.choose_action(obs, greedy=True)
+                action = agent.choose_action(obs, greedy=True, mask=info.get("action_mask"))
             obs, _, terminated, truncated, info = env.step(action)
             if terminated or truncated:
                 break

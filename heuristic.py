@@ -20,7 +20,9 @@ class HeuristicAgent:
         self.buy_cost = buy_cost
         self.n_shop = n_shop
 
-    def choose_action(self, obs, greedy: bool = True) -> int:
+    def choose_action(self, obs, greedy: bool = True, mask=None) -> int:
+        # The rule-based policy only ever proposes legal moves, so ``mask`` is
+        # accepted for interface parity but not needed.
         obs = np.asarray(obs)
         gold = int(round(obs[0]))
         shop = [int(round(x)) for x in obs[2 : 2 + self.n_shop]]

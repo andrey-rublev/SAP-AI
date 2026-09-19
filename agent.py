@@ -54,13 +54,18 @@ class QLearningAgent:
             return str(state)
 
     # -------------------------------------------------------------- policy
-    def choose_action(self, state, greedy: bool = False):
+    def choose_action(self, state, greedy: bool = False, mask=None):
+        """Pick an action. ``mask`` (bool seq aligned to ``actions``) hides illegal ones."""
+        n = len(self.actions)
+        legal = [i for i in range(n) if mask is None or mask[i]]
+        if not legal:  # nothing legal (shouldn't happen) -> allow everything
+            legal = list(range(n))
         if not greedy and self._rng.random() < self.epsilon:
-            return self._rng.choice(self.actions)
+            return self.actions[self._rng.choice(legal)]
         q_row = self.q[self._key(state)]
-        best = max(q_row.values())
+        best = max(q_row[self.actions[i]] for i in legal)
         # Random tie-break so the agent doesn't fixate on the first-listed action.
-        best_actions = [a for a, v in q_row.items() if v == best]
+        best_actions = [self.actions[i] for i in legal if q_row[self.actions[i]] == best]
         return self._rng.choice(best_actions)
 
     def learn(self, state, action, reward, next_state, done):
@@ -83,6 +88,12 @@ class QLearningAgent:
         return result
 
     @staticmethod
+    def _mask_from_reset(result):
+        if isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], dict):
+            return result[1].get("action_mask")
+        return None
+
+    @staticmethod
     def _unpack_step(result):
         if len(result) == 5:  # gymnasium
             obs, reward, terminated, truncated, info = result
@@ -94,13 +105,16 @@ class QLearningAgent:
         """Run Q-learning and return the per-episode total reward history."""
         history = []
         for ep in range(1, num_episodes + 1):
-            state = self._unpack_reset(env.reset())
+            reset_out = env.reset()
+            state = self._unpack_reset(reset_out)
+            mask = self._mask_from_reset(reset_out)
             total = 0.0
             for _ in range(max_steps):
-                action = self.choose_action(state)
-                nxt, reward, done, _ = self._unpack_step(env.step(action))
+                action = self.choose_action(state, mask=mask)
+                nxt, reward, done, info = self._unpack_step(env.step(action))
                 self.learn(state, action, reward, nxt, done)
                 state = nxt
+                mask = info.get("action_mask") if isinstance(info, dict) else None
                 total += reward
                 if done:
                     break

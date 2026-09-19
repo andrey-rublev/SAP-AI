@@ -17,6 +17,19 @@ def test_greedy_picks_argmax():
     assert agent.choose_action("s", greedy=True) == 1
 
 
+def test_choose_action_respects_mask_when_exploring():
+    agent = QLearningAgent([0, 1, 2], epsilon=1.0, seed=0)  # always explore
+    for _ in range(30):
+        assert agent.choose_action("s", mask=[False, True, False]) == 1
+
+
+def test_greedy_respects_mask():
+    agent = QLearningAgent([0, 1, 2], seed=0)
+    agent.q["s"] = {0: 5.0, 1: 1.0, 2: 2.0}
+    # action 0 has the highest value but is masked out -> best legal is action 2
+    assert agent.choose_action("s", greedy=True, mask=[False, True, True]) == 2
+
+
 def test_learn_terminal_update():
     agent = QLearningAgent([0, 1], alpha=0.5, gamma=0.9, seed=0)
     agent.learn("s", 0, reward=10.0, next_state="s2", done=True)
