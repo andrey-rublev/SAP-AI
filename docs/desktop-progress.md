@@ -8,6 +8,15 @@ control again for this task and asked to remove the scheduled task. The
 and controlled live validation may resume; the earlier background-only
 restriction has been superseded. Keep captures and calibration private.
 
+**Next-demo requirement, explicitly clarified by the user:** SAP-AI itself
+must both decide and physically execute game actions. The running program must
+observe the desktop, choose an action, send its own mouse input, and verify
+the result. Codex choosing or manually clicking gameplay moves through
+Computer Use does not satisfy this requirement. Fix calibration and controller
+blockers before the next demo; if the program stops, report and repair the
+blocker instead of silently substituting agent-directed gameplay. Label any
+manual setup or intervention separately from the bot's verified actions.
+
 The user requests continued development toward actual Super Auto Pets desktop
 play and immediate pushes for every small completed change, approximately five
 meaningful commits per day. Work on `main`, pushing to `origin/main`; never
