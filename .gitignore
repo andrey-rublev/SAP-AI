@@ -5,8 +5,13 @@ __pycache__/
 .venv/
 venv/
 env/
+.pytest_cache/
+build/
+dist/
 
 # Trained artifacts
 qtable*.json
 *.pt
 *.png
+reports/
+layout*.json

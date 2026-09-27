@@ -1,17 +1,6 @@
-# Core RL environment + agent (game.py, agent.py, main.py)
-gymnasium
-numpy
-
-# Training against the real Super Auto Pets rules (train.py)
-sapai
-
-# Driving the real Steam client (autogui.py)
-pyautogui
-pytesseract
-opencv-python
-
-# Deep Q-Network agent (dqn.py) - optional, only needed for the neural agent
-torch
-
-# Plotting training curves (metrics.py, main.py --plot) - optional
-matplotlib
+# Lightweight simulator and tabular agent. Optional features:
+#   pip install -e ".[dqn,plot,dev]"  # neural agent, plots, tests
+#   pip install -e ".[live]"          # experimental desktop bridge
+# sapai is installed separately from upstream; see README.
+gymnasium>=1.0,<2
+numpy>=1.26,<3

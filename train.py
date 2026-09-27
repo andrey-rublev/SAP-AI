@@ -1,88 +1,148 @@
-"""Train a Q-learning agent against the real Super Auto Pets rules.
+"""Optional sapai battle-engine drill with a small custom shop.
 
-This uses the ``sapai`` package (the community Super Auto Pets simulator) so the
-agent learns against authentic pets and battle resolution.  Install it with
-``pip install sapai`` (it is listed in requirements.txt).
-
-For a dependency-free demo that trains against the built-in surrogate
-environment instead, run ``python main.py``.
+This is not a complete SAP rules environment: shopping uses fixed costs and
+three low-tier pet choices; only combat is delegated to sapai. Install sapai
+from its upstream repository (see README). Importing this module needs no sapai.
 """
 from __future__ import annotations
 
-import sys
+import argparse
+from contextlib import contextmanager
+from pathlib import Path
 
-try:
-    from sapai.pets import Pet
-    from sapai.teams import Team
-    from sapai.battle import Battle
-except ModuleNotFoundError:
-    sys.exit(
-        "This trainer needs the 'sapai' package.\n"
-        "  Install it with:  pip install sapai\n"
-        "  Or run 'python main.py' for the dependency-free demo."
-    )
+import numpy as np
 
 from agent import QLearningAgent
+from evaluation import positive_int
 
-ACTIONS = ["buy", "roll", "battle"]
+ACTIONS = ["buy_0", "buy_1", "buy_2", "roll", "battle"]
+PETS = ("ant", "fish", "otter", "beaver", "pig")
+
+
+def _load_engine():
+    try:
+        from sapai.teams import Team
+        from sapai.battle import Battle
+    except ImportError as exc:
+        raise RuntimeError(
+            "The optional sapai battle drill needs the upstream sapai package. "
+            "See README for installation, or run python main.py for the built-in arena."
+        ) from exc
+    return Team, Battle
+
+
+@contextmanager
+def _battle_rng(seed):
+    """Isolate sapai's legacy global NumPy randomness in this serial drill."""
+    state = np.random.get_state()
+    try:
+        np.random.seed(seed)
+        yield
+    finally:
+        np.random.set_state(state)
 
 
 class SAPEnvironment:
-    """A minimal sapai-backed environment exposing a classic RL step API."""
+    """Bounded team-building drill using real sapai combat and a custom shop."""
 
-    def __init__(self):
-        self.team = Team([])
-        self.enemy_team = Team(["sheep", "tiger"])
+    def __init__(self, seed=None, max_steps=50, engine=None):
+        if max_steps <= 0:
+            raise ValueError("max_steps must be positive")
+        self._Team, self._Battle = engine or _load_engine()
+        self.max_steps = max_steps
+        self._rng = np.random.default_rng(seed)
+        self._done = True
 
-    def reset(self):
-        """Reset to an empty team and a fixed enemy; state is the team string."""
-        self.team = Team([])
-        self.enemy_team = Team(["sheep", "tiger"])
-        return str(self.team)
+    def _roll_shop(self):
+        self.shop = self._rng.integers(1, len(PETS) + 1, size=3).tolist()
+
+    def _obs(self):
+        return (self.gold, *self.shop, *self.pets, *([0] * (5 - len(self.pets))))
+
+    def _info(self):
+        mask = [self.gold >= 3 and len(self.pets) < 5 and pet > 0 for pet in self.shop]
+        mask += [self.gold >= 1 and len(self.pets) < 5, True]
+        if self._done and not self._truncated:
+            mask = [False] * len(ACTIONS)
+        return {"action_mask": np.array(mask, dtype=bool), "gold": self.gold,
+                "steps": self.steps, "battle_winner": self.winner}
+
+    def reset(self, *, seed=None, options=None):
+        if seed is not None:
+            self._rng = np.random.default_rng(seed)
+        self.gold, self.steps, self.winner = 15, 0, None
+        self.pets = []
+        self.team = self._Team([])
+        self.enemy_team = self._Team(["sheep", "tiger"])
+        self._roll_shop()
+        self._done = self._truncated = False
+        return self._obs(), self._info()
 
     def step(self, action):
-        """Apply an action and return ``(state, reward, done, info)``."""
-        reward, done = 0.0, False
-
-        if action == "buy":
-            pet = Pet("ant")
-            for i in range(5):  # place the pet in the first empty slot
-                if self.team.get_slot(i).is_empty():
-                    self.team.move(pet, i)
-                    reward = 1.0
-                    break
-
+        if self._done:
+            raise RuntimeError("call reset() before stepping a finished drill")
+        if action not in ACTIONS:
+            raise ValueError(f"invalid action {action!r}")
+        legal = bool(self._info()["action_mask"][ACTIONS.index(action)])
+        self.steps += 1
+        reward, terminated = -0.01, False
+        if not legal:
+            reward = -0.1
+        elif action.startswith("buy_"):
+            slot = int(action[-1])
+            self.pets.append(self.shop[slot])
+            self.shop[slot] = 0
+            self.gold -= 3
+            # Team.move takes two slot indices; it cannot insert a new Pet.
+            self.team = self._Team([PETS[pet - 1] for pet in self.pets])
         elif action == "roll":
-            reward = 0.0  # refreshing the shop has no immediate reward
+            self.gold -= 1
+            self._roll_shop()
+        else:
+            with _battle_rng(int(self._rng.integers(0, 2**32))):
+                self.winner = int(self._Battle(self.team, self.enemy_team).battle())
+            if self.winner not in (0, 1, 2):
+                raise RuntimeError(f"unexpected sapai winner code: {self.winner}")
+            reward = {0: 1.0, 1: -1.0, 2: 0.0}[self.winner]
+            terminated = True
+        self._truncated = not terminated and self.steps >= self.max_steps
+        self._done = terminated or self._truncated
+        info = self._info()
+        if self._truncated:
+            info["truncation_reason"] = "step_limit"
+        return self._obs(), reward, terminated, self._truncated, info
 
-        elif action == "battle":
-            battle = Battle(self.team, self.enemy_team)
-            winner = battle.battle()
-            reward = {0: 10.0, 1: -10.0}.get(winner, 5.0)  # win / lose / draw
-            done = True
 
-        return str(self.team), reward, done, {}
-
-
-def main(num_episodes: int = 1000):
-    env = SAPEnvironment()
-    agent = QLearningAgent(ACTIONS)
-
-    print(f"Training for {num_episodes} episodes against the sapai rules ...")
-    agent.train(env, num_episodes=num_episodes, log_every=max(1, num_episodes // 10))
-
-    # Demonstrate the learned greedy policy on a fresh episode.
-    print("\nGreedy rollout with the learned policy:")
-    state, done = env.reset(), False
-    while not done:
-        action = agent.choose_action(state, greedy=True)
-        state, reward, done, _ = env.step(action)
-        print(f"  action={action:<6s} reward={reward:+.1f}")
-
-    agent.save("qtable_sapai.json")
-    print("\nSaved learned Q-table to qtable_sapai.json")
+def main(argv=None):
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--episodes", type=positive_int, default=1000)
+    p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--max-steps", type=positive_int, default=50)
+    p.add_argument("--output", default="qtable_sapai.json")
+    args = p.parse_args(argv)
+    if args.seed < 0:
+        p.error("--seed must be non-negative")
+    try:
+        env = SAPEnvironment(seed=args.seed, max_steps=args.max_steps)
+    except RuntimeError as exc:
+        p.error(str(exc))
+    agent = QLearningAgent(ACTIONS, seed=args.seed)
+    print(f"Training {args.episodes} episodes on the custom-shop sapai battle drill ...")
+    agent.train(env, num_episodes=args.episodes, max_steps=args.max_steps,
+                seed=args.seed, log_every=max(1, args.episodes // 10))
+    print("\nGreedy rollout:")
+    state, info = env.reset(seed=args.seed + 10_000)
+    for _ in range(args.max_steps):
+        action = agent.choose_action(state, greedy=True, mask=info["action_mask"])
+        state, reward, terminated, truncated, info = env.step(action)
+        print(f"  action={action:<8s} reward={reward:+.2f}")
+        if terminated or truncated:
+            break
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    agent.save(args.output)
+    print(f"Saved battle-drill Q-table to {args.output}")
+    return agent
 
 
 if __name__ == "__main__":
-    episodes = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
-    main(episodes)
+    main()
