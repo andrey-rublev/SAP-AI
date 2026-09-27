@@ -106,6 +106,30 @@ def test_empty_portrait_with_stats_is_contradictory(scene):
     assert observe(scene).shop[0].occupied is None
 
 
+@pytest.mark.parametrize("species_color,frame_color", [(2, 2), (2, 0), (0, 0), (10, 10)])
+def test_empty_requires_margin_over_species_even_when_ocr_is_blank(scene, species_color, frame_color):
+    # Both references match the threshold: species may tie, nearly tie, or win.
+    save_template(scene[3] / "ant.png", species_color)
+    scene[1][5:9, :4] = frame_color
+    scene[1][5, 5:8] = 255
+    slot = observe(scene).shop[0]
+    assert slot.occupied is None
+    assert slot.species is None
+
+
+def test_species_pixels_and_missing_ocr_never_authorize_an_empty_target(scene):
+    save_template(scene[3] / "ant.png", 2)
+    scene[1][5:9, :4] = 2
+    assert observe(scene, ocr=None).shop[0].occupied is None
+
+
+def test_empty_can_win_by_a_clear_margin_with_blank_ocr(scene):
+    save_template(scene[3] / "ant.png", 10)
+    scene[1][5:9, :4] = 0
+    scene[1][5, 5:8] = 255
+    assert observe(scene).shop[0].occupied is False
+
+
 def test_empty_requires_visual_evidence(scene):
     scene[0]["team"][0].pop("empty_template")
     assert observe(scene).team[0].occupied is None

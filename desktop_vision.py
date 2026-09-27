@@ -237,14 +237,17 @@ class Perceptor:
         attack = self._number(frame, slot.attack, 0, 99)
         health = self._number(frame, slot.health, 1, 99)
         stats_present = attack is not None and health is not None
-        empty = slot.empty_template is not None and self._distance(frame, slot.portrait, slot.empty_template) <= slot.max_distance
-        if empty:
-            # A matching empty portrait plus numeric stats is contradictory.
-            return PetSlot(occupied=None if attack is not None or health is not None else False)
+        scores = sorted((self._distance(frame, slot.portrait, path), name) for name, path in slot.species_templates.items())
+        empty_score = self._distance(frame, slot.portrait, slot.empty_template) if slot.empty_template is not None else float("inf")
+        if empty_score <= slot.max_distance:
+            # Blank OCR alone cannot resolve competing visual evidence. Empty
+            # must beat every known pet reference by the configured margin.
+            competing_pet = bool(scores) and scores[0][0] - empty_score <= slot.margin
+            conflicting_stats = attack is not None or health is not None
+            return PetSlot(occupied=None if competing_pet or conflicting_stats else False)
         if not stats_present:
             return PetSlot(occupied=None)
         species = None
-        scores = sorted((self._distance(frame, slot.portrait, path), name) for name, path in slot.species_templates.items())
         if scores and scores[0][0] <= slot.max_distance and (len(scores) == 1 or scores[1][0] - scores[0][0] > slot.margin):
             species = scores[0][1]
         return PetSlot(occupied=True, species=species, attack=attack, health=health, level=self._number(frame, slot.level, 1, 3))
