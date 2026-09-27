@@ -76,6 +76,12 @@ action, then view the overlay to confirm every region. Blank OCR is unknown,
 not empty. Occupied slots require both attack and health. Merging additionally
 requires identified species and known compatible levels.
 
+Numeric regions must include a clear margin around every digit, including
+two-digit values. OCR isolates contrasting glyphs, removes frame lines, and
+pads the result before one recognition call. Blank or substantially clipped
+glyphs return unknown; they are not repaired by guessing a number. Validate
+counter zeroes, levels, and larger stats as well as the opening shop.
+
 ## Preview and controlled execution
 
 After setting `calibrated` to true and keeping the game foreground:

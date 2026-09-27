@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from desktop import main
-from desktop_runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow, tesseract_ocr
+from desktop_runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow, prepare_numeric_crop, tesseract_ocr
 from desktop_session import DesktopSession
 from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase
 from desktop_vision import Perceptor, Rect, VisionProfile
@@ -210,28 +210,87 @@ def fake_tesseract(monkeypatch):
     return ocr
 
 
+def numeric_crop(*, light_background=True):
+    """Two synthetic, separate complete glyphs, with no installed font needed."""
+    frame = np.full((30, 36, 3), 255 if light_background else 0, dtype=np.uint8)
+    foreground = 0 if light_background else 255
+    frame[5:25, 6:11] = foreground
+    frame[5:25, 20:25] = foreground
+    return frame
+
+
 def test_ocr_passes_finite_subprocess_timeout_and_preserves_preprocessing(fake_tesseract):
-    assert tesseract_ocr(np.zeros((2, 3, 3), dtype=np.uint8)) == "12"
+    assert tesseract_ocr(numeric_crop()) == "12"
     args, kwargs = fake_tesseract.image_to_string.call_args
     assert kwargs["timeout"] == 3.0
-    assert args[0].mode == "L" and args[0].size == (9, 6)
+    assert kwargs["config"].startswith("--psm 13 ")
+    assert args[0].mode == "L" and args[0].size == (129, 132)
+
+
+def test_numeric_preprocessing_normalizes_contrast_without_dropping_a_digit():
+    light = np.asarray(prepare_numeric_crop(numeric_crop()))
+    dark = np.asarray(prepare_numeric_crop(numeric_crop(light_background=False)))
+    np.testing.assert_array_equal(light, dark)
+    columns = np.any(light == 0, axis=0)
+    assert np.count_nonzero(np.diff(np.r_[False, columns, False].astype(int)) == 1) == 2
+    assert np.all(light[:36] == 255) and np.all(light[-36:] == 255)
+
+
+def test_numeric_preprocessing_removes_frame_lines_and_small_noise():
+    clean = numeric_crop()
+    noisy = clean.copy()
+    noisy[0] = 0
+    noisy[-1] = 0
+    noisy[2, 15] = 0
+    np.testing.assert_array_equal(prepare_numeric_crop(clean), prepare_numeric_crop(noisy))
+
+
+@pytest.mark.parametrize("edge", ["left", "right", "top", "bottom"])
+def test_clipped_glyph_rejects_entire_value_instead_of_remaining_digit(edge, fake_tesseract):
+    frame = numeric_crop()
+    if edge == "left":
+        frame[5:25, :7] = 0
+    elif edge == "right":
+        frame[5:25, 24:] = 0
+    elif edge == "top":
+        frame[:6, 6:11] = 0
+    else:
+        frame[24:, 6:11] = 0
+    assert prepare_numeric_crop(frame) is None
+    assert tesseract_ocr(frame) == ""
+    fake_tesseract.image_to_string.assert_not_called()
+
+
+def test_clipped_glyph_joined_to_full_width_border_is_not_dropped(fake_tesseract):
+    frame = numeric_crop()
+    frame[0] = 0
+    frame[:6, 6:11] = 0
+    assert prepare_numeric_crop(frame) is None
+    assert tesseract_ocr(frame) == ""
+    fake_tesseract.image_to_string.assert_not_called()
+
+
+@pytest.mark.parametrize("value", [0, 128, 255])
+def test_blank_crop_is_unknown_without_starting_ocr(value, fake_tesseract):
+    assert tesseract_ocr(np.full((30, 40, 3), value, dtype=np.uint8)) == ""
+    fake_tesseract.image_to_string.assert_not_called()
 
 
 def test_ocr_timeout_becomes_clear_fatal_error(fake_tesseract):
     failure = RuntimeError("Tesseract process timeout")
     fake_tesseract.image_to_string.side_effect = failure
     with pytest.raises(TimeoutError, match="Tesseract OCR exceeded 3s timeout") as caught:
-        tesseract_ocr(np.zeros((1, 1, 3), dtype=np.uint8))
+        tesseract_ocr(numeric_crop())
     assert caught.value.__cause__ is failure
 
 
 def test_ocr_timeout_aborts_observation_without_retrying_other_crops_or_clicking(fake_tesseract, monkeypatch):
     fake_tesseract.image_to_string.side_effect = RuntimeError("Tesseract process timeout")
-    profile = VisionProfile(image_size=(2, 1),
-                            hud={"gold": Rect(0, 0, 1, 1), "turn": Rect(1, 0, 1, 1)})
+    profile = VisionProfile(image_size=(72, 30),
+                            hud={"gold": Rect(0, 0, 36, 30), "turn": Rect(36, 0, 36, 30)})
     perceptor = Perceptor(profile, ocr=tesseract_ocr)
     monkeypatch.setattr(perceptor, "_phase", lambda frame: Phase.SHOP)
-    frame = np.zeros((1, 2, 3), dtype=np.uint8)
+    frame = np.concatenate([numeric_crop(), numeric_crop()], axis=1)
     click = Mock()
     runner = DesktopSession(lambda: perceptor.observe(frame), click, DesktopPolicy(),
                             sleep=lambda duration: None)
@@ -245,5 +304,5 @@ def test_ocr_timeout_aborts_observation_without_retrying_other_crops_or_clicking
 
 def test_other_ocr_runtime_errors_still_yield_unknown(fake_tesseract):
     fake_tesseract.image_to_string.side_effect = RuntimeError("OCR unavailable")
-    perceptor = Perceptor(VisionProfile(image_size=(1, 1)), ocr=tesseract_ocr)
-    assert perceptor._number(np.zeros((1, 1, 3), dtype=np.uint8), Rect(0, 0, 1, 1), 0, 99) is None
+    perceptor = Perceptor(VisionProfile(image_size=(36, 30)), ocr=tesseract_ocr)
+    assert perceptor._number(numeric_crop(), Rect(0, 0, 36, 30), 0, 99) is None

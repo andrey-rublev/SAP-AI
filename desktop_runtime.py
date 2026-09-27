@@ -110,21 +110,71 @@ class WindowsGameWindow:
                 self.mouse.FAILSAFE = failsafe
 
 
-def tesseract_ocr(image):
-    """Read a numeric crop with a bounded subprocess; timeouts stop perception."""
-    import pytesseract
+def prepare_numeric_crop(image):
+    """Isolate complete numeric glyphs from contrasting HUD/stat backgrounds.
+
+    Tight calibration must leave a margin around each glyph. Border-connected
+    shapes are removed; a substantial clipped glyph rejects the entire crop so
+    a truncated two-digit value cannot silently become its remaining digit.
+    This is a deterministic image transform, not a correction of OCR answers.
+    """
     from PIL import Image, ImageOps
+
+    image = np.asarray(image)
+    if image.dtype != np.uint8 or image.ndim != 3 or image.shape[2] != 3 or not image.size:
+        raise ValueError("numeric OCR requires a nonempty RGB uint8 crop")
+    gray = np.asarray(ImageOps.grayscale(Image.fromarray(image)))
+    mask = gray < 90 if np.median(gray) > 170 else gray > 180
+    height, width = mask.shape
+    visited = np.zeros_like(mask)
+    foreground = np.zeros_like(mask)
+    for y, x in zip(*np.where(mask)):
+        if visited[y, x]:
+            continue
+        pending, component = [(y, x)], []
+        visited[y, x] = True
+        touches_edge = False
+        while pending:
+            cy, cx = pending.pop()
+            component.append((cy, cx))
+            touches_edge |= cx in (0, width - 1) or cy in (0, height - 1)
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    ny, nx = cy + dy, cx + dx
+                    if 0 <= ny < height and 0 <= nx < width and mask[ny, nx] and not visited[ny, nx]:
+                        visited[ny, nx] = True
+                        pending.append((ny, nx))
+        ys, xs = zip(*component)
+        tall = max(ys) - min(ys) >= height * 0.3
+        # A glyph can join a full-width frame line when clipped. Its width
+        # cannot safely distinguish that combined shape from a UI border.
+        if touches_edge and tall:
+            return None
+        if not touches_edge and tall and len(component) >= height * width * 0.015:
+            foreground[ys, xs] = True
+    if not foreground.any():
+        return None
+    ys, xs = np.where(foreground)
+    foreground = foreground[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+    crop = Image.fromarray(np.where(foreground, 0, 255).astype(np.uint8))
+    crop = crop.resize((crop.width * 3, crop.height * 3), Image.Resampling.NEAREST)
+    return ImageOps.expand(crop, 36, 255)
+
+
+def tesseract_ocr(image):
+    """Read isolated glyphs once; blank/clipped crops stay unknown."""
+    crop = prepare_numeric_crop(image)
+    if crop is None:
+        return ""
+    import pytesseract
 
     if not shutil.which("tesseract"):
         executable = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
         if executable.is_file():
             pytesseract.pytesseract.tesseract_cmd = str(executable)
-    crop = Image.fromarray(np.asarray(image, dtype=np.uint8)).convert("RGB")
-    crop = crop.resize((crop.width * 3, crop.height * 3))
-    crop = ImageOps.grayscale(crop)
     try:
         return pytesseract.image_to_string(
-            crop, config="--psm 7 -c tessedit_char_whitelist=0123456789",
+            crop, config="--psm 13 -c tessedit_char_whitelist=0123456789",
             timeout=OCR_TIMEOUT_SECONDS,
         ).strip()
     except RuntimeError as exc:

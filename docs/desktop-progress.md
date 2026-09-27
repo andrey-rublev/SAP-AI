@@ -46,14 +46,14 @@ readiness from synthetic tests.
 ## Progress, 2026-09-27
 
 - Deleted the recurring task at the user's request and recorded renewed screen
-  permission above. The next launch reached Steam's sign-in window; live
-  calibration is waiting for the user to sign in and open the game.
+  permission above. The initial launch reached Steam's sign-in window; the
+  user subsequently opened the game before the live demo below.
 - Bounded each Tesseract subprocess to three seconds. A timed-out crop now
   aborts observation immediately, producing a clear session error without
   further OCR retries or mouse input. Other OCR failures remain unknown readings.
 - Validation: **361 tests passed**, including four new mocked OCR regression
-  tests. No private captures or calibration were added to Git. No real purchase
-  or autonomous game turn has been verified.
+  tests. No private captures or calibration were added to Git. At this point,
+  a real purchase and an autonomous game turn were still unverified.
 
 ## Live validation resumed, 2026-09-27
 
@@ -78,16 +78,38 @@ of the observed fish/duck/fish purchase and negative cases pass: **39 session
 tests**, and **119 combined runtime/session/state tests**. The first victory
 screen required a click to return to the turn-two shop.
 
+The visible demo continued through turn two: bought an otter and ant, rolled,
+and merged a shop fish into a team fish (2/3 became 3/4). The second battle also
+ended in victory. The game is left at the turn-three shop with **2 trophies,
+5 lives, and 10 gold**. Both rounds were agent-directed; the standalone runner
+has not completed an end-to-end live turn. The turn-three tier-unlock overlay
+also needed dismissal before the new shop settled.
+
+Real frames revealed OCR reading a health digit as 72 or 4. Numeric OCR now
+isolates complete contrasting glyphs, removes frame lines, pads the image,
+and uses one bounded raw-line recognition call. Blank/clipped crops return
+unknown rather than a guessed or partial value. **393 tests passed** after
+the click, compaction, and OCR changes. Offline inspection of the held-out
+turn-three frame reads all occupied attack/health values correctly and
+proposes a roll. Some zero-gold, wins, and level crops remain unreadable;
+species coverage remains incomplete. Recorded day/night shops, naming,
+battle, victory, and tier-unlock frames have been checked; later-turn coverage
+still needs expansion.
+The private profile stays `calibrated: false`; unattended play is not enabled.
+
 ## Next useful milestones
 
-1. Capture a stable shop image and establish a private local profile using the
-   actual client resolution and geometry. Obtain empty team/empty shop samples.
-2. Verify every OCR reading and proposed action against recorded real frames,
-   including negative frames (menus/battle) and post-purchase/roll frames.
-3. Observe one real purchase and confirm its expected gold and slot changes.
-   Then verify roll, end-turn, and the following shop without duplicate inputs.
-4. Add calibrated naming/dialog/result handling and changing shop-slot counts.
-   Record verified multi-turn playback before claiming autonomous runs.
+1. Finish the private 2048x1152 profile using the recorded turn-one through
+   turn-three frames. Keep `calibrated` false until all readings and input
+   points pass validation. Empty team and shop reference images are available.
+2. Verify OCR, empty slots, species, and proposals across both day and night
+   backgrounds. Include naming, battle, victory, and tier-unlock negatives.
+3. Verify a bounded run of the standalone controller: purchase acknowledgment,
+   roll, end-turn, and the following shop without duplicate inputs. The
+   agent-directed demo does not establish that this pipeline works end to end.
+4. Add calibrated naming/dialog/result handling and changing shop-slot counts,
+   including victory continuation and tier-unlock dismissal. Record verified
+   multi-turn controller playback before claiming autonomous runs.
 5. Broaden species/level recognition and strategic play (food, abilities,
    ordering), using an observation representation compatible with the real game.
 
