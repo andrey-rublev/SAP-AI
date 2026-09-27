@@ -13,8 +13,8 @@ dependencies = ["gymnasium>=1.0,<2", "numpy>=1.26,<3"]
 [project.optional-dependencies]
 dqn = ["torch>=2.6,<3"]
 plot = ["matplotlib>=3.8,<4"]
-live = ["pyautogui>=0.9.54", "pytesseract>=0.3.10"]
-dev = ["pytest>=8,<10"]
+live = ["pyautogui>=0.9.54", "pytesseract>=0.3.10", "Pillow>=10,<13"]
+dev = ["pytest>=8,<10", "Pillow>=10,<13"]
 
 [project.scripts]
 sap-train = "main:cli"
@@ -23,7 +23,7 @@ sap-play = "play:cli"
 sap-dqn = "dqn:main"
 
 [tool.setuptools]
-py-modules = ["agent", "autogui", "benchmark", "desktop_state", "dqn", "evaluation", "game", "heuristic", "main", "metrics", "play", "train"]
+py-modules = ["agent", "autogui", "benchmark", "desktop_state", "desktop_vision", "dqn", "evaluation", "game", "heuristic", "main", "metrics", "play", "train"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
