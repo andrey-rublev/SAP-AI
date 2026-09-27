@@ -23,7 +23,7 @@ sap-play = "play:cli"
 sap-dqn = "dqn:main"
 
 [tool.setuptools]
-py-modules = ["agent", "autogui", "benchmark", "desktop_state", "desktop_vision", "dqn", "evaluation", "game", "heuristic", "main", "metrics", "play", "train"]
+py-modules = ["agent", "autogui", "benchmark", "desktop_session", "desktop_state", "desktop_vision", "dqn", "evaluation", "game", "heuristic", "main", "metrics", "play", "train"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
