@@ -1,0 +1,110 @@
+# Desktop controller
+
+The new desktop pipeline is separate from the toy simulator and its DQN. It
+reads real attack/health, explicit slot occupancy, optional species/levels, and
+the game phase. Its first policy is a conservative stat-based baseline. It does
+not yet model food, pet abilities, frozen offers, or team positioning.
+
+```text
+game client image -> calibrated Perceptor -> typed Board
+   -> two matching observations -> DesktopPolicy -> legal Action
+   -> re-read board and verify focus -> mouse input
+   -> wait for expected gold/slot/phase changes -> next decision
+```
+
+## Install and capture
+
+```powershell
+python -m pip install -e ".[live,dev]"
+python desktop.py capture --output .local/desktop/shop.png
+```
+
+The capture command requires the Super Auto Pets window to be in the foreground.
+Live IO is Windows-only. Tesseract must be installed separately; its standard
+Windows install location is detected if it is absent from PATH. Local captures,
+templates, profiles, and event logs should stay under `.local/desktop/`, which
+Git ignores. Do not publish account information or private screenshots.
+
+## Calibrate from actual game frames
+
+A profile is JSON version 1. `image_size` is the exact game **client** size, not
+the monitor size. Rectangles use `[x, y, width, height]`; button points use
+`[x, y]`. Coordinates are relative to the top-left of the game client.
+
+Fields:
+
+| Field | Contents |
+| --- | --- |
+| `version` | `1` |
+| `image_size` | `[width, height]` from the captured image |
+| `calibrated` | `false` until every region and action point is verified |
+| `hud` | Rectangles for `gold`, `turn`, and optionally `wins`, `lives` |
+| `phase_templates` | Objects containing `phase`, `region`, and a relative `template` image path |
+| `shop` | One configuration for each currently visible pet shop slot (up to five) |
+| `team` | Exactly five team slot configurations |
+| `buttons` | Calibrated `roll`, `end_turn`, optional `sell` points |
+
+Each slot contains `portrait`, `attack`, `health`, and optional `level`
+rectangles. `empty_template` references an image of that exact portrait region
+when empty. `species_templates` optionally maps species names to matching
+portrait images. Reference paths must stay inside the profile directory.
+
+Extract template crops from a screenshot using observed coordinates:
+
+```powershell
+python desktop.py template --image .local/desktop/shop.png --region 100 200 80 60 --output .local/desktop/templates/empty-slot.png
+```
+
+Those coordinates are an example, not a shipped calibration. An empty shop
+slot normally needs a reference captured after a purchase. Empty team slots
+need references from an empty board. Include a stable, distinctive shop-only
+region as a `shop` phase template. Add `battle` and `result` references from
+their respective screens. Avoid animations, pet sprites, hover highlights,
+numeric counters, and broad background regions for phase identification.
+
+Matching uses normalized mean pixel distance; `max_distance` defaults to 0.06
+and an ambiguity `margin` to 0.015. Verify these against both positive and
+negative frames. A template match is not a probability. Profiles are specific
+to game resolution and appearance; changes require recalibration.
+
+```powershell
+python desktop.py inspect --profile .local/desktop/profile.json --image .local/desktop/shop.png --overlay .local/desktop/overlay.png
+```
+
+This command is entirely offline. Inspect its board readings and proposed
+action, then view the overlay to confirm every region. Blank OCR is unknown,
+not empty. Occupied slots require both attack and health. Merging additionally
+requires identified species and known compatible levels.
+
+## Preview and controlled execution
+
+After setting `calibrated` to true and keeping the game foreground:
+
+```powershell
+python desktop.py run --profile .local/desktop/profile.json
+python desktop.py run --profile .local/desktop/profile.json --execute --max-actions 3
+```
+
+The first command proposes one stable action without sending input. The second
+executes a bounded session and waits for each action to be acknowledged. Every
+step is logged to `.local/desktop/session.jsonl`. `--action-timeout` defaults
+to 30 seconds and can be increased for slower OCR. Ctrl+C or moving the mouse to
+a screen corner stops control. Losing window focus stops control. The program
+does not activate or navigate other applications.
+
+Interrupted drags release the mouse button before the session exits. The
+session will not repeat a purchase just because its result is slow. It
+stops on unreadable boards, mismatched image size, missing calibration, action
+timeouts, or result screens. End-turn requires an observed turn number; after
+a battle it waits for a stable shop showing a higher turn. Menus, naming
+dialogs, result continuation, and initial game setup currently require manual
+handling. The legacy `play.py --live` bridge remains available, but this
+structured pipeline is the path for ongoing desktop development.
+
+## Validation boundaries
+
+The state model, recognition logic, and session are tested with synthetic
+images and replayed observations. Native input is tested with mocks. These
+tests do not establish correct coordinates, template quality, OCR accuracy, or
+successful real-client play. Track observed game evidence and remaining work
+in [desktop-progress.md](desktop-progress.md).

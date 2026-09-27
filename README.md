@@ -134,6 +134,14 @@ serial use.
 
 ## Experimental desktop bridge
 
+The new structured controller is documented in [Desktop controller](docs/desktop.md).
+It adds observed attack/health and occupancy, calibrated phase recognition,
+stable-frame decisions, action acknowledgments, and window-relative Windows IO.
+Use `python desktop.py --help` for capture, offline inspection, and bounded live
+preview/execution. [Desktop progress](docs/desktop-progress.md) tracks what has
+actually been verified. The legacy bridge described below is retained for
+compatibility.
+
 `python play.py` runs offline. Desktop control requires explicit `--live`, an
 installed Tesseract binary, optional Python dependencies, and a calibrated file:
 

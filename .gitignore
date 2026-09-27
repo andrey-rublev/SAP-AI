@@ -15,3 +15,5 @@ qtable*.json
 *.png
 reports/
 layout*.json
+.local/
+desktop-profiles/
