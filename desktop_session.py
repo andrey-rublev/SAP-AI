@@ -43,6 +43,41 @@ def _credible_target(source, target) -> bool:
     return not (source.species and target.species and source.species != target.species)
 
 
+def _shop_purchase_observed(before, after, purchased: int) -> bool:
+    """Match one removal, either leaving its gap or packing remaining offers.
+
+    Complete survivor stats are required. Species/level must agree whenever
+    both observations know them; matching stats cannot prove unknown identity.
+    """
+    if (len(before) != len(after) or any(pet.occupied is None for pet in (*before, *after))
+            or before[purchased].occupied is not True):
+        return False
+
+    def matches(expected):
+        for old, new in zip(expected, after):
+            if old is None or old.occupied is False:
+                if new.occupied is not False:
+                    return False
+                continue
+            if new.occupied is not True:
+                return False
+            for field in ("attack", "health"):
+                value = getattr(old, field)
+                if value is None or value != getattr(new, field):
+                    return False
+            for field in ("species", "level"):
+                left, right = getattr(old, field), getattr(new, field)
+                if left is not None and right is not None and left != right:
+                    return False
+        return True
+
+    with_gap = (*before[:purchased], None, *before[purchased + 1:])
+    compacted = [pet for index, pet in enumerate(before)
+                 if index != purchased and pet.occupied is True]
+    compacted.extend([None] * (len(before) - len(compacted)))
+    return matches(with_gap) or matches(compacted)
+
+
 def action_acknowledged(before: Board, after: Board, action: Action) -> bool:
     """Recognize only action-specific evidence, never arbitrary screen changes."""
     if action.kind == "end_turn":
@@ -70,7 +105,7 @@ def action_acknowledged(before: Board, after: Board, action: Action) -> bool:
             or j >= len(before.team) or j >= len(after.team)):
         return False
     source, target_before, target_after = before.shop[i], before.team[j], after.team[j]
-    if (delta != -3 or source.occupied is not True or after.shop[i].occupied is not False
+    if (delta != -3 or not _shop_purchase_observed(before.shop, after.shop, i)
             or not _credible_target(source, target_after)):
         return False
     if action.kind == "buy":

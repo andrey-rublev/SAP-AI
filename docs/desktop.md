@@ -96,6 +96,11 @@ Purchases and merges select the shop pet with one click, then click its team
 destination. Both clicks check window focus and geometry. If either fails,
 the session stops without repeating the input sequence.
 
+Purchase acknowledgment checks gold, the destination pet, and removal of the
+selected shop offer. Remaining offers may stay in place or shift left, but
+their order and observed stats must match. Known species and levels must also
+agree; equal stats alone cannot identify an unrecognized species.
+
 Each Tesseract call has a three-second subprocess timeout. If a numeric crop
 times out, observation stops immediately and the session reports an error
 without issuing another action. This bound is separate from the action

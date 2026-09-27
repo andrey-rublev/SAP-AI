@@ -11,6 +11,8 @@ from desktop_session import DesktopSession, action_acknowledged
 
 EMPTY = PetSlot(False)
 ANT = PetSlot(True, "ant", 2, 1, 1)
+FISH = PetSlot(True, "fish", 2, 3, 1)
+DUCK = PetSlot(True, "duck", 2, 2, 1)
 
 
 def shop(**changes):
@@ -80,6 +82,72 @@ def test_buy_requires_gold_source_and_target_evidence():
     assert not action_acknowledged(before, replace(correct, shop=before.shop), action)
     assert not action_acknowledged(before, replace(correct, team=before.team), action)
     assert not action_acknowledged(before, replace(correct, turn=2), action)
+
+
+def test_live_purchase_replay_acknowledges_left_compaction():
+    before = shop(shop=(FISH, DUCK, FISH))
+    after = shop(gold=7, shop=(DUCK, FISH, EMPTY), team=(FISH, EMPTY, EMPTY, EMPTY, EMPTY))
+    action = Action("buy", 0, 0)
+    runner, clicks, _ = session([before, before, after, after, after], action, max_actions=1)
+    result = runner.run()
+    assert clicks == [action]
+    assert (result.reason, result.actions, result.acknowledgments) == ("max_actions", 1, 1)
+
+
+@pytest.mark.parametrize("remaining", [(FISH, FISH, EMPTY), (FISH, EMPTY, FISH)])
+def test_duplicate_offers_support_compaction_and_preserved_gaps(remaining):
+    before = shop(shop=(FISH, FISH, FISH))
+    after = shop(gold=7, shop=remaining, team=(FISH, EMPTY, EMPTY, EMPTY, EMPTY))
+    assert action_acknowledged(before, after, Action("buy", 1, 0))
+
+
+@pytest.mark.parametrize("remaining", [
+    (FISH, FISH, EMPTY),  # The duck, rather than the selected fish, disappeared.
+    (DUCK, EMPTY, EMPTY),  # Two offers disappeared.
+    (FISH, DUCK, EMPTY),  # Remaining offers were reordered.
+    (DUCK, replace(FISH, attack=3), EMPTY),
+    (DUCK, replace(FISH, species="beaver"), EMPTY),
+    (DUCK, replace(FISH, level=2), EMPTY),
+    (DUCK, replace(FISH, attack=None), EMPTY),
+    (DUCK, replace(FISH, health=None), EMPTY),
+    (DUCK, FISH, PetSlot(None)),
+    (DUCK, FISH),  # A different calibration geometry is not compaction.
+])
+def test_compaction_rejects_inconsistent_or_incomplete_survivors(remaining):
+    before = shop(shop=(FISH, DUCK, FISH))
+    after = shop(gold=7, shop=remaining, team=(FISH, EMPTY, EMPTY, EMPTY, EMPTY))
+    assert not action_acknowledged(before, after, Action("buy", 0, 0))
+
+
+def test_gap_preserving_purchase_also_requires_unchanged_survivors():
+    before = shop(shop=(FISH, DUCK, FISH))
+    after = shop(gold=7, shop=(EMPTY, ANT, FISH), team=(FISH, EMPTY, EMPTY, EMPTY, EMPTY))
+    assert not action_acknowledged(before, after, Action("buy", 0, 0))
+
+
+def test_compaction_with_unknown_species_uses_only_observed_stats():
+    fish, duck = replace(FISH, species=None, level=None), replace(DUCK, species=None, level=None)
+    before = shop(shop=(fish, duck, fish))
+    after = shop(gold=7, shop=(duck, fish, EMPTY), team=(fish, EMPTY, EMPTY, EMPTY, EMPTY))
+    assert action_acknowledged(before, after, Action("buy", 0, 0))
+    # Complete numeric evidence remains necessary when species are unavailable.
+    missing = replace(after, shop=(replace(duck, health=None), fish, EMPTY))
+    assert not action_acknowledged(before, missing, Action("buy", 0, 0))
+
+
+def test_compaction_still_requires_price_and_matching_target_species():
+    before = shop(shop=(FISH, DUCK, FISH))
+    after = shop(gold=7, shop=(DUCK, FISH, EMPTY), team=(FISH, EMPTY, EMPTY, EMPTY, EMPTY))
+    assert not action_acknowledged(before, replace(after, gold=8), Action("buy", 0, 0))
+    assert not action_acknowledged(before, replace(after, team=(DUCK, EMPTY, EMPTY, EMPTY, EMPTY)),
+                                   Action("buy", 0, 0))
+
+
+def test_merge_purchase_can_compact_the_shop():
+    before = shop(shop=(FISH, DUCK, FISH), team=(FISH, EMPTY, EMPTY, EMPTY, EMPTY))
+    after = replace(before, gold=7, shop=(DUCK, FISH, EMPTY),
+                    team=(replace(FISH, attack=3, health=4), EMPTY, EMPTY, EMPTY, EMPTY))
+    assert action_acknowledged(before, after, Action("merge", 0, 0))
 
 
 def test_sell_requires_emptied_slot_and_one_gold():

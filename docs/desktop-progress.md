@@ -70,6 +70,14 @@ purchases and merges, with focus/geometry checks at each click and no retry
 after an error. **22 mocked runtime tests passed.** Shop compaction and OCR
 calibration are also being checked against the recorded real frames.
 
+Recorded purchases also showed that the shop packs its remaining pets left.
+Acknowledgment now accepts the selected offer's removal with either preserved
+gaps or left-compacted survivors, checking every survivor's stats and any known
+species/level. Unknown species still cannot establish exact identity. A replay
+of the observed fish/duck/fish purchase and negative cases pass: **39 session
+tests**, and **119 combined runtime/session/state tests**. The first victory
+screen required a click to return to the turn-two shop.
+
 ## Next useful milestones
 
 1. Capture a stable shop image and establish a private local profile using the
