@@ -213,12 +213,15 @@ class DesktopSession:
                 stage = "action"
                 # Record the attempt before IO: a failing callback may have clicked.
                 actions += 1
-                pending, before, pending_at = proposal, board, self.clock()
+                pending, before = proposal, board
                 pending_polls = 0
                 last_acted = fingerprint
                 if pending.kind == "end_turn":
                     waiting_turn = board.turn
                 self.act(pending)
+                # The runtime may recheck the entire board before clicking.
+                # Give the resulting change its full observation budget.
+                pending_at = self.clock()
                 emit("acted", action=asdict(pending))
                 stable = 0
             if reason == "max_polls" and waiting_turn is not None and pending is None:

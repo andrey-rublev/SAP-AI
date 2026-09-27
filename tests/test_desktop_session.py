@@ -172,6 +172,8 @@ def test_dependency_errors_stop_without_retries(stage):
     assert result.reason == stage + "_error"
     assert result.error == "RuntimeError: disconnected"
     assert result.actions == (1 if stage == "action" else 0)
+    if stage == "action":
+        assert result.pending_action == Action("buy", 0, 0)
     assert not clicks
 
 
@@ -192,6 +194,28 @@ def test_wall_clock_action_timeout_without_poll_budget_exhaustion():
     assert result.reason == "action_timeout"
     assert result.polls == 4
     assert len(clicks) == 1
+
+
+def test_slow_action_preflight_does_not_consume_acknowledgment_timeout():
+    before = shop()
+    bought = shop(gold=7, shop=(EMPTY, ANT, ANT), team=(ANT, EMPTY, EMPTY, EMPTY, EMPTY))
+    action = Action("buy", 0, 0)
+    runner, clicks, _ = session([before, before, bought, bought, bought], action,
+                                action_timeout=0.5, max_actions=1)
+    now = [0.0]
+    runner.clock = lambda: now[0]
+    runner.sleep = lambda duration: now.__setitem__(0, now[0] + 0.1)
+
+    def slow_act(proposal):
+        # Simulate expensive OCR revalidation before the actual click.
+        now[0] += 5.0
+        clicks.append(proposal)
+
+    runner.act = slow_act
+    result = runner.run()
+    assert clicks == [action]
+    assert (result.reason, result.actions, result.acknowledgments) == ("max_actions", 1, 1)
+    assert result.polls == 5
 
 
 def test_rejects_single_frame_control():
