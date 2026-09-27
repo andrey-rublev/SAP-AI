@@ -1,6 +1,6 @@
 """Window IO contracts with fake frames/mouse; never touches a real desktop."""
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 import sys
 
 import numpy as np
@@ -35,7 +35,65 @@ def runtime(*, execute=True, current=None):
 def test_purchase_targets_correct_client_slot():
     driver, window = runtime()
     driver.act(Action("buy", slot=0, target=4))
-    window.drag.assert_called_once_with((15, 65), (75, 25), (100, 100))
+    assert window.click.call_args_list == [
+        call((15, 65), (100, 100)), call((75, 25), (100, 100)),
+    ]
+    window.drag.assert_not_called()
+
+
+def test_merge_selects_shop_pet_then_matching_team_target():
+    observed = Board(Phase.SHOP, gold=10, turn=1,
+                     shop=(PetSlot(True, "fish", 2, 3, 1),),
+                     team=(PetSlot(False), PetSlot(True, "fish", 3, 4, 1),
+                           PetSlot(False), PetSlot(False), PetSlot(False)))
+    driver, window = runtime(current=observed)
+    driver.last_board = observed
+    driver.act(Action("merge", slot=0, target=1))
+    assert window.click.call_args_list == [
+        call((15, 65), (100, 100)), call((30, 25), (100, 100)),
+    ]
+    window.drag.assert_not_called()
+
+
+@pytest.mark.parametrize("failed_click", [1, 2])
+def test_purchase_click_failure_stops_without_retry(failed_click):
+    driver, window = runtime()
+    window.click.side_effect = [None] * (failed_click - 1) + [DesktopUnavailable("focus")]
+    with pytest.raises(DesktopUnavailable, match="focus"):
+        driver.act(Action("buy", 0, 4))
+    expected = [call((15, 65), (100, 100)), call((75, 25), (100, 100))]
+    assert window.click.call_args_list == expected[:failed_click]
+    window.drag.assert_not_called()
+
+
+def test_purchase_rechecks_focus_before_destination_click():
+    driver, _ = runtime()
+    window = WindowsGameWindow.__new__(WindowsGameWindow)
+    window.capture = Mock(return_value=np.zeros((100, 100, 3), dtype=np.uint8))
+    # Selecting the shop pet succeeds; focus is lost before placing it.
+    window.geometry = Mock(side_effect=[(500, 200, 100, 100)] * 2 + [DesktopUnavailable("focus")])
+    window.mouse = Mock()
+    driver.window = window
+    with pytest.raises(DesktopUnavailable, match="focus"):
+        driver.act(Action("buy", 0, 4))
+    window.mouse.click.assert_called_once_with(515, 265)
+    window.mouse.moveTo.assert_called_once_with(515, 265, duration=0.15)
+
+
+def test_purchase_rechecks_geometry_before_destination_press():
+    driver, _ = runtime()
+    window = WindowsGameWindow.__new__(WindowsGameWindow)
+    window.capture = Mock(return_value=np.zeros((100, 100, 3), dtype=np.uint8))
+    # The client moves while the pointer travels to the destination.
+    window.geometry = Mock(side_effect=[(500, 200, 100, 100)] * 3 + [(501, 200, 100, 100)])
+    window.mouse = Mock()
+    driver.window = window
+    with pytest.raises(DesktopUnavailable, match="moved"):
+        driver.act(Action("buy", 0, 4))
+    window.mouse.click.assert_called_once_with(515, 265)
+    assert window.mouse.moveTo.call_args_list == [
+        call(515, 265, duration=0.15), call(575, 225, duration=0.15),
+    ]
 
 
 def test_preview_cannot_click():
@@ -51,6 +109,7 @@ def test_changed_board_rejected_before_mouse_input():
     with pytest.raises(DesktopUnavailable, match="changed"):
         driver.act(Action("buy", 0, 0))
     window.drag.assert_not_called()
+    window.click.assert_not_called()
 
 
 def test_missing_button_fails_without_input():

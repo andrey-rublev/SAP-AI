@@ -159,8 +159,11 @@ class DesktopRuntime:
             raise DesktopUnavailable("board changed before input; observe again")
         size = self.profile.image_size
         if action.kind in ("buy", "merge"):
-            self.window.drag(self.profile.shop[action.slot].portrait.center,
-                             self.profile.team[action.target].portrait.center, size)
+            # The desktop client selects a shop pet, then places it with a
+            # second click. Each click rechecks focus and client geometry;
+            # any failure propagates without retrying or selecting again.
+            self.window.click(self.profile.shop[action.slot].portrait.center, size)
+            self.window.click(self.profile.team[action.target].portrait.center, size)
         elif action.kind == "sell":
             if "sell" not in self.profile.buttons:
                 raise ValueError("profile has no calibrated sell point")

@@ -55,6 +55,21 @@ readiness from synthetic tests.
   tests. No private captures or calibration were added to Git. No real purchase
   or autonomous game turn has been verified.
 
+## Live validation resumed, 2026-09-27
+
+The user requested visible desktop play. Using Computer Use, we opened the
+installed game, started a free Turtle-pack Arena run, bought two fish and a
+duck, rolled once, named the team, and observed a first-round victory. The
+three purchases changed gold from 10 to 7 to 4 to 1, then the roll spent the
+last gold. These were agent-directed UI actions, not an unattended Python run.
+Private frames under `.local/desktop/` support calibration and offline replay.
+
+The client ignored a drag purchase but accepted selecting a shop pet and then
+clicking an empty team slot. The runtime now uses this click sequence for
+purchases and merges, with focus/geometry checks at each click and no retry
+after an error. **22 mocked runtime tests passed.** Shop compaction and OCR
+calibration are also being checked against the recorded real frames.
+
 ## Next useful milestones
 
 1. Capture a stable shop image and establish a private local profile using the

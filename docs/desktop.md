@@ -92,6 +92,10 @@ to 30 seconds and can be increased for slower OCR. Ctrl+C or moving the mouse to
 a screen corner stops control. Losing window focus stops control. The program
 does not activate or navigate other applications.
 
+Purchases and merges select the shop pet with one click, then click its team
+destination. Both clicks check window focus and geometry. If either fails,
+the session stops without repeating the input sequence.
+
 Each Tesseract call has a three-second subprocess timeout. If a numeric crop
 times out, observation stops immediately and the session reports an error
 without issuing another action. This bound is separate from the action
