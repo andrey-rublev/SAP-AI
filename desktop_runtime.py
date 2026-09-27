@@ -12,6 +12,9 @@ import numpy as np
 from desktop_state import legal_action
 
 
+OCR_TIMEOUT_SECONDS = 3.0
+
+
 class DesktopUnavailable(RuntimeError):
     pass
 
@@ -108,7 +111,7 @@ class WindowsGameWindow:
 
 
 def tesseract_ocr(image):
-    """Enlarge small numeric glyphs; return raw text for strict parsing."""
+    """Read a numeric crop with a bounded subprocess; timeouts stop perception."""
     import pytesseract
     from PIL import Image, ImageOps
 
@@ -119,7 +122,17 @@ def tesseract_ocr(image):
     crop = Image.fromarray(np.asarray(image, dtype=np.uint8)).convert("RGB")
     crop = crop.resize((crop.width * 3, crop.height * 3))
     crop = ImageOps.grayscale(crop)
-    return pytesseract.image_to_string(crop, config="--psm 7 -c tessedit_char_whitelist=0123456789").strip()
+    try:
+        return pytesseract.image_to_string(
+            crop, config="--psm 7 -c tessedit_char_whitelist=0123456789",
+            timeout=OCR_TIMEOUT_SECONDS,
+        ).strip()
+    except RuntimeError as exc:
+        # Pytesseract terminates its child process, then raises an untyped
+        # RuntimeError. Distinguish that timeout from an unreadable OCR result.
+        if str(exc) == "Tesseract process timeout":
+            raise TimeoutError(f"Tesseract OCR exceeded {OCR_TIMEOUT_SECONDS:g}s timeout") from exc
+        raise
 
 
 class DesktopRuntime:

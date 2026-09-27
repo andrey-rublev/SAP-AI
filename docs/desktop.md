@@ -92,6 +92,11 @@ to 30 seconds and can be increased for slower OCR. Ctrl+C or moving the mouse to
 a screen corner stops control. Losing window focus stops control. The program
 does not activate or navigate other applications.
 
+Each Tesseract call has a three-second subprocess timeout. If a numeric crop
+times out, observation stops immediately and the session reports an error
+without issuing another action. This bound is separate from the action
+acknowledgment timeout; increasing `--action-timeout` does not extend OCR calls.
+
 Interrupted drags release the mouse button before the session exits. The
 session will not repeat a purchase just because its result is slow. It
 stops on unreadable boards, mismatched image size, missing calibration, action

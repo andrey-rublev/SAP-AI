@@ -216,6 +216,9 @@ class Perceptor:
             return None
         try:
             return read_number(self.ocr(region.crop(frame)), minimum, maximum)
+        except TimeoutError:
+            # Abort this observation instead of timing out again on every crop.
+            raise
         except Exception:
             # OCR process failures must never authorize a mouse action.
             return None

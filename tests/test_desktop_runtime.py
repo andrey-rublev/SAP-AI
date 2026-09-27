@@ -1,14 +1,16 @@
 """Window IO contracts with fake frames/mouse; never touches a real desktop."""
 from types import SimpleNamespace
 from unittest.mock import Mock
+import sys
 
 import numpy as np
 import pytest
 
 from desktop import main
-from desktop_runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow
-from desktop_state import Action, Board, PetSlot, Phase
-from desktop_vision import Rect
+from desktop_runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow, tesseract_ocr
+from desktop_session import DesktopSession
+from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase
+from desktop_vision import Perceptor, Rect, VisionProfile
 
 
 def board(gold=10):
@@ -138,3 +140,51 @@ def test_template_command_is_offline_and_bounds_checked(tmp_path):
         assert image.size == (3, 4)
     with pytest.raises(ValueError):
         main(["template", "--image", str(source), "--region", "19", "19", "3", "4", "--output", str(target)])
+
+
+@pytest.fixture
+def fake_tesseract(monkeypatch):
+    """Replace the optional OCR package before import; never launch a process."""
+    ocr = SimpleNamespace(image_to_string=Mock(return_value=" 12\n"))
+    monkeypatch.setitem(sys.modules, "pytesseract", ocr)
+    monkeypatch.setattr("desktop_runtime.shutil.which", lambda name: "tesseract")
+    return ocr
+
+
+def test_ocr_passes_finite_subprocess_timeout_and_preserves_preprocessing(fake_tesseract):
+    assert tesseract_ocr(np.zeros((2, 3, 3), dtype=np.uint8)) == "12"
+    args, kwargs = fake_tesseract.image_to_string.call_args
+    assert kwargs["timeout"] == 3.0
+    assert args[0].mode == "L" and args[0].size == (9, 6)
+
+
+def test_ocr_timeout_becomes_clear_fatal_error(fake_tesseract):
+    failure = RuntimeError("Tesseract process timeout")
+    fake_tesseract.image_to_string.side_effect = failure
+    with pytest.raises(TimeoutError, match="Tesseract OCR exceeded 3s timeout") as caught:
+        tesseract_ocr(np.zeros((1, 1, 3), dtype=np.uint8))
+    assert caught.value.__cause__ is failure
+
+
+def test_ocr_timeout_aborts_observation_without_retrying_other_crops_or_clicking(fake_tesseract, monkeypatch):
+    fake_tesseract.image_to_string.side_effect = RuntimeError("Tesseract process timeout")
+    profile = VisionProfile(image_size=(2, 1),
+                            hud={"gold": Rect(0, 0, 1, 1), "turn": Rect(1, 0, 1, 1)})
+    perceptor = Perceptor(profile, ocr=tesseract_ocr)
+    monkeypatch.setattr(perceptor, "_phase", lambda frame: Phase.SHOP)
+    frame = np.zeros((1, 2, 3), dtype=np.uint8)
+    click = Mock()
+    runner = DesktopSession(lambda: perceptor.observe(frame), click, DesktopPolicy(),
+                            sleep=lambda duration: None)
+    result = runner.run()
+    assert result.reason == "observation_error"
+    assert result.error == "TimeoutError: Tesseract OCR exceeded 3s timeout"
+    assert result.actions == 0
+    fake_tesseract.image_to_string.assert_called_once()
+    click.assert_not_called()
+
+
+def test_other_ocr_runtime_errors_still_yield_unknown(fake_tesseract):
+    fake_tesseract.image_to_string.side_effect = RuntimeError("OCR unavailable")
+    perceptor = Perceptor(VisionProfile(image_size=(1, 1)), ocr=tesseract_ocr)
+    assert perceptor._number(np.zeros((1, 1, 3), dtype=np.uint8), Rect(0, 0, 1, 1), 0, 99) is None
