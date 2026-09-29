@@ -141,6 +141,19 @@ caught and fixed swallowed interrupts and missing independent acknowledgment
 checks. Fifty harness tests and 1,600 additional cases passed after those
 fixes; these cases do not exercise vision, native IO, or combat strategy.
 
+The native-resolution live preview passed. The standalone program then chose
+and physically executed one roll, independently observed gold 10 -> 9 with
+the new shop, and stopped at its one-action limit: one attempt, one
+acknowledgment, six observations, no pending action. This is the first verified
+program-executed desktop action. It does not yet establish autonomous turns.
+The full offline suite passed 529 tests before subsequent cache work.
+
+Exact-pixel OCR memoization now avoids repeated subprocesses for unchanged
+crops. The bounded, session-local cache stores raw OCR strings, retains range
+and template checks, and never stores engine failures. A private recorded-frame
+benchmark measured 2.80 seconds initially and 0.0044 seconds on the identical
+frame; changing/animated frames still need OCR. Nineteen cache tests pass.
+
 ## Remaining milestones
 
 1. Finish the private 2048x1152 profile using the recorded turn-one through

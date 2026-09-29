@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from desktop_runtime import DesktopRuntime, WindowsGameWindow, tesseract_ocr
+from desktop_runtime import CachedOCR, DesktopRuntime, WindowsGameWindow, tesseract_ocr
 from desktop_session import DesktopSession
 from desktop_state import DesktopPolicy
 from desktop_vision import Perceptor, Rect, VisionProfile
@@ -105,7 +105,7 @@ def main(argv=None):
         print(f"Saved local template to {args.output}")
         return
     profile = VisionProfile.load(args.profile)
-    perceptor = Perceptor(profile, ocr=tesseract_ocr)
+    perceptor = Perceptor(profile, ocr=CachedOCR(tesseract_ocr))
     if args.command == "inspect":
         frame = read_image(args.image)
         board = perceptor.observe(frame)

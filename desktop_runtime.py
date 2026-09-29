@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ctypes
+from collections import OrderedDict
 from ctypes import wintypes
 import os
 from pathlib import Path
@@ -13,6 +14,38 @@ from desktop_state import Action, Phase, legal_action
 
 
 OCR_TIMEOUT_SECONDS = 3.0
+
+
+class CachedOCR:
+    """Bounded, instance-local raw OCR cache for exactly identical RGB crops.
+
+    Numeric validation remains the perceptor's responsibility on every frame.
+    Errors and non-string results are never cached, so a failed engine can be
+    retried without retaining an invented reading.
+    """
+
+    def __init__(self, ocr, *, max_entries=128):
+        if not callable(ocr):
+            raise TypeError("ocr must be callable")
+        if type(max_entries) is not int or max_entries < 1:
+            raise ValueError("max_entries must be a positive integer")
+        self.ocr, self.max_entries = ocr, max_entries
+        self._cache = OrderedDict()
+
+    def __call__(self, image):
+        crop = np.asarray(image)
+        if crop.ndim != 3 or crop.shape[2] != 3:
+            raise ValueError("OCR cache requires an RGB crop")
+        key = (crop.dtype.str, crop.shape, crop.tobytes())
+        if key in self._cache:
+            self._cache.move_to_end(key)
+            return self._cache[key]
+        result = self.ocr(crop)
+        if isinstance(result, str):
+            self._cache[key] = result
+            if len(self._cache) > self.max_entries:
+                self._cache.popitem(last=False)
+        return result
 
 
 class DesktopUnavailable(RuntimeError):

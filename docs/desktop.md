@@ -126,6 +126,9 @@ Each Tesseract call has a three-second subprocess timeout. If a numeric crop
 times out, observation stops immediately and the session reports an error
 without issuing another action. This bound is separate from the action
 acknowledgment timeout; increasing `--action-timeout` does not extend OCR calls.
+An in-memory 128-entry cache reuses raw OCR strings only when dtype, shape, and
+every crop byte match. Numeric bounds and reference conflicts are still checked
+on every observation. Errors are not cached, and each invocation starts fresh.
 
 Interrupted drags release the mouse button before the session exits. The
 session will not repeat a purchase just because its result is slow. It
