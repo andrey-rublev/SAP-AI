@@ -19,6 +19,7 @@ PHASE_ACTION_KINDS = {
     Phase.NAMING_READY: "confirm_name",
     Phase.ROUND_RESULT: "continue_round",
     Phase.TIER_UNLOCK: "dismiss_tier",
+    Phase.END_TURN_CONFIRM: "confirm_end_turn",
 }
 
 
@@ -91,11 +92,15 @@ def action_acknowledged(before: Board, after: Board, action: Action,
     """Recognize only action-specific evidence, never arbitrary screen changes."""
     if action.kind == "end_turn":
         return before.phase == Phase.SHOP and (after.phase in (
-            Phase.NAMING, Phase.BATTLE, Phase.ROUND_RESULT,
+            Phase.NAMING, Phase.BATTLE, Phase.ROUND_RESULT, Phase.END_TURN_CONFIRM,
         ) or (
             after.phase == Phase.SHOP and before.turn is not None and after.turn is not None
             and after.turn > before.turn
         ))
+    if action.kind == "confirm_end_turn":
+        return before.phase == Phase.END_TURN_CONFIRM and after.phase in (
+            Phase.NAMING, Phase.BATTLE, Phase.ROUND_RESULT,
+        )
     if action.kind == "choose_name":
         return before.phase == Phase.NAMING and after.phase == Phase.NAMING_READY
     if action.kind == "confirm_name":

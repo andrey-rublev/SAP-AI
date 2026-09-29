@@ -191,6 +191,7 @@ PHASE_TRANSITIONS = (
     (Phase.NAMING_READY, "confirm_name", ("confirm_name",)),
     (Phase.ROUND_RESULT, "continue_round", ("continue_round",)),
     (Phase.TIER_UNLOCK, "dismiss_tier", ("dismiss_tier",)),
+    (Phase.END_TURN_CONFIRM, "confirm_end_turn", ("confirm_end_turn",)),
 )
 
 
@@ -202,6 +203,7 @@ def phase_runtime(phase, *, execute=True):
     driver.profile.buttons.update({
         "name_adjective": (20, 30), "name_noun": (70, 30),
         "confirm_name": (50, 80), "continue_round": (80, 90), "dismiss_tier": (50, 50),
+        "confirm_end_turn": (60, 70),
     })
     return driver, window
 

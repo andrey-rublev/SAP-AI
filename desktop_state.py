@@ -20,6 +20,7 @@ class Phase(str, Enum):
     NAMING_READY = "naming_ready"
     ROUND_RESULT = "round_result"
     TIER_UNLOCK = "tier_unlock"
+    END_TURN_CONFIRM = "end_turn_confirm"
     RESULT = "result"
 
 
@@ -116,7 +117,8 @@ class Action:
 
     def __post_init__(self) -> None:
         if self.kind not in {"buy", "roll", "sell", "end_turn", "merge", "continue",
-                             "choose_name", "confirm_name", "continue_round", "dismiss_tier"}:
+                             "choose_name", "confirm_name", "continue_round", "dismiss_tier",
+                             "confirm_end_turn"}:
             raise ValueError(f"unknown desktop action: {self.kind!r}")
         _integer(self.slot, "slot", maximum=4)
         _integer(self.target, "target", maximum=4)
@@ -151,7 +153,8 @@ def legal_action(board: Board, action: Action) -> bool:
     if not isinstance(board, Board) or not isinstance(action, Action):
         return False
     transitions = {"choose_name": Phase.NAMING, "confirm_name": Phase.NAMING_READY,
-                   "continue_round": Phase.ROUND_RESULT, "dismiss_tier": Phase.TIER_UNLOCK}
+                   "continue_round": Phase.ROUND_RESULT, "dismiss_tier": Phase.TIER_UNLOCK,
+                   "confirm_end_turn": Phase.END_TURN_CONFIRM}
     if action.kind in transitions:
         return (board.phase == transitions[action.kind]
                 and action.slot is None and action.target is None)

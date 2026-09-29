@@ -235,6 +235,7 @@ class DesktopRuntime:
             Phase.NAMING_READY: ("confirm_name", ("confirm_name",)),
             Phase.ROUND_RESULT: ("continue_round", ("continue_round",)),
             Phase.TIER_UNLOCK: ("dismiss_tier", ("dismiss_tier",)),
+            Phase.END_TURN_CONFIRM: ("confirm_end_turn", ("confirm_end_turn",)),
         }
         recognized = {item.phase for item in self.profile.phase_templates}
         return {phase: Action(kind) for phase, (kind, points) in requirements.items()

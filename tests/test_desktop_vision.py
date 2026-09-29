@@ -346,6 +346,7 @@ def test_explicit_phase_templates_support_all_known_phases(scene, phase):
 
 
 def test_transition_buttons_are_explicit_optional_calibration(scene):
-    scene[0]["buttons"].update({name: [3, 4] for name in ("name_adjective", "name_noun", "confirm_name", "continue_round", "dismiss_tier")})
+    scene[0]["buttons"].update({name: [3, 4] for name in ("name_adjective", "name_noun", "confirm_name", "continue_round", "dismiss_tier", "confirm_end_turn")})
     profile = VisionProfile.from_dict(scene[0], base_dir=scene[3])
     assert profile.buttons["dismiss_tier"] == (3, 4)
+    assert profile.buttons["confirm_end_turn"] == (3, 4)

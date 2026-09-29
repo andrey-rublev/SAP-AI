@@ -198,6 +198,7 @@ def test_every_policy_decision_in_representative_boards_is_legal():
 @pytest.mark.parametrize("phase,kind", [
     (Phase.NAMING, "choose_name"), (Phase.NAMING_READY, "confirm_name"),
     (Phase.ROUND_RESULT, "continue_round"), (Phase.TIER_UNLOCK, "dismiss_tier"),
+    (Phase.END_TURN_CONFIRM, "confirm_end_turn"),
 ])
 def test_transition_action_requires_exact_phase_and_no_slots(phase, kind):
     for candidate in Phase:

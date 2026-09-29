@@ -173,6 +173,12 @@ the event log, distinct directories per run, and a default 200-frame limit.
 Repeated stable polls do not produce duplicate files. Eighteen mocked tests
 cover limits, unique paths, evidence linkage, and stopping on recording errors.
 
+Excess-gold confirmation now has its own opt-in phase/action pair. End Turn
+can acknowledge this modal, and its confirmation must lead to naming, battle,
+or a round result. It cannot acknowledge an unchanged dialog or unknown frame.
+Stable recognition, repeat prevention, and transition limits also apply here.
+Validation: 295 focused state/session/runtime/vision tests pass.
+
 ## Remaining milestones
 
 1. Finish the private 2048x1152 profile using the recorded turn-one through

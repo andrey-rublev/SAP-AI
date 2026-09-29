@@ -302,7 +302,8 @@ def phase_actions():
     return {Phase.NAMING: Action("choose_name"),
             Phase.NAMING_READY: Action("confirm_name"),
             Phase.ROUND_RESULT: Action("continue_round"),
-            Phase.TIER_UNLOCK: Action("dismiss_tier")}
+            Phase.TIER_UNLOCK: Action("dismiss_tier"),
+            Phase.END_TURN_CONFIRM: Action("confirm_end_turn")}
 
 
 def test_recorded_round_flow_requires_each_calibrated_ready_phase():
@@ -324,7 +325,8 @@ def test_recorded_round_flow_requires_each_calibrated_ready_phase():
     assert [event["poll"] for event in events if event["event"] == "acted"] == [2, 5, 8, 11, 14]
 
 
-@pytest.mark.parametrize("phase", [Phase.NAMING, Phase.NAMING_READY, Phase.ROUND_RESULT, Phase.TIER_UNLOCK])
+@pytest.mark.parametrize("phase", [Phase.NAMING, Phase.NAMING_READY, Phase.ROUND_RESULT, Phase.TIER_UNLOCK,
+                                  Phase.END_TURN_CONFIRM])
 def test_interstitial_actions_are_disabled_unless_explicitly_configured(phase):
     runner, clicks, _ = session([Board(phase)])
     result = runner.run()
@@ -435,3 +437,38 @@ def test_terminal_result_never_uses_round_continuation():
 def test_phase_plan_rejects_unsupported_or_mismatched_actions(mapping):
     with pytest.raises(ValueError, match="matching action"):
         session([shop()], phase_actions=mapping)
+
+
+def test_excess_gold_modal_requires_stable_confirmation_before_battle():
+    before = shop(gold=2, team=(FISH, EMPTY, EMPTY, EMPTY, EMPTY))
+    confirm, battle = Board(Phase.END_TURN_CONFIRM), Board(Phase.BATTLE)
+    runner, clicks, events = session([before, before, confirm, confirm, confirm, battle, battle],
+                                     Action("end_turn"), phase_actions=phase_actions(), max_actions=2)
+    result = runner.run()
+    assert clicks == [Action("end_turn"), Action("confirm_end_turn")]
+    assert [event["poll"] for event in events if event["event"] == "acted"] == [2, 5]
+    assert (result.reason, result.acknowledgments) == ("max_actions", 2)
+
+
+@pytest.mark.parametrize("destination", list(Phase))
+def test_confirm_end_turn_acknowledges_only_expected_forward_phases(destination):
+    result = action_acknowledged(Board(Phase.END_TURN_CONFIRM), Board(destination, turn=2),
+                                 Action("confirm_end_turn"))
+    assert result is (destination in (Phase.NAMING, Phase.BATTLE, Phase.ROUND_RESULT))
+
+
+def test_unchanged_excess_gold_modal_does_not_retry_confirmation():
+    runner, clicks, _ = session([Board(Phase.END_TURN_CONFIRM)], phase_actions=phase_actions(),
+                                action_max_polls=3)
+    result = runner.run()
+    assert clicks == [Action("confirm_end_turn")]
+    assert (result.reason, result.acknowledgments) == ("action_timeout", 0)
+
+
+def test_excess_gold_modal_cannot_be_confirmed_again_before_new_shop():
+    confirm, naming = Board(Phase.END_TURN_CONFIRM), Board(Phase.NAMING)
+    runner, clicks, _ = session([confirm, confirm, naming, naming, confirm, confirm],
+                                phase_actions=phase_actions())
+    result = runner.run()
+    assert clicks == [Action("confirm_end_turn")]
+    assert (result.reason, result.acknowledgments) == ("repeated_transition", 1)
