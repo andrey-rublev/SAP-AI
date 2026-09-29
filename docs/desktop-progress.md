@@ -262,15 +262,36 @@ A separate, bounded 55-minute CPU species-recognition experiment is running
 against private local artwork. It is not connected to the live controller;
 synthetic accuracy alone will not justify enabling it.
 
+## Uninterrupted desktop controller evidence, 2026-09-29
+
+One standalone run observed all 327 frames and attempted 32 actions, with 31
+verified acknowledgments. It sold and purchased a teammate, rolled, confirmed
+end turns, observed battles, continued results, and dismissed a tier overlay
+across shops six through eight without agent gameplay clicks. It stopped at
+the previously unseen turn-nine tier overlay. The three battles were losses;
+this validates control and sequencing, not competitive strength.
+
+The sanitized board/action recording is now an offline regression fixture.
+Seven tests reproduce exact action/acknowledgment polls, delayed observations,
+shop compaction and safe stopping. Corrupted purchase evidence must time out
+without retries. Screenshots, paths and account metadata are excluded. The
+full offline suite passed 718 tests before these seven additional tests.
+
+A follow-up dismissed the newly calibrated tier overlay, sold the fish and
+bought a 6/5 rooster. It stopped because the newly empty fifth slot lacked a
+reference. The actual empty sample is now calibrated against an occupied
+negative. No input was retried. The private profile is still specific to this
+client geometry; naming and terminal results remain unvalidated.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
    The older 2048x1152 Computer Use profile cannot drive native Windows input.
 2. Verify OCR, empty slots, species, and proposals across both day and night
    backgrounds. Include naming, battle, victory, and tier-unlock negatives.
-3. Verify a bounded run of the standalone controller: purchase acknowledgment,
-   roll, end-turn, and the following shop without duplicate inputs. The
-   agent-directed demo does not establish that this pipeline works end to end.
+3. Extend the verified multi-turn controller run to a fresh start and terminal
+   result. The turn-six-to-eight replay establishes bounded observed control;
+   it does not establish general unattended runs or competitive play.
 4. Validate remaining naming, loss/terminal result, and later shop-slot layouts.
    Victory/draw continuation and tier dismissal are implemented. Record verified
    multi-turn controller playback before claiming autonomous runs.
