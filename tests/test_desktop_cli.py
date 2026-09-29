@@ -45,6 +45,7 @@ def test_cli_passes_calibrated_phase_actions_and_checks_deadline(tmp_path, cli_r
     def session(*args, **kwargs):
         assert kwargs["phase_actions"] == runtime.phase_actions.return_value
         assert kwargs["preview"] is True
+        assert desktop.DesktopRuntime.call_args.kwargs["should_stop"] is kwargs["should_stop"]
         assert not kwargs["should_stop"]()
         clock[0] = 11.5
         assert kwargs["should_stop"]()

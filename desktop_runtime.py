@@ -52,12 +52,19 @@ class DesktopUnavailable(RuntimeError):
     pass
 
 
+def _require_running(should_stop):
+    if should_stop is not None and should_stop():
+        raise DesktopUnavailable("stop requested or runtime deadline reached; no further input sent")
+
+
 class WindowsGameWindow:
     """Capture/control one foreground game client in physical screen pixels.
 
     Never activates a window or clicks through another foreground application.
     All stored profile coordinates are relative to the client, not the monitor.
     """
+
+    should_stop = None
 
     def __init__(self, title="Super Auto Pets"):
         if os.name != "nt":
@@ -116,21 +123,26 @@ class WindowsGameWindow:
 
     def click(self, point, expected_size):
         target = self._screen_point(point, expected_size)
+        _require_running(self.should_stop)
         self.mouse.moveTo(*target, duration=0.15)
         if self._screen_point(point, expected_size) != target:
             raise DesktopUnavailable("game moved before click")
+        _require_running(self.should_stop)
         self.mouse.click(*target)
 
     def drag(self, source, target, expected_size):
         start = self._screen_point(source, expected_size)
         end = self._screen_point(target, expected_size)
+        _require_running(self.should_stop)
         self.mouse.moveTo(*start, duration=0.15)
         if self._screen_point(source, expected_size) != start:
             raise DesktopUnavailable("game moved before drag")
         try:
+            _require_running(self.should_stop)
             self.mouse.mouseDown(*start, button="left")
             if self._screen_point(target, expected_size) != end:
                 raise DesktopUnavailable("game moved during drag")
+            _require_running(self.should_stop)
             self.mouse.moveTo(*end, duration=0.35)
         finally:
             # A corner abort also prevents ordinary mouseUp. Suppress that check
@@ -221,10 +233,13 @@ def tesseract_ocr(image):
 class DesktopRuntime:
     """Connect calibrated perception and a window, with a last-moment recheck."""
 
-    def __init__(self, profile, perceptor, window, *, execute=False):
+    def __init__(self, profile, perceptor, window, *, execute=False, should_stop=None):
         profile.validate(require_calibrated=True)
         self.profile, self.perceptor, self.window = profile, perceptor, window
         self.execute = execute
+        self.should_stop = should_stop
+        if isinstance(window, WindowsGameWindow) and should_stop is not None:
+            window.should_stop = should_stop
         self.last_board = None
         self.last_frame = None
 
@@ -249,35 +264,41 @@ class DesktopRuntime:
     def act(self, action):
         if not self.execute:
             raise DesktopUnavailable("desktop input is disabled in preview mode")
+        _require_running(self.should_stop)
         before = self.last_board
         if before is None or not legal_action(before, action):
             raise ValueError("action is not legal for the last observed board")
         self.last_frame = self.window.capture()
         current = self.perceptor.observe(self.last_frame)
+        _require_running(self.should_stop)
         if current.fingerprint() != before.fingerprint():
             raise DesktopUnavailable("board changed before input; observe again")
         size = self.profile.image_size
+        def click(point):
+            _require_running(self.should_stop)
+            self.window.click(point, size)
+
         if action.kind in ("buy", "merge"):
             # The desktop client selects a shop pet, then places it with a
             # second click. Each click rechecks focus and client geometry;
             # any failure propagates without retrying or selecting again.
-            self.window.click(self.profile.shop[action.slot].portrait.center, size)
-            self.window.click(self.profile.team[action.target].portrait.center, size)
+            click(self.profile.shop[action.slot].portrait.center)
+            click(self.profile.team[action.target].portrait.center)
         elif action.kind == "choose_name":
             # Validate the whole sequence before selecting its first option.
             names = ("name_adjective", "name_noun")
             if any(name not in self.profile.buttons for name in names):
                 raise ValueError("profile needs both calibrated name options")
             for name in names:
-                self.window.click(self.profile.buttons[name], size)
+                click(self.profile.buttons[name])
         elif action.kind == "sell":
             if "sell" not in self.profile.buttons:
                 raise ValueError("profile has no calibrated sell point")
             # Selecting a teammate reveals the client's Sell button. Validate
             # that point before selection; each click checks focus/geometry.
-            self.window.click(self.profile.team[action.slot].portrait.center, size)
-            self.window.click(self.profile.buttons["sell"], size)
+            click(self.profile.team[action.slot].portrait.center)
+            click(self.profile.buttons["sell"])
         else:
             if action.kind not in self.profile.buttons:
                 raise ValueError(f"profile has no calibrated {action.kind} button")
-            self.window.click(self.profile.buttons[action.kind], size)
+            click(self.profile.buttons[action.kind])

@@ -244,6 +244,24 @@ rejects existing output and game-installation paths, bounds decoded data, and
 reads external resources in bounded chunks. Thirty-three asset tests pass.
 All artwork and manifests remain private; no classifier is enabled in play.
 
+## Stop controls and the next live run, 2026-09-29
+
+The bounded turn-five run completed seven actions and seven acknowledgments,
+then stopped at an unrecognized defeat screen. The private defeat reference
+now passes comparison against 69 recorded frames without changing unrelated
+phase results. Fifth-slot geometry is staged for turn nine, with no invented
+empty reference; naming and terminal screens remain unvalidated.
+
+The CLI, session, runtime and native input now share the same stop-file and
+deadline predicate. It is checked after fresh OCR, between selection clicks,
+and after pointer travel before pressing. This closes the gap where a stop
+request during OCR or mouse travel could still allow input. Drag interruption
+still releases the button. All 79 runtime/CLI regression tests pass.
+
+A separate, bounded 55-minute CPU species-recognition experiment is running
+against private local artwork. It is not connected to the live controller;
+synthetic accuracy alone will not justify enabling it.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

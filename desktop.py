@@ -163,8 +163,12 @@ def main(argv=None):
         return
     # Validate before constructing a desktop dependency or taking any screenshot.
     profile.validate(require_calibrated=True)
+    deadline = time.monotonic() + args.max_seconds
+    def should_stop():
+        return Path(args.stop_file).exists() or time.monotonic() >= deadline
+
     window = WindowsGameWindow(args.window)
-    runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute)
+    runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute, should_stop=should_stop)
     recorder = FrameRecorder(args.record_dir, args.record_limit) if args.record_dir else None
     log_path = Path(args.log)
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -174,12 +178,11 @@ def main(argv=None):
                 data = recorder.record(data, runtime.last_frame)
             log.write(json.dumps(data) + "\n")
             log.flush()
-        deadline = time.monotonic() + args.max_seconds
         session = DesktopSession(runtime.observe, runtime.act, DesktopPolicy(),
                                  preview=not args.execute, max_actions=args.max_actions,
                                  max_polls=args.max_polls, action_timeout=args.action_timeout,
                                  event_callback=event, phase_actions=runtime.phase_actions(),
-                                 should_stop=lambda: Path(args.stop_file).exists() or time.monotonic() >= deadline)
+                                 should_stop=should_stop)
         try:
             result = session.run()
         except KeyboardInterrupt:

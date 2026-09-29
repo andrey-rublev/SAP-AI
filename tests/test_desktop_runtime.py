@@ -186,6 +186,91 @@ def test_illegal_action_rejected_before_capture():
     window.capture.assert_not_called()
 
 
+def test_stop_requested_before_action_skips_capture_and_input():
+    driver, window = runtime()
+    driver.should_stop = lambda: True
+    with pytest.raises(DesktopUnavailable, match="stop requested"):
+        driver.act(Action("buy", 0, 0))
+    window.capture.assert_not_called()
+    window.click.assert_not_called()
+
+
+def test_stop_file_created_during_fresh_ocr_prevents_selection(tmp_path):
+    driver, window = runtime()
+    stop = tmp_path / "STOP"
+    driver.should_stop = stop.exists
+    def observe(frame):
+        stop.touch()
+        return board()
+    driver.perceptor.observe.side_effect = observe
+    with pytest.raises(DesktopUnavailable, match="stop requested"):
+        driver.act(Action("buy", 0, 0))
+    window.capture.assert_called_once()
+    window.click.assert_not_called()
+
+
+@pytest.mark.parametrize("kind", ["buy", "sell", "choose_name"])
+def test_stop_between_selection_clicks_prevents_destination(kind):
+    driver, window = (sell_runtime() if kind == "sell" else phase_runtime(Phase.NAMING)
+                      if kind == "choose_name" else runtime())
+    stopped = [False]
+    driver.should_stop = lambda: stopped[0]
+    window.click.side_effect = lambda *args: stopped.__setitem__(0, True)
+    action = Action("sell", 2) if kind == "sell" else Action("choose_name") if kind == "choose_name" else Action("buy", 0, 0)
+    with pytest.raises(DesktopUnavailable, match="stop requested"):
+        driver.act(action)
+    assert window.click.call_count == 1
+    window.drag.assert_not_called()
+
+
+def test_deadline_expiring_during_phase_preflight_prevents_continuation():
+    driver, window = phase_runtime(Phase.ROUND_RESULT)
+    clock = [1.0]
+    driver.should_stop = lambda: clock[0] >= 2.0
+    def observe(frame):
+        clock[0] = 2.0
+        return Board(Phase.ROUND_RESULT)
+    driver.perceptor.observe.side_effect = observe
+    with pytest.raises(DesktopUnavailable, match="deadline"):
+        driver.act(Action("continue_round"))
+    window.click.assert_not_called()
+
+
+def test_native_click_rechecks_deadline_after_pointer_travel():
+    window = WindowsGameWindow.__new__(WindowsGameWindow)
+    window.geometry = Mock(return_value=(500, 200, 100, 100))
+    clock = [0.0]
+    window.should_stop = lambda: clock[0] >= 1.0
+    window.mouse = Mock()
+    window.mouse.moveTo.side_effect = lambda *args, **kwargs: clock.__setitem__(0, 1.0)
+    with pytest.raises(DesktopUnavailable, match="deadline"):
+        window.click((20, 30), (100, 100))
+    window.mouse.moveTo.assert_called_once_with(520, 230, duration=0.15)
+    window.mouse.click.assert_not_called()
+
+
+def test_native_drag_stop_after_press_still_releases_button():
+    window = WindowsGameWindow.__new__(WindowsGameWindow)
+    window.geometry = Mock(return_value=(0, 0, 100, 100))
+    stopped = [False]
+    window.should_stop = lambda: stopped[0]
+    window.mouse = Mock(FAILSAFE=True)
+    window.mouse.mouseDown.side_effect = lambda *args, **kwargs: stopped.__setitem__(0, True)
+    with pytest.raises(DesktopUnavailable, match="stop requested"):
+        window.drag((10, 20), (30, 40), (100, 100))
+    window.mouse.moveTo.assert_called_once_with(10, 20, duration=0.15)
+    window.mouse.mouseUp.assert_called_once_with(button="left", _pause=False)
+    assert window.mouse.FAILSAFE is True
+
+
+def test_runtime_shares_stop_predicate_with_native_window():
+    driver, _ = runtime()
+    window = WindowsGameWindow.__new__(WindowsGameWindow)
+    should_stop = lambda: True
+    controlled = DesktopRuntime(driver.profile, driver.perceptor, window, execute=True, should_stop=should_stop)
+    assert controlled.should_stop is window.should_stop is should_stop
+
+
 PHASE_TRANSITIONS = (
     (Phase.NAMING, "choose_name", ("name_adjective", "name_noun")),
     (Phase.NAMING_READY, "confirm_name", ("confirm_name",)),
