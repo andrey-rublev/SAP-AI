@@ -149,3 +149,17 @@ images and replayed observations. Native input is tested with mocks. These
 tests do not establish correct coordinates, template quality, OCR accuracy, or
 successful real-client play. Track observed game evidence and remaining work
 in [desktop-progress.md](desktop-progress.md).
+
+For sustained controller stress tests without desktop access:
+
+```powershell
+python tools/eval_desktop.py --seconds 7200 --output .local/desktop/soak.json --fail-fast
+python tools/eval_desktop.py --replay 17 --scenario wrong_price
+```
+
+The seeded harness exercises purchases, shop compaction, merges, sales, rolls,
+delayed frames, missing observations, and input/OCR failures. An independent
+fixture checks inputs and acknowledged effects. Reports checkpoint atomically;
+`--resume` requires unchanged configuration and source hashes. A stop file or
+Ctrl+C retains the next unfinished seed. This is a controller contract test,
+not a combat simulator, OCR evaluation, model training, or measured win rate.

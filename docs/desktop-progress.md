@@ -135,6 +135,12 @@ The first live preview sent no inputs: native capture is 2560x1440, whereas
 Computer Use supplied 2048x1152 images. The exact-size check caught this before
 input. A separate native-resolution private profile is being validated.
 
+A seeded offline controller evaluator now records reproducible failure cases,
+action coverage, source hashes, and atomic resume checkpoints. Peer review
+caught and fixed swallowed interrupts and missing independent acknowledgment
+checks. Fifty harness tests and 1,600 additional cases passed after those
+fixes; these cases do not exercise vision, native IO, or combat strategy.
+
 ## Remaining milestones
 
 1. Finish the private 2048x1152 profile using the recorded turn-one through
