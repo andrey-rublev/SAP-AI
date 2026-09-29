@@ -179,6 +179,22 @@ or a round result. It cannot acknowledge an unchanged dialog or unknown frame.
 Stable recognition, repeat prevention, and transition limits also apply here.
 Validation: 295 focused state/session/runtime/vision tests pass.
 
+The program confirmed that modal, acknowledged battle, recognized victory,
+then used a newly calibrated continuation point and observed the turn-four
+shop: 10 gold, 3 trophies, 5 lives. These actions were program-executed across
+bounded sessions, with calibration work between sessions. An uninterrupted
+turn-four sequence is the next live check.
+
+A paired shopping experiment compared eight policies on 50,000 seeds (400,000
+episodes) with no illegal actions or unexpected stops. Combined threshold-two
+changes increased this synthetic immediate-stat objective by 4.42%; ranking
+upgrade gains at threshold four improved its gold-efficiency proxy by 2.75%.
+The live policy is unchanged: abilities, food, combat, and experience strategy
+are absent from this experiment. Twenty-six experiment tests pass and peer
+review found no blocking issues. The installed historical `sapai` engine has
+different species/stats from recorded current-game offers, so overnight work
+does not train the incompatible toy DQN.
+
 ## Remaining milestones
 
 1. Finish the private 2048x1152 profile using the recorded turn-one through

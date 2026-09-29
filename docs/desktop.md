@@ -175,3 +175,10 @@ fixture checks inputs and acknowledged effects. Reports checkpoint atomically;
 `--resume` requires unchanged configuration and source hashes. A stop file or
 Ctrl+C retains the next unfinished seed. This is a controller contract test,
 not a combat simulator, OCR evaluation, model training, or measured win rate.
+
+`python tools/eval_desktop_economy.py --pairs 50000` compares experimental
+shopping policies on identical initial boards and indexed future offers.
+It reports paired stat gains and gold efficiency, with deterministic replay
+and resumable reports under `.local/desktop/`. Candidates remain separate
+from the live policy: this synthetic stat objective omits abilities, food,
+equipment, combat, and the strategic value of experience.
