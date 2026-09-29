@@ -206,3 +206,35 @@ selected texture count and total decoded pixels. The manifest retains names,
 object IDs, duplicate artwork variants, and source hashes. Extracted artwork
 is not distributed with this repository; names alone do not prove which art
 variant is displayed in the current client.
+
+`tools/train_desktop_species.py` is an offline species-recognition experiment.
+It fits the mirrored, partial portrait geometry using calibration references,
+then trains a small CPU classifier on private extracted sprites over recorded
+empty backgrounds. Exact-pixel sprite variants and background sources are
+separated between synthetic training and validation. Model inputs consistently
+use RGB, bilinear resizing to 64×32, and float values from zero to one.
+
+```powershell
+python tools/train_desktop_species.py prepare --profile .local/desktop/calibration-native.json --assets .local/desktop/assets --negatives .local/desktop/species-negative-assets --output .local/desktop/species-run
+python tools/train_desktop_species.py train --plan .local/desktop/species-run/plan.json --labels .local/desktop/species-heldout-labels.json --seconds 3300 --threads 4
+python tools/train_desktop_species.py evaluate --plan .local/desktop/species-run/plan.json --labels .local/desktop/species-heldout-labels.json --model .local/desktop/species-run/model.pt --output .local/desktop/species-run/reevaluation.json
+```
+
+The negative asset manifest supplies unrelated species for the unknown class.
+The private label JSON contains `label_source` and `frames`, each with `image`,
+`phase`, and ordered `shop`/`team` species lists; use `__unknown__` for unfamiliar
+pets. Label real frames independently and exclude calibration-source frames.
+Non-shop frames are excluded from this classifier evaluation.
+
+Outputs must stay under this repository's `.local` directory; linked paths and
+linked checkpoint files are rejected. Preparation needs a new directory, and
+reevaluation needs a new report filename. Reports preserve the loaded plan and
+implementation hashes; reevaluation records evaluator and training provenance
+separately. A legacy checkpoint may have no training implementation hash, so
+retain its original source snapshot and run-provenance file.
+
+Synthetic accuracy is not gameplay accuracy. Inspect known-pet recall, accepted
+prediction correctness, unknown false accepts, and duplicate real crops together.
+The initial real holdout is small, drawn from one session, and repeats several
+pets. The prototype does not change the live perceptor or authorize merging pets;
+false species identifications remain a blocker to enabling it.

@@ -296,8 +296,18 @@ The CPU recognition experiment ran 31,697 steps in 3,300.2 seconds. Its original
 real-frame report accepted all 17 known-pet samples correctly but falsely
 accepted one of seven unknown samples (24 samples, only 14 unique pixel crops).
 The small same-session set is not general validation. The model remains
-disconnected from production. Shared preprocessing and reproducible provenance
-are being finalized before preserving the tool and corrected evaluation.
+disconnected from production. Reevaluation with shared bilinear preprocessing
+produced the same counts: the unfamiliar hedgehog was incorrectly accepted as
+beaver at 0.99725 confidence. Raising a generic confidence threshold is not a
+validated solution. Original weights, report, loaded source and provenance
+remain private alongside the corrected evaluation.
+
+The reusable experiment now bounds training with finite limits, separates
+loaded training/evaluation hashes, writes atomic artifacts only under `.local`,
+and rejects redirected or linked output targets. It has no desktop input or
+live-model integration. Final full-suite validation: 739 passed, one skipped
+because this Windows account cannot create test symlinks; the separate Windows
+reparse-point regression passed.
 
 ## Remaining milestones
 
