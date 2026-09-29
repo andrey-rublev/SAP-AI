@@ -234,6 +234,16 @@ five. A bot purchase spent 11 -> 8 gold and filled the empty teammate with the
 6/3 badger. It stopped because the fourth shop slot had no verified empty
 reference; that resulting native sample is now available for calibration.
 
+The fourth-slot empty sample is validated against both empty and occupied
+native frames. A longer bounded consecutive-turn run is underway.
+
+A local-only Unity extractor recovered 34 named textures for nine candidate
+species. Visual comparison identified matching modern Fish/Otter variants;
+partial Ant crops still require care. The extractor preserves IDs/hashes,
+rejects existing output and game-installation paths, bounds decoded data, and
+reads external resources in bounded chunks. Thirty-three asset tests pass.
+All artwork and manifests remain private; no classifier is enabled in play.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

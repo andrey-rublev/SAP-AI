@@ -197,3 +197,12 @@ counts; errors and incorrect readings give a failing exit status. Time, case,
 and saved-example limits bound the job. This checks the supplied scenes and
 does not measure accuracy on unseen gameplay. See the tool docstring for the
 manifest format; keep labels, images, and reports under `.local/desktop/`.
+
+`tools/extract_desktop_assets.py` can extract selected named textures from an
+installed Unity 6000.3 Windows client for private recognition experiments.
+It supports only the explicitly checked version-22 layout and DXT1/DXT5 formats,
+requires a fresh output directory outside the game installation, and bounds
+selected texture count and total decoded pixels. The manifest retains names,
+object IDs, duplicate artwork variants, and source hashes. Extracted artwork
+is not distributed with this repository; names alone do not prove which art
+variant is displayed in the current client.
