@@ -134,13 +134,34 @@ serial use.
 
 ## Experimental desktop bridge
 
-The new structured controller is documented in [Desktop controller](docs/desktop.md).
-It adds observed attack/health and occupancy, calibrated phase recognition,
-stable-frame decisions, action acknowledgments, and window-relative Windows IO.
-Use `python desktop.py --help` for capture, offline inspection, and bounded live
-preview/execution. [Desktop progress](docs/desktop-progress.md) tracks what has
-actually been verified. The legacy bridge described below is retained for
-compatibility.
+Use the structured controller in [Desktop controller](docs/desktop.md) for
+desktop development. It observes attack/health and occupancy, recognizes
+calibrated phases, chooses actions, physically clicks, and checks their effects.
+It controls only the foreground game window and stops on ambiguous observations,
+unacknowledged actions, loss of focus, a stop file, or its runtime limit.
+
+With an already verified profile for your client geometry:
+
+```bash
+python desktop.py run --profile .local/desktop/calibration-native.json
+python desktop.py run --profile .local/desktop/calibration-native.json --execute --max-actions 40 --max-seconds 600
+```
+
+The first command previews without input; `--execute` enables the program's own
+clicks. Create `.local/desktop/STOP` to request a stop. Profiles and captures are
+private and are not included in Git. See the controller guide for calibration.
+
+A recorded Windows run completed shop turns six through eight, including
+purchases, rolls, battles and round continuation, with 31 verified actions and
+no agent gameplay clicks. It then stopped at an unseen turn-nine overlay.
+This is partial desktop validation: the stat-based policy lost those battles,
+fresh-start naming is unvalidated, and recognition still has gaps.
+[Desktop progress](docs/desktop-progress.md) records the evidence and limits.
+
+### Legacy bridge
+
+The older `play.py --live` bridge below is retained for compatibility. Its
+limitations do not describe the structured `desktop.py` controller above.
 
 `python play.py` runs offline. Desktop control requires explicit `--live`, an
 installed Tesseract binary, optional Python dependencies, and a calibrated file:
@@ -159,7 +180,7 @@ ambiguous numbers, and never assumes unreadable text means an empty slot. The
 mouse failsafe remains enabled; a live session stops after one end-turn and
 revokes control when it exits.
 
-**Perception is incomplete:** empty slots currently require an explicit OCR zero,
+**Legacy perception is incomplete:** empty slots currently require an explicit OCR zero,
 pet species and game phases are unrecognized, and the bridge cannot merge pets
 or supply the metadata needed by 13-input DQN policies. It is a development
 scaffold, not a ready-to-use autonomous SAP bot. Desktop actions are covered by

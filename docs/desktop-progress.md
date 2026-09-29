@@ -283,18 +283,34 @@ reference. The actual empty sample is now calibrated against an occupied
 negative. No input was retried. The private profile is still specific to this
 client geometry; naming and terminal results remain unvalidated.
 
+## Terminal validation and training result, 2026-09-29
+
+The final bounded turn-nine session completed seven actions with seven
+acknowledgments and stopped at an unrecognized game-over screen. A narrow
+GAME OVER reference was then validated against 157 native recordings: only
+the two terminal images changed from UNKNOWN to RESULT. A fresh read-only
+native run returned `reason=result`, zero actions, and one poll. No further
+gameplay or new arena was started.
+
+The CPU recognition experiment ran 31,697 steps in 3,300.2 seconds. Its original
+real-frame report accepted all 17 known-pet samples correctly but falsely
+accepted one of seven unknown samples (24 samples, only 14 unique pixel crops).
+The small same-session set is not general validation. The model remains
+disconnected from production. Shared preprocessing and reproducible provenance
+are being finalized before preserving the tool and corrected evaluation.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
    The older 2048x1152 Computer Use profile cannot drive native Windows input.
 2. Verify OCR, empty slots, species, and proposals across both day and night
    backgrounds. Include naming, battle, victory, and tier-unlock negatives.
-3. Extend the verified multi-turn controller run to a fresh start and terminal
-   result. The turn-six-to-eight replay establishes bounded observed control;
+3. Extend the verified multi-turn controller run to a fresh start through a
+   terminal result without calibration pauses. The turn-six-to-eight replay establishes bounded observed control;
    it does not establish general unattended runs or competitive play.
-4. Validate remaining naming, loss/terminal result, and later shop-slot layouts.
-   Victory/draw continuation and tier dismissal are implemented. Record verified
-   multi-turn controller playback before claiming autonomous runs.
+4. Validate naming and further variations of results and shop layouts. A loss
+   terminal, victory/draw/defeat continuation, tier dismissal, and the fifth
+   shop slot now have limited native evidence. Broaden this across new runs.
 5. Broaden species/level recognition and strategic play (food, abilities,
    ordering), using an observation representation compatible with the real game.
 
