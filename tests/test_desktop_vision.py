@@ -231,3 +231,121 @@ def test_distance_uses_signed_arithmetic():
 def test_crop_does_not_allow_negative_or_overflow_geometry():
     with pytest.raises(ValueError):
         Rect(-1, 0, 1, 1).crop(np.zeros((2, 2, 3), dtype=np.uint8))
+
+
+def add_number_reference(scene, *, field="gold", value=10, color=10, name="number.png", **thresholds):
+    save_template(scene[3] / name, color, size=(1, 1))
+    item = {"field": field, "value": value, "template": name, **thresholds}
+    scene[0].setdefault("numeric_templates", []).append(item)
+    return item
+
+
+def test_calibrated_numeric_reference_resolves_blank_ocr(scene):
+    add_number_reference(scene)
+    assert observe(scene, ocr=lambda crop: "?").gold == 10
+    assert observe(scene, ocr=None).gold == 10
+
+
+def test_reference_can_confirm_a_real_zero_but_never_defaults_to_zero(scene):
+    scene[1][0, 5] = 0
+    add_number_reference(scene, value=0, color=0)
+    assert observe(scene, ocr=None).gold == 0
+    scene[1][0, 5] = 255
+    assert observe(scene, ocr=None).gold is None
+
+
+def test_conflicting_ocr_and_numeric_reference_stay_unknown(scene):
+    add_number_reference(scene)
+    assert observe(scene, ocr=lambda crop: "7").gold is None
+
+
+def test_ambiguous_number_references_cannot_be_resolved_by_ocr(scene):
+    add_number_reference(scene)
+    add_number_reference(scene, value=7, name="seven.png")
+    assert observe(scene).gold is None
+
+
+def test_numeric_margin_prevents_near_tie_even_when_ocr_agrees(scene):
+    add_number_reference(scene)
+    add_number_reference(scene, value=7, color=11, name="seven.png")
+    assert observe(scene).gold is None
+
+
+def test_same_value_reference_variants_do_not_compete(scene):
+    add_number_reference(scene)
+    add_number_reference(scene, color=11, name="same-number-variant.png")
+    assert observe(scene, ocr=None).gold == 10
+
+
+def test_unmatched_numeric_references_allow_ordinary_ocr(scene):
+    add_number_reference(scene, value=7, color=200)
+    assert observe(scene).gold == 10
+
+
+def test_numeric_references_do_not_override_ocr_runtime_failure(scene):
+    add_number_reference(scene)
+    def broken(crop):
+        raise RuntimeError("OCR unavailable")
+    assert observe(scene, ocr=broken).gold is None
+
+
+def test_numeric_references_do_not_hide_ocr_timeout(scene):
+    add_number_reference(scene)
+    def timeout(crop):
+        raise TimeoutError("OCR timeout")
+    with pytest.raises(TimeoutError):
+        observe(scene, ocr=timeout)
+
+
+def test_level_reference_attaches_only_to_its_calibrated_slot(scene):
+    add_number_reference(scene, field="shop.0.level", value=1, color=1)
+    ocr = lambda crop: "?" if int(crop[0, 0, 0]) == 1 else scene[2](crop)
+    board = observe(scene, ocr=ocr)
+    assert board.shop[0].level == 1
+    assert board.team[0].level is None
+
+
+@pytest.mark.parametrize("field,value", [("bogus", 1), ("team.4.level", 1), ("team.0.level", 1), ("shop.0.level", 0), ("shop.0.level", 4), ("gold", True), ("gold", "10"), ("gold", 100), ("turn", 0), ("shop.0.health", 0)])
+def test_invalid_numeric_reference_field_or_range_is_rejected(scene, field, value):
+    add_number_reference(scene, field=field, value=value)
+    with pytest.raises(ValueError):
+        VisionProfile.from_dict(scene[0], base_dir=scene[3])
+
+
+def test_numeric_templates_roundtrip_and_stay_relative(scene):
+    add_number_reference(scene)
+    profile = VisionProfile.from_dict(scene[0], base_dir=scene[3])
+    path = scene[3] / "with-numbers.json"
+    profile.save(path)
+    loaded = VisionProfile.load(path)
+    assert loaded == profile
+    assert Perceptor(loaded).observe(scene[1]).gold == 10
+    scene[0]["numeric_templates"][0]["template"] = "../outside.png"
+    with pytest.raises(ValueError, match="template paths"):
+        VisionProfile.from_dict(scene[0], base_dir=scene[3])
+
+
+def test_missing_numeric_template_is_configuration_error(scene):
+    item = add_number_reference(scene)
+    item["template"] = "missing-number.png"
+    with pytest.raises(FileNotFoundError):
+        observe(scene)
+
+
+def test_numeric_template_must_have_exact_crop_dimensions(scene):
+    add_number_reference(scene)
+    save_template(scene[3] / "number.png", 10, size=(2, 2))
+    with pytest.raises(ValueError, match="dimensions"):
+        observe(scene)
+
+
+@pytest.mark.parametrize("phase", [phase for phase in Phase if phase != Phase.UNKNOWN])
+def test_explicit_phase_templates_support_all_known_phases(scene, phase):
+    scene[0]["phase_templates"] = [{"phase": phase.value, "region": [0, 0, 4, 4], "template": "shop.png"}]
+    assert observe(scene).phase == phase
+
+
+def test_transition_buttons_are_explicit_optional_calibration(scene):
+    scene[0]["buttons"].update({name: [3, 4] for name in ("name_adjective", "name_noun", "confirm_name", "continue_round", "dismiss_tier")})
+    profile = VisionProfile.from_dict(scene[0], base_dir=scene[3])
+    assert profile.buttons["dismiss_tier"] == (3, 4)

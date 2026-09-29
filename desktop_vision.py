@@ -95,6 +95,23 @@ class SlotConfig:
 
 
 @dataclass(frozen=True)
+class NumberTemplate:
+    """One manually verified numeric crop, never a default for unreadable text."""
+    field: str
+    value: int
+    template: str
+    max_distance: float = 0.01
+    margin: float = 0.01
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data["field"], data["value"], data["template"], data.get("max_distance", 0.01), data.get("margin", 0.01))
+
+    def to_dict(self):
+        return {"field": self.field, "value": self.value, "template": self.template, "max_distance": self.max_distance, "margin": self.margin}
+
+
+@dataclass(frozen=True)
 class VisionProfile:
     image_size: tuple[int, int]
     phase_templates: tuple[PhaseTemplate, ...] = ()
@@ -104,6 +121,20 @@ class VisionProfile:
     buttons: dict[str, tuple[int, int]] = field(default_factory=dict)
     calibrated: bool = False
     base_dir: Path = field(default_factory=lambda: Path("."), repr=False, compare=False)
+    numeric_templates: tuple[NumberTemplate, ...] = ()
+
+    def numeric_region(self, name):
+        """Resolve an explicit HUD/slot field and its allowed integer range."""
+        if name in {"gold", "turn", "wins", "lives"}:
+            return self.hud.get(name), 1 if name == "turn" else 0, 99
+        match = re.fullmatch(r"(shop|team)\.([0-4])\.(attack|health|level)", name) if isinstance(name, str) else None
+        if match is None:
+            raise ValueError(f"unknown numeric field: {name!r}")
+        row, index, stat = match.groups()
+        slots = getattr(self, row)
+        if int(index) >= len(slots):
+            raise ValueError(f"numeric field refers to missing slot: {name!r}")
+        return getattr(slots[int(index)], stat), 0 if stat == "attack" else 1, 3 if stat == "level" else 99
 
     def validate(self, *, require_calibrated=False):
         width, height = _coordinates(self.image_size, 2, "image_size")
@@ -113,7 +144,7 @@ class VisionProfile:
             raise ValueError("profile must be explicitly calibrated before desktop control")
         if set(self.hud) - {"gold", "turn", "wins", "lives"}:
             raise ValueError("unknown HUD field")
-        if set(self.buttons) - {"roll", "end_turn", "sell", "continue"}:
+        if set(self.buttons) - {"roll", "end_turn", "sell", "continue", "name_adjective", "name_noun", "confirm_name", "continue_round", "dismiss_tier"}:
             raise ValueError("unknown button")
         for region in self.hud.values():
             region.validate(self.image_size)
@@ -122,8 +153,8 @@ class VisionProfile:
             if not 0 <= x < width or not 0 <= y < height:
                 raise ValueError("button lies outside image_size")
         for item in self.phase_templates:
-            if item.phase not in (Phase.SHOP, Phase.BATTLE, Phase.RESULT):
-                raise ValueError("phase templates must identify shop, battle, or result")
+            if not isinstance(item.phase, Phase) or item.phase == Phase.UNKNOWN:
+                raise ValueError("phase templates must identify a known phase")
             item.region.validate(self.image_size)
             self.template_path(item.template)
             _thresholds(item.max_distance, item.margin)
@@ -140,6 +171,14 @@ class VisionProfile:
                 if not isinstance(species, str) or not species.strip():
                     raise ValueError("species names must be nonempty strings")
                 self.template_path(path)
+        for item in self.numeric_templates:
+            region, minimum, maximum = self.numeric_region(item.field)
+            if region is None:
+                raise ValueError(f"numeric reference requires a calibrated region: {item.field}")
+            if type(item.value) is not int or not minimum <= item.value <= maximum:
+                raise ValueError(f"numeric reference value is outside the field range: {item.field}")
+            self.template_path(item.template)
+            _thresholds(item.max_distance, item.margin)
         return self
 
     def template_path(self, name):
@@ -155,16 +194,16 @@ class VisionProfile:
     def from_dict(cls, data, *, base_dir=Path(".")):
         if not isinstance(data, dict) or type(data.get("version")) is not int or data["version"] != 1:
             raise ValueError("unsupported vision profile format; expected version 1")
-        allowed = {"version", "image_size", "phase_templates", "hud", "shop", "team", "buttons", "calibrated"}
+        allowed = {"version", "image_size", "phase_templates", "hud", "shop", "team", "buttons", "calibrated", "numeric_templates"}
         if set(data) - allowed:
             raise ValueError(f"unknown vision profile fields: {sorted(set(data) - allowed)}")
         try:
-            return cls(image_size=_coordinates(data["image_size"], 2, "image_size"), phase_templates=tuple(PhaseTemplate.from_dict(item) for item in data.get("phase_templates", [])), hud={name: Rect.from_list(value) for name, value in data.get("hud", {}).items()}, shop=tuple(SlotConfig.from_dict(item) for item in data.get("shop", [])), team=tuple(SlotConfig.from_dict(item) for item in data.get("team", [])), buttons={name: _coordinates(value, 2, "button") for name, value in data.get("buttons", {}).items()}, calibrated=data.get("calibrated", False), base_dir=Path(base_dir)).validate()
+            return cls(image_size=_coordinates(data["image_size"], 2, "image_size"), phase_templates=tuple(PhaseTemplate.from_dict(item) for item in data.get("phase_templates", [])), hud={name: Rect.from_list(value) for name, value in data.get("hud", {}).items()}, shop=tuple(SlotConfig.from_dict(item) for item in data.get("shop", [])), team=tuple(SlotConfig.from_dict(item) for item in data.get("team", [])), buttons={name: _coordinates(value, 2, "button") for name, value in data.get("buttons", {}).items()}, calibrated=data.get("calibrated", False), base_dir=Path(base_dir), numeric_templates=tuple(NumberTemplate.from_dict(item) for item in data.get("numeric_templates", []))).validate()
         except (KeyError, TypeError, AttributeError) as exc:
             raise ValueError(f"invalid vision profile: {exc}") from exc
 
     def to_dict(self):
-        return {"version": 1, "image_size": list(self.image_size), "calibrated": self.calibrated, "phase_templates": [item.to_dict() for item in self.phase_templates], "hud": {name: value.to_list() for name, value in self.hud.items()}, "shop": [slot.to_dict() for slot in self.shop], "team": [slot.to_dict() for slot in self.team], "buttons": {name: list(point) for name, point in self.buttons.items()}}
+        return {"version": 1, "image_size": list(self.image_size), "calibrated": self.calibrated, "phase_templates": [item.to_dict() for item in self.phase_templates], "hud": {name: value.to_list() for name, value in self.hud.items()}, "shop": [slot.to_dict() for slot in self.shop], "team": [slot.to_dict() for slot in self.team], "buttons": {name: list(point) for name, point in self.buttons.items()}, "numeric_templates": [item.to_dict() for item in self.numeric_templates]}
 
     @classmethod
     def load(cls, path):
@@ -197,6 +236,9 @@ class Perceptor:
         self.profile = profile.validate()
         self.ocr = ocr
         self._templates = {}
+        self._numeric_templates = {}
+        for item in profile.numeric_templates:
+            self._numeric_templates.setdefault(item.field, []).append(item)
 
     def _template(self, name, region):
         if name not in self._templates:
@@ -211,17 +253,39 @@ class Perceptor:
     def _distance(self, frame, region, name):
         return image_distance(region.crop(frame), self._template(name, region))
 
-    def _number(self, frame, region, minimum, maximum):
-        if region is None or self.ocr is None:
+    def _reference_number(self, frame, region, field_name):
+        scores = {}
+        for item in self._numeric_templates.get(field_name, ()):
+            score = self._distance(frame, region, item.template)
+            if item.value not in scores or score < scores[item.value][0]:
+                scores[item.value] = (score, item)
+        ordered = sorted(scores.values(), key=lambda pair: pair[0])
+        if not ordered or ordered[0][0] > ordered[0][1].max_distance:
+            return None, False
+        score, item = ordered[0]
+        if len(ordered) > 1 and ordered[1][0] - score <= item.margin:
+            return None, True
+        return item.value, True
+
+    def _number(self, frame, region, minimum, maximum, field_name=None):
+        if region is None:
             return None
+        reference, matched = self._reference_number(frame, region, field_name)
+        if matched and reference is None:
+            return None
+        if self.ocr is None:
+            return reference
         try:
-            return read_number(self.ocr(region.crop(frame)), minimum, maximum)
+            value = read_number(self.ocr(region.crop(frame)), minimum, maximum)
         except TimeoutError:
             # Abort this observation instead of timing out again on every crop.
             raise
         except Exception:
             # OCR process failures must never authorize a mouse action.
             return None
+        if matched:
+            return reference if value is None or value == reference else None
+        return value
 
     def _phase(self, frame):
         scores = {}
@@ -236,9 +300,9 @@ class Perceptor:
         runner_up = ordered[1][0] if len(ordered) > 1 else float("inf")
         return item.phase if score <= item.max_distance and runner_up - score > item.margin else Phase.UNKNOWN
 
-    def _slot(self, frame, slot):
-        attack = self._number(frame, slot.attack, 0, 99)
-        health = self._number(frame, slot.health, 1, 99)
+    def _slot(self, frame, slot, field_prefix=None):
+        attack = self._number(frame, slot.attack, 0, 99, f"{field_prefix}.attack")
+        health = self._number(frame, slot.health, 1, 99, f"{field_prefix}.health")
         stats_present = attack is not None and health is not None
         scores = sorted((self._distance(frame, slot.portrait, path), name) for name, path in slot.species_templates.items())
         empty_score = self._distance(frame, slot.portrait, slot.empty_template) if slot.empty_template is not None else float("inf")
@@ -253,7 +317,7 @@ class Perceptor:
         species = None
         if scores and scores[0][0] <= slot.max_distance and (len(scores) == 1 or scores[1][0] - scores[0][0] > slot.margin):
             species = scores[0][1]
-        return PetSlot(occupied=True, species=species, attack=attack, health=health, level=self._number(frame, slot.level, 1, 3))
+        return PetSlot(occupied=True, species=species, attack=attack, health=health, level=self._number(frame, slot.level, 1, 3, f"{field_prefix}.level"))
 
     def observe(self, frame):
         frame = np.asarray(frame)
@@ -264,5 +328,5 @@ class Perceptor:
         if phase != Phase.SHOP:
             return Board(phase=phase)
         limits = {"gold": (0, 99), "turn": (1, 99), "wins": (0, 99), "lives": (0, 99)}
-        hud = {name: self._number(frame, self.profile.hud.get(name), *bounds) for name, bounds in limits.items()}
-        return Board(phase=phase, **hud, shop=tuple(self._slot(frame, slot) for slot in self.profile.shop), team=tuple(self._slot(frame, slot) for slot in self.profile.team))
+        hud = {name: self._number(frame, self.profile.hud.get(name), *bounds, field_name=name) for name, bounds in limits.items()}
+        return Board(phase=phase, **hud, shop=tuple(self._slot(frame, slot, f"shop.{i}") for i, slot in enumerate(self.profile.shop)), team=tuple(self._slot(frame, slot, f"team.{i}") for i, slot in enumerate(self.profile.team)))

@@ -16,6 +16,10 @@ class Phase(str, Enum):
     UNKNOWN = "unknown"
     SHOP = "shop"
     BATTLE = "battle"
+    NAMING = "naming"
+    NAMING_READY = "naming_ready"
+    ROUND_RESULT = "round_result"
+    TIER_UNLOCK = "tier_unlock"
     RESULT = "result"
 
 
@@ -111,7 +115,8 @@ class Action:
     target: int | None = None
 
     def __post_init__(self) -> None:
-        if self.kind not in {"buy", "roll", "sell", "end_turn", "merge", "continue"}:
+        if self.kind not in {"buy", "roll", "sell", "end_turn", "merge", "continue",
+                             "choose_name", "confirm_name", "continue_round", "dismiss_tier"}:
             raise ValueError(f"unknown desktop action: {self.kind!r}")
         _integer(self.slot, "slot", maximum=4)
         _integer(self.target, "target", maximum=4)
@@ -139,11 +144,18 @@ def legal_action(board: Board, action: Action) -> bool:
     """Validate an action against observations, without touching the desktop.
 
     A standard pet costs three gold. Combines require an identified level-one
-    shop pet and an identified matching teammate below level three. Result and
-    battle screens need a separately calibrated, phase-specific controller;
-    this initial validator never authorizes their ``continue`` action.
+    shop pet and an identified matching teammate below level three. Interstitial
+    actions require their exact recognized phase and no slot arguments. The
+    runtime separately requires calibrated points; generic continue is disabled.
     """
-    if not isinstance(board, Board) or not isinstance(action, Action) or not _known_shop(board):
+    if not isinstance(board, Board) or not isinstance(action, Action):
+        return False
+    transitions = {"choose_name": Phase.NAMING, "confirm_name": Phase.NAMING_READY,
+                   "continue_round": Phase.ROUND_RESULT, "dismiss_tier": Phase.TIER_UNLOCK}
+    if action.kind in transitions:
+        return (board.phase == transitions[action.kind]
+                and action.slot is None and action.target is None)
+    if not _known_shop(board):
         return False
     if action.kind in {"roll", "end_turn"}:
         return action.slot is None and action.target is None and (

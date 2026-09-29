@@ -193,3 +193,15 @@ def test_every_policy_decision_in_representative_boards_is_legal():
         for team in ((EMPTY,) * 5, (pet(level=1),) * 5, (pet(), EMPTY, EMPTY, EMPTY, EMPTY)):
             value = board(gold=gold, team=team, shop=(pet(8, 9, level=1), pet(), EMPTY))
             assert legal_action(value, policy.choose_action(value))
+
+
+@pytest.mark.parametrize("phase,kind", [
+    (Phase.NAMING, "choose_name"), (Phase.NAMING_READY, "confirm_name"),
+    (Phase.ROUND_RESULT, "continue_round"), (Phase.TIER_UNLOCK, "dismiss_tier"),
+])
+def test_transition_action_requires_exact_phase_and_no_slots(phase, kind):
+    for candidate in Phase:
+        assert legal_action(Board(candidate), Action(kind)) is (candidate == phase)
+    assert not legal_action(Board(phase), Action(kind, slot=0))
+    assert not legal_action(Board(phase), Action(kind, target=0))
+    assert DesktopPolicy().choose_action(Board(phase)) is None

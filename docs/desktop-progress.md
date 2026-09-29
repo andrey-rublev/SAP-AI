@@ -106,7 +106,28 @@ battle, victory, and tier-unlock frames have been checked; later-turn coverage
 still needs expansion.
 The private profile stays `calibrated: false`; unattended play is not enabled.
 
-## Next useful milestones
+## Overnight development, 2026-09-29
+
+The user authorized eight hours of development and live program testing,
+06:38–14:38 UTC. The target is the program's own observe/decide/click/verify
+loop. Agent-directed gameplay is not a substitute for this validation.
+
+Optional, field-specific numeric references now supplement OCR. Ambiguous
+references and conflicting OCR remain unknown. Private replay checked 286
+expected numeric/occupancy fields across eleven recorded shop frames with no
+unknown or incorrect values. This set includes reference-source frames and
+does not establish general recognition accuracy. A fresh turn-three frame
+read all HUD values, occupancy, and attack/health values correctly without
+new references; one hovered level badge remained unknown. The local profile
+was enabled for a bounded roll test. No private calibration is committed.
+
+Naming, naming-ready, round-result, and tier-unlock are now distinct phases;
+the terminal result phase remains separate. Shop dice indicate tier, so they
+are not used as pet-level observations. Species coverage remains incomplete.
+Validation: 279 focused state/session/runtime/CLI/vision tests passed with
+mocked IO. A live program action is the next check.
+
+## Remaining milestones
 
 1. Finish the private 2048x1152 profile using the recorded turn-one through
    turn-three frames. Keep `calibrated` false until all readings and input
