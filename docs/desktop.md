@@ -188,3 +188,12 @@ It reports paired stat gains and gold efficiency, with deterministic replay
 and resumable reports under `.local/desktop/`. Candidates remain separate
 from the live policy: this synthetic stat objective omits abilities, food,
 equipment, combat, and the strategic value of experience.
+
+`tools/eval_desktop_frames.py` evaluates an explicitly labeled private frame
+manifest against a frozen copy of the profile and templates. `--sweep` applies
+small brightness, contrast, and JPEG perturbations without moving the layout.
+Reports separate correct, unknown, incorrect, false-empty, and observation-error
+counts; errors and incorrect readings give a failing exit status. Time, case,
+and saved-example limits bound the job. This checks the supplied scenes and
+does not measure accuracy on unseen gameplay. See the tool docstring for the
+manifest format; keep labels, images, and reports under `.local/desktop/`.

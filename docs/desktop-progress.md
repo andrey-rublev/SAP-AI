@@ -214,18 +214,37 @@ constraint. Bounded offline CPU jobs continue: two-hour controller soak,
 four-hour long-sequence soak, and one-hour perception perturbation sweep.
 The eight-hour work window still ends at 14:38 UTC.
 
+## Validation results after the usage reset, 2026-09-29
+
+At 11:35 UTC, local jobs had completed 287,444 thirty-round controller cases
+in two hours and 183,473 hundred-round cases in four hours, with zero unexpected
+failures. Source hashes identify the exact controller versions used. These are
+synthetic IO contract checks, not game wins.
+
+The private perception sweep completed 1,485 cases over eleven labeled native
+frames in 1,388.6 seconds: 21,487 correct fields, 6,053 unknown, zero incorrect,
+zero false-empty, and no case errors. Perturbed/reference-source frames are
+not held-out gameplay accuracy. The reusable evaluator snapshots its inputs
+and reports errors separately; an exception can never score as a correct
+UNKNOWN observation. Thirty-three focused evaluator tests pass. The full
+offline suite passed 688 tests before this final error-accounting revision.
+
+Private calibration now recognizes 11 gold and the fourth shop slot from turn
+five. A bot purchase spent 11 -> 8 gold and filled the empty teammate with the
+6/3 badger. It stopped because the fourth shop slot had no verified empty
+reference; that resulting native sample is now available for calibration.
+
 ## Remaining milestones
 
-1. Finish the private 2048x1152 profile using the recorded turn-one through
-   turn-three frames. Keep `calibrated` false until all readings and input
-   points pass validation. Empty team and shop reference images are available.
+1. Continue the private 2560x1440 native profile validation as new states appear.
+   The older 2048x1152 Computer Use profile cannot drive native Windows input.
 2. Verify OCR, empty slots, species, and proposals across both day and night
    backgrounds. Include naming, battle, victory, and tier-unlock negatives.
 3. Verify a bounded run of the standalone controller: purchase acknowledgment,
    roll, end-turn, and the following shop without duplicate inputs. The
    agent-directed demo does not establish that this pipeline works end to end.
-4. Add calibrated naming/dialog/result handling and changing shop-slot counts,
-   including victory continuation and tier-unlock dismissal. Record verified
+4. Validate remaining naming, loss/terminal result, and later shop-slot layouts.
+   Victory/draw continuation and tier dismissal are implemented. Record verified
    multi-turn controller playback before claiming autonomous runs.
 5. Broaden species/level recognition and strategic play (food, abilities,
    ordering), using an observation representation compatible with the real game.
