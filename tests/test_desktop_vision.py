@@ -4,7 +4,7 @@ import copy
 import numpy as np
 import pytest
 
-from desktop_state import Phase
+from desktop_state import Action, DesktopPolicy, Phase, legal_action
 from desktop_vision import Perceptor, Rect, VisionProfile, image_distance, read_number
 
 
@@ -350,3 +350,91 @@ def test_transition_buttons_are_explicit_optional_calibration(scene):
     profile = VisionProfile.from_dict(scene[0], base_dir=scene[3])
     assert profile.buttons["dismiss_tier"] == (3, 4)
     assert profile.buttons["confirm_end_turn"] == (3, 4)
+
+
+def gated_shop(scene, turns=(1, 1, 1, 5, 9)):
+    template = scene[0]["shop"][0]
+    scene[0]["shop"] = [{**copy.deepcopy(template), "available_from_turn": turn} for turn in turns]
+
+
+@pytest.mark.parametrize("turn,count", [(1, 3), (4, 3), (5, 4), (8, 4), (9, 5), (12, 5)])
+def test_shop_geometry_uses_calibrated_turn_boundaries(scene, turn, count):
+    gated_shop(scene)
+    scene[1][0, 6] = turn
+    board = observe(scene)
+    assert board.turn == turn and len(board.shop) == count
+    assert all(slot.occupied is True and slot.attack == 2 and slot.health == 3 for slot in board.shop)
+
+
+def test_turn_gating_uses_profile_values_without_builtin_game_schedule(scene):
+    gated_shop(scene, (1, 2, 7))
+    scene[1][0, 6] = 2
+    assert len(observe(scene).shop) == 2
+
+
+def test_unknown_turn_with_gated_slots_blocks_actions_and_skips_shop_readings(scene, monkeypatch):
+    gated_shop(scene)
+    scene[1][0, 6] = 255
+    scene[0]["team"] *= 5
+    profile = VisionProfile.from_dict(scene[0], base_dir=scene[3])
+    perceptor = Perceptor(profile, ocr=scene[2])
+    original = perceptor._slot
+    prefixes = []
+
+    def record(frame, slot, field_prefix=None):
+        prefixes.append(field_prefix)
+        return original(frame, slot, field_prefix)
+
+    monkeypatch.setattr(perceptor, "_slot", record)
+    board = perceptor.observe(scene[1])
+    assert board.turn is None and len(board.shop) == 5
+    assert all(slot.occupied is None for slot in board.shop)
+    assert prefixes == [f"team.{i}" for i in range(5)]
+    assert DesktopPolicy().choose_action(board) is None
+    assert not legal_action(board, Action("roll"))
+    assert not legal_action(board, Action("end_turn"))
+
+
+def test_inactive_slot_references_are_not_loaded(scene):
+    gated_shop(scene)
+    scene[0]["shop"][3]["species_templates"] = {"future": "not-yet-captured.png"}
+    scene[1][0, 6] = 4
+    assert len(observe(scene).shop) == 3
+
+
+@pytest.mark.parametrize("turn", [0, -1, True, 1.5, "5", None])
+def test_invalid_available_turn_is_rejected(scene, turn):
+    scene[0]["shop"][0]["available_from_turn"] = turn
+    with pytest.raises(ValueError, match="available_from_turn"):
+        VisionProfile.from_dict(scene[0])
+
+
+def test_active_shop_must_be_a_prefix_and_team_slots_are_always_available(scene):
+    gated_shop(scene, (1, 5, 1))
+    with pytest.raises(ValueError, match="nondecreasing"):
+        VisionProfile.from_dict(scene[0])
+    gated_shop(scene, (1, 5, 9))
+    scene[0]["team"][0]["available_from_turn"] = 2
+    with pytest.raises(ValueError, match="team slots"):
+        VisionProfile.from_dict(scene[0])
+
+
+@pytest.mark.parametrize("row", ["shop", "team"])
+def test_profile_rejects_more_slots_than_board_can_represent(scene, row):
+    scene[0][row] *= 6
+    with pytest.raises(ValueError, match="at most five"):
+        VisionProfile.from_dict(scene[0])
+
+
+def test_gated_slots_roundtrip_and_legacy_slots_default_to_turn_one(scene):
+    legacy = VisionProfile.from_dict(scene[0], base_dir=scene[3])
+    assert legacy.shop[0].available_from_turn == legacy.team[0].available_from_turn == 1
+    scene[1][0, 6] = 255
+    assert observe(scene).shop[0].occupied is True  # Legacy unknown-turn behavior.
+    gated_shop(scene)
+    profile = VisionProfile.from_dict(scene[0], base_dir=scene[3])
+    path = scene[3] / "gated.json"
+    profile.save(path)
+    restored = VisionProfile.load(path)
+    assert restored == profile
+    assert [slot.available_from_turn for slot in restored.shop] == [1, 1, 1, 5, 9]

@@ -84,14 +84,15 @@ class SlotConfig:
     species_templates: dict[str, str] = field(default_factory=dict)
     max_distance: float = 0.06
     margin: float = 0.015
+    available_from_turn: int = 1
 
     @classmethod
     def from_dict(cls, data):
         regions = {name: Rect.from_list(data[name]) if data.get(name) is not None else None for name in ("attack", "health", "level")}
-        return cls(portrait=Rect.from_list(data["portrait"]), **regions, empty_template=data.get("empty_template"), species_templates=data.get("species_templates", {}), max_distance=data.get("max_distance", 0.06), margin=data.get("margin", 0.015))
+        return cls(portrait=Rect.from_list(data["portrait"]), **regions, empty_template=data.get("empty_template"), species_templates=data.get("species_templates", {}), max_distance=data.get("max_distance", 0.06), margin=data.get("margin", 0.015), available_from_turn=data.get("available_from_turn", 1))
 
     def to_dict(self):
-        return {"portrait": self.portrait.to_list(), **{name: getattr(self, name).to_list() if getattr(self, name) else None for name in ("attack", "health", "level")}, "empty_template": self.empty_template, "species_templates": self.species_templates, "max_distance": self.max_distance, "margin": self.margin}
+        return {"portrait": self.portrait.to_list(), **{name: getattr(self, name).to_list() if getattr(self, name) else None for name in ("attack", "health", "level")}, "empty_template": self.empty_template, "species_templates": self.species_templates, "max_distance": self.max_distance, "margin": self.margin, "available_from_turn": self.available_from_turn}
 
 
 @dataclass(frozen=True)
@@ -158,7 +159,12 @@ class VisionProfile:
             item.region.validate(self.image_size)
             self.template_path(item.template)
             _thresholds(item.max_distance, item.margin)
+        for row in (self.shop, self.team):
+            if len(row) > 5:
+                raise ValueError("shop and team may each contain at most five slots")
         for slot in (*self.shop, *self.team):
+            if type(slot.available_from_turn) is not int or slot.available_from_turn < 1:
+                raise ValueError("available_from_turn must be a positive integer")
             for name in ("portrait", "attack", "health", "level"):
                 if getattr(slot, name) is not None:
                     getattr(slot, name).validate(self.image_size)
@@ -171,6 +177,11 @@ class VisionProfile:
                 if not isinstance(species, str) or not species.strip():
                     raise ValueError("species names must be nonempty strings")
                 self.template_path(path)
+        if any(slot.available_from_turn != 1 for slot in self.team):
+            raise ValueError("team slots must be available from turn 1")
+        if any(left.available_from_turn > right.available_from_turn
+               for left, right in zip(self.shop, self.shop[1:])):
+            raise ValueError("shop available_from_turn values must be nondecreasing")
         for item in self.numeric_templates:
             region, minimum, maximum = self.numeric_region(item.field)
             if region is None:
@@ -329,4 +340,13 @@ class Perceptor:
             return Board(phase=phase)
         limits = {"gold": (0, 99), "turn": (1, 99), "wins": (0, 99), "lives": (0, 99)}
         hud = {name: self._number(frame, self.profile.hud.get(name), *bounds, field_name=name) for name, bounds in limits.items()}
-        return Board(phase=phase, **hud, shop=tuple(self._slot(frame, slot, f"shop.{i}") for i, slot in enumerate(self.profile.shop)), team=tuple(self._slot(frame, slot, f"team.{i}") for i, slot in enumerate(self.profile.team)))
+        turn = hud["turn"]
+        if turn is None and any(slot.available_from_turn > 1 for slot in self.profile.shop):
+            # The active geometry is unknown. Never authorize input from a
+            # partially observed shop or infer the turn from visible pet count.
+            shop = tuple(PetSlot(None) for _ in self.profile.shop)
+        else:
+            shop = tuple(self._slot(frame, slot, f"shop.{i}")
+                         for i, slot in enumerate(self.profile.shop)
+                         if turn is None or slot.available_from_turn <= turn)
+        return Board(phase=phase, **hud, shop=shop, team=tuple(self._slot(frame, slot, f"team.{i}") for i, slot in enumerate(self.profile.team)))

@@ -90,6 +90,12 @@ region. A match can resolve blank OCR, but conflicting OCR or ambiguous
 references remain unknown. Keep reference images beside the private profile.
 Shop dice show tier, not pet level.
 
+Calibrate later shop positions with `available_from_turn` on each shop slot
+(default 1). Values must be nondecreasing so the active slots remain a prefix
+and action indices still map to the correct points. The observed turn selects
+that prefix; an unreadable turn blocks shop actions when any slot is gated.
+Team slots are always present. Validate the schedule against the actual client.
+
 ## Preview and controlled execution
 
 After setting `calibrated` to true and keeping the game foreground:

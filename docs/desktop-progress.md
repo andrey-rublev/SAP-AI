@@ -195,6 +195,25 @@ review found no blocking issues. The installed historical `sapai` engine has
 different species/stats from recorded current-game offers, so overnight work
 does not train the incompatible toy DQN.
 
+Turn four completed its shop inputs and confirmation, but night battle imagery
+was unknown. Private battle references now use the PAUSE label on the player's
+half, with both day/night examples; DRAW has an explicit round-result reference.
+The bot continued to the turn-five tier overlay, then dismissed it after
+calibration. It sold the ant at 10 gold but could not read the resulting 11,
+so acknowledgment timed out without retrying. The game is stopped at turn five
+with four teammates and 11 gold. Turn five also reveals a fourth shop offer.
+
+Shop slots now support an explicit `available_from_turn` calibration schedule.
+Unknown turn readings fail closed for gated layouts. The runtime retains the
+same prefix indices for input. 115 vision tests pass. The private profile still
+needs its fourth slot and the 11-gold crop validated before continuing play.
+
+At 07:16 UTC the five-hour Plus usage window was exhausted; reset is 11:33:44
+UTC. Further model work is deferred until reset to honor the user's usage
+constraint. Bounded offline CPU jobs continue: two-hour controller soak,
+four-hour long-sequence soak, and one-hour perception perturbation sweep.
+The eight-hour work window still ends at 14:38 UTC.
+
 ## Remaining milestones
 
 1. Finish the private 2048x1152 profile using the recorded turn-one through
