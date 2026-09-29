@@ -154,6 +154,13 @@ and template checks, and never stores engine failures. A private recorded-frame
 benchmark measured 2.80 seconds initially and 0.0044 seconds on the identical
 frame; changing/animated frames still need OCR. Nineteen cache tests pass.
 
+The program completed five further rolls and acknowledged each gold decrease,
+then correctly stopped before a sale because no Sell point was calibrated.
+Selecting a teammate for calibration exposed the Sell button; that inspection
+did not sell a pet. Sales now use select-then-click, with calibration checked
+before selection and focus/geometry checks before both clicks. Fifty-nine
+mocked runtime tests pass, including six added sale regressions.
+
 ## Remaining milestones
 
 1. Finish the private 2048x1152 profile using the recorded turn-one through

@@ -97,6 +97,64 @@ def test_purchase_rechecks_geometry_before_destination_press():
     ]
 
 
+def sell_runtime():
+    observed = Board(Phase.SHOP, gold=10, turn=1,
+                     shop=(PetSlot(True, "duck", 2, 2, 1),),
+                     team=(PetSlot(False), PetSlot(False), PetSlot(True, "ant", 2, 3, 1),
+                           PetSlot(False), PetSlot(False)))
+    driver, window = runtime(current=observed)
+    driver.last_board = observed
+    driver.profile.buttons["sell"] = (55, 90)
+    return driver, window
+
+
+def test_sell_selects_teammate_then_clicks_calibrated_sell_button():
+    driver, window = sell_runtime()
+    driver.act(Action("sell", 2))
+    assert window.click.call_args_list == [call((45, 25), (100, 100)), call((55, 90), (100, 100))]
+    window.drag.assert_not_called()
+
+
+def test_missing_sell_point_rejects_sequence_before_selecting_teammate():
+    driver, window = sell_runtime()
+    driver.profile.buttons.pop("sell")
+    with pytest.raises(ValueError, match="calibrated sell point"):
+        driver.act(Action("sell", 2))
+    window.click.assert_not_called()
+    window.drag.assert_not_called()
+
+
+@pytest.mark.parametrize("failed_click", [1, 2])
+def test_sell_click_failure_stops_without_retry(failed_click):
+    driver, window = sell_runtime()
+    window.click.side_effect = [None] * (failed_click - 1) + [DesktopUnavailable("focus")]
+    with pytest.raises(DesktopUnavailable, match="focus"):
+        driver.act(Action("sell", 2))
+    expected = [call((45, 25), (100, 100)), call((55, 90), (100, 100))]
+    assert window.click.call_args_list == expected[:failed_click]
+    window.drag.assert_not_called()
+
+
+@pytest.mark.parametrize("failure", ["focus", "moved"])
+def test_sell_rechecks_focus_and_geometry_before_pressing_sell(failure):
+    driver, _ = sell_runtime()
+    window = WindowsGameWindow.__new__(WindowsGameWindow)
+    window.capture = Mock(return_value=np.zeros((100, 100, 3), dtype=np.uint8))
+    if failure == "focus":
+        geometry = [(500, 200, 100, 100)] * 2 + [DesktopUnavailable("focus")]
+    else:
+        geometry = [(500, 200, 100, 100)] * 3 + [(501, 200, 100, 100)]
+    window.geometry, window.mouse = Mock(side_effect=geometry), Mock()
+    driver.window = window
+    with pytest.raises(DesktopUnavailable, match=failure):
+        driver.act(Action("sell", 2))
+    window.mouse.click.assert_called_once_with(545, 225)
+    expected = [call(545, 225, duration=0.15)]
+    if failure == "moved":
+        expected.append(call(555, 290, duration=0.15))
+    assert window.mouse.moveTo.call_args_list == expected
+
+
 def test_preview_cannot_click():
     driver, window = runtime(execute=False)
     with pytest.raises(DesktopUnavailable, match="disabled"):

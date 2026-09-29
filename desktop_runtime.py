@@ -272,8 +272,10 @@ class DesktopRuntime:
         elif action.kind == "sell":
             if "sell" not in self.profile.buttons:
                 raise ValueError("profile has no calibrated sell point")
-            self.window.drag(self.profile.team[action.slot].portrait.center,
-                             self.profile.buttons["sell"], size)
+            # Selecting a teammate reveals the client's Sell button. Validate
+            # that point before selection; each click checks focus/geometry.
+            self.window.click(self.profile.team[action.slot].portrait.center, size)
+            self.window.click(self.profile.buttons["sell"], size)
         else:
             if action.kind not in self.profile.buttons:
                 raise ValueError(f"profile has no calibrated {action.kind} button")

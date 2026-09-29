@@ -116,6 +116,8 @@ input produces a failing exit status even when the poll budget expires.
 Purchases and merges select the shop pet with one click, then click its team
 destination. Both clicks check window focus and geometry. If either fails,
 the session stops without repeating the input sequence.
+Sales select the teammate, then click the calibrated `sell` point. That
+button appears after selection; its point must be present before either click.
 
 Purchase acknowledgment checks gold, the destination pet, and removal of the
 selected shop offer. Remaining offers may stay in place or shift left, but
