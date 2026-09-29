@@ -14,6 +14,14 @@ from typing import Callable
 from desktop_state import Action, Board, Phase, legal_action
 
 
+PHASE_ACTION_KINDS = {
+    Phase.NAMING: "choose_name",
+    Phase.NAMING_READY: "confirm_name",
+    Phase.ROUND_RESULT: "continue_round",
+    Phase.TIER_UNLOCK: "dismiss_tier",
+}
+
+
 @dataclass(frozen=True)
 class SessionResult:
     """Counts include attempted actions, including an action that raised."""
@@ -78,13 +86,34 @@ def _shop_purchase_observed(before, after, purchased: int) -> bool:
     return matches(with_gap) or matches(compacted)
 
 
-def action_acknowledged(before: Board, after: Board, action: Action) -> bool:
+def action_acknowledged(before: Board, after: Board, action: Action,
+                        *, previous_shop_turn: int | None = None) -> bool:
     """Recognize only action-specific evidence, never arbitrary screen changes."""
     if action.kind == "end_turn":
-        return after.phase == Phase.BATTLE or (
-            before.turn is not None and after.turn is not None
+        return before.phase == Phase.SHOP and (after.phase in (
+            Phase.NAMING, Phase.BATTLE, Phase.ROUND_RESULT,
+        ) or (
+            after.phase == Phase.SHOP and before.turn is not None and after.turn is not None
             and after.turn > before.turn
-        )
+        ))
+    if action.kind == "choose_name":
+        return before.phase == Phase.NAMING and after.phase == Phase.NAMING_READY
+    if action.kind == "confirm_name":
+        return before.phase == Phase.NAMING_READY and after.phase in (Phase.BATTLE, Phase.ROUND_RESULT)
+    if action.kind == "continue_round":
+        if before.phase != Phase.ROUND_RESULT:
+            return False
+        if after.phase == Phase.TIER_UNLOCK:
+            return True
+        prior = before.turn if before.turn is not None else previous_shop_turn
+        return (after.phase == Phase.SHOP and after.turn is not None
+                and (prior is None or after.turn > prior))
+    if action.kind == "dismiss_tier":
+        if before.phase != Phase.TIER_UNLOCK or after.phase != Phase.SHOP or after.turn is None:
+            return False
+        if before.turn is not None:
+            return after.turn == before.turn
+        return previous_shop_turn is None or after.turn > previous_shop_turn
     if after.phase != Phase.SHOP or not _same_turn(before, after):
         return False
     if before.gold is None or after.gold is None:
@@ -127,6 +156,9 @@ class DesktopSession:
     zero-argument capture and single-argument execution callbacks respectively.
     Event callbacks receive JSON-serializable dictionaries. ``preview`` stops
     after the first stable, legal proposal without calling ``act``.
+    ``phase_actions`` explicitly enables calibrated interstitial actions;
+    unconfigured dialogs stop the session. A round transition has its own poll
+    budget and never infers a new turn from a dismissed overlay.
     """
 
     def __init__(self, observe: Callable[[], Board], act: Callable[[Action], None], policy,
@@ -134,11 +166,13 @@ class DesktopSession:
                  preview=False, max_actions=100, max_polls=1000, poll_interval=0.2,
                  stable_frames=2, action_timeout=10.0, action_max_polls=50,
                  max_unknown_polls=25, clock=time.monotonic, sleep=time.sleep,
-                 should_stop: Callable[[], bool] | None = None):
+                 should_stop: Callable[[], bool] | None = None,
+                 phase_actions=None, max_transition_polls=300):
         for name, value in (("max_actions", max_actions), ("max_polls", max_polls),
                             ("stable_frames", stable_frames),
                             ("action_max_polls", action_max_polls),
-                            ("max_unknown_polls", max_unknown_polls)):
+                            ("max_unknown_polls", max_unknown_polls),
+                            ("max_transition_polls", max_transition_polls)):
             if type(value) is not int or value < 1:
                 raise ValueError(f"{name} must be a positive integer")
         if stable_frames < 2:
@@ -154,11 +188,20 @@ class DesktopSession:
         self.action_timeout, self.action_max_polls = action_timeout, action_max_polls
         self.max_unknown_polls = max_unknown_polls
         self.clock, self.sleep, self.should_stop = clock, sleep, should_stop
+        self.phase_actions = {Phase(phase): action for phase, action in (phase_actions or {}).items()}
+        for phase, action in self.phase_actions.items():
+            if (phase not in PHASE_ACTION_KINDS or not isinstance(action, Action)
+                    or action.kind != PHASE_ACTION_KINDS[phase]
+                    or action.slot is not None or action.target is not None):
+                raise ValueError("phase_actions must map supported phases to their matching action")
+        self.max_transition_polls = max_transition_polls
 
     def run(self) -> SessionResult:
         actions = acknowledgments = polls = stable = unknown = pending_polls = 0
         board = proposal = pending = before = last_fingerprint = last_acted = None
-        waiting_turn = None
+        waiting_turn = last_shop_turn = None
+        transition_active, transition_polls = False, 0
+        completed_transitions = set()
         started = pending_at = self.clock()
         reason, error, stage = "max_polls", None, "event"
         event_failed = False
@@ -201,10 +244,23 @@ class DesktopSession:
                 if unknown >= self.max_unknown_polls:
                     reason = "unknown_timeout"
                     break
+                if board.phase in PHASE_ACTION_KINDS or board.phase == Phase.BATTLE:
+                    if not transition_active:
+                        waiting_turn = last_shop_turn
+                    transition_active = True
+                later_shop = (board.phase == Phase.SHOP and stable >= self.stable_frames
+                              and board.turn is not None
+                              and (waiting_turn is None or board.turn > waiting_turn))
+                if transition_active and not later_shop:
+                    transition_polls += 1
+                    if transition_polls >= self.max_transition_polls:
+                        reason = "transition_timeout"
+                        break
                 if pending is not None:
                     pending_polls += 1
                     # Battles animate constantly; their phase alone confirms End Turn.
-                    confirmed = action_acknowledged(before, board, pending)
+                    confirmed = action_acknowledged(before, board, pending,
+                                                     previous_shop_turn=last_shop_turn)
                     if confirmed and (stable >= self.stable_frames or board.phase == Phase.BATTLE):
                         acknowledgments += 1
                         emit("acknowledged", action=asdict(pending), board=asdict(board))
@@ -218,16 +274,29 @@ class DesktopSession:
                 if actions >= self.max_actions:
                     reason = "max_actions"
                     break
-                if board.phase != Phase.SHOP or stable < self.stable_frames:
+                if stable < self.stable_frames:
                     continue
-                if waiting_turn is not None:
-                    if board.turn is None or board.turn <= waiting_turn:
+                if board.phase == Phase.SHOP:
+                    if transition_active and not later_shop:
                         continue
                     waiting_turn = None
+                    transition_active, transition_polls = False, 0
+                    completed_transitions.clear()
+                    last_shop_turn = board.turn
+                elif board.phase in PHASE_ACTION_KINDS:
+                    if board.phase not in self.phase_actions:
+                        reason = "transition_disabled"
+                        break
+                    if board.phase in completed_transitions:
+                        reason = "repeated_transition"
+                        break
+                else:
+                    continue
                 if fingerprint == last_acted:
                     continue
                 stage = "policy"
-                proposal = self.policy.choose_action(board)
+                proposal = (self.policy.choose_action(board) if board.phase == Phase.SHOP
+                            else self.phase_actions[board.phase])
                 if proposal is None:
                     reason = "policy_stopped"
                     break
@@ -253,6 +322,9 @@ class DesktopSession:
                 last_acted = fingerprint
                 if pending.kind == "end_turn":
                     waiting_turn = board.turn
+                    transition_active = True
+                elif board.phase in PHASE_ACTION_KINDS:
+                    completed_transitions.add(board.phase)
                 self.act(pending)
                 # The runtime may recheck the entire board before clicking.
                 # Give the resulting change its full observation budget.

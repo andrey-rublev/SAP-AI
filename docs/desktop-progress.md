@@ -127,6 +127,14 @@ are not used as pet-level observations. Species coverage remains incomplete.
 Validation: 279 focused state/session/runtime/CLI/vision tests passed with
 mocked IO. A live program action is the next check.
 
+The controller now supports opt-in, phase-specific naming, round continuation,
+and tier dismissal, with stable observations, expected next-phase checks,
+repeat prevention, and bounded transition waits. The CLI adds a time budget,
+stop file, last-frame diagnostic, and failure status for unacknowledged input.
+The first live preview sent no inputs: native capture is 2560x1440, whereas
+Computer Use supplied 2048x1152 images. The exact-size check caught this before
+input. A separate native-resolution private profile is being validated.
+
 ## Remaining milestones
 
 1. Finish the private 2048x1152 profile using the recorded turn-one through

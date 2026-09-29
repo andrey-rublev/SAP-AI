@@ -9,7 +9,7 @@ import shutil
 
 import numpy as np
 
-from desktop_state import legal_action
+from desktop_state import Action, Phase, legal_action
 
 
 OCR_TIMEOUT_SECONDS = 3.0
@@ -193,9 +193,23 @@ class DesktopRuntime:
         self.profile, self.perceptor, self.window = profile, perceptor, window
         self.execute = execute
         self.last_board = None
+        self.last_frame = None
+
+    def phase_actions(self):
+        """Enable only transitions with both a recognized phase and all points."""
+        requirements = {
+            Phase.NAMING: ("choose_name", ("name_adjective", "name_noun")),
+            Phase.NAMING_READY: ("confirm_name", ("confirm_name",)),
+            Phase.ROUND_RESULT: ("continue_round", ("continue_round",)),
+            Phase.TIER_UNLOCK: ("dismiss_tier", ("dismiss_tier",)),
+        }
+        recognized = {item.phase for item in self.profile.phase_templates}
+        return {phase: Action(kind) for phase, (kind, points) in requirements.items()
+                if phase in recognized and all(point in self.profile.buttons for point in points)}
 
     def observe(self):
-        self.last_board = self.perceptor.observe(self.window.capture())
+        self.last_frame = self.window.capture()
+        self.last_board = self.perceptor.observe(self.last_frame)
         return self.last_board
 
     def act(self, action):
@@ -204,7 +218,8 @@ class DesktopRuntime:
         before = self.last_board
         if before is None or not legal_action(before, action):
             raise ValueError("action is not legal for the last observed board")
-        current = self.perceptor.observe(self.window.capture())
+        self.last_frame = self.window.capture()
+        current = self.perceptor.observe(self.last_frame)
         if current.fingerprint() != before.fingerprint():
             raise DesktopUnavailable("board changed before input; observe again")
         size = self.profile.image_size
@@ -214,6 +229,13 @@ class DesktopRuntime:
             # any failure propagates without retrying or selecting again.
             self.window.click(self.profile.shop[action.slot].portrait.center, size)
             self.window.click(self.profile.team[action.target].portrait.center, size)
+        elif action.kind == "choose_name":
+            # Validate the whole sequence before selecting its first option.
+            names = ("name_adjective", "name_noun")
+            if any(name not in self.profile.buttons for name in names):
+                raise ValueError("profile needs both calibrated name options")
+            for name in names:
+                self.window.click(self.profile.buttons[name], size)
         elif action.kind == "sell":
             if "sell" not in self.profile.buttons:
                 raise ValueError("profile has no calibrated sell point")

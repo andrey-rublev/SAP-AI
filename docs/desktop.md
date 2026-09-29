@@ -82,6 +82,14 @@ pads the result before one recognition call. Blank or substantially clipped
 glyphs return unknown; they are not repaired by guessing a number. Validate
 counter zeroes, levels, and larger stats as well as the opening shop.
 
+Optional `numeric_templates` entries provide verified references for individual
+fields, for example `{"field": "gold", "value": 0, "template": "gold-zero.png",
+"max_distance": 0.006, "margin": 0.01}`. Fields include HUD names and
+`team.0.level`/`shop.0.attack` style slot paths. They use the field's existing
+region. A match can resolve blank OCR, but conflicting OCR or ambiguous
+references remain unknown. Keep reference images beside the private profile.
+Shop dice show tier, not pet level.
+
 ## Preview and controlled execution
 
 After setting `calibrated` to true and keeping the game foreground:
@@ -97,6 +105,13 @@ step is logged to `.local/desktop/session.jsonl`. `--action-timeout` defaults
 to 30 seconds and can be increased for slower OCR. Ctrl+C or moving the mouse to
 a screen corner stops control. Losing window focus stops control. The program
 does not activate or navigate other applications.
+
+`--max-seconds` defaults to 1800; the deadline is checked before observations
+and action dispatch, without interrupting an in-flight OCR call. Creating the
+`--stop-file` (default `.local/desktop/STOP`) stops further dispatch at the same
+checks. Remove that file explicitly before restarting. The final captured
+frame is saved to `--last-frame` for local diagnosis. Pending, unacknowledged
+input produces a failing exit status even when the poll budget expires.
 
 Purchases and merges select the shop pet with one click, then click its team
 destination. Both clicks check window focus and geometry. If either fails,
@@ -115,9 +130,15 @@ acknowledgment timeout; increasing `--action-timeout` does not extend OCR calls.
 Interrupted drags release the mouse button before the session exits. The
 session will not repeat a purchase just because its result is slow. It
 stops on unreadable boards, mismatched image size, missing calibration, action
-timeouts, or result screens. End-turn requires an observed turn number; after
-a battle it waits for a stable shop showing a higher turn. Menus, naming
-dialogs, result continuation, and initial game setup currently require manual
+timeouts, or terminal result screens. End-turn requires an observed turn
+number; after a battle it waits for a stable shop showing a higher turn.
+Interstitial control is opt-in: both the recognized phase and every required
+button must be in the profile. `naming` uses `name_adjective` and `name_noun`;
+`naming_ready` uses `confirm_name`; `round_result` uses `continue_round`; and
+`tier_unlock` uses `dismiss_tier`. Each action needs stable recognition and
+its expected following phase. Unknown frames never confirm success, repeated
+dialogs stop, and transition polling has a finite budget. An unconfigured
+dialog stops without clicking. Initial game setup still requires manual
 handling. The legacy `play.py --live` bridge remains available, but this
 structured pipeline is the path for ongoing desktop development.
 

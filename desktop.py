@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import time
 from pathlib import Path
 
 import numpy as np
@@ -78,9 +79,15 @@ def parse_args(argv=None):
     run.add_argument("--execute", action="store_true")
     run.add_argument("--max-actions", type=positive_int, default=40)
     run.add_argument("--max-polls", type=positive_int, default=600)
+    run.add_argument("--max-seconds", type=positive_seconds, default=1800,
+                     help="wall-clock budget checked before each observation and action")
     run.add_argument("--action-timeout", type=positive_seconds, default=30,
                      help="seconds allowed for observed action acknowledgment")
     run.add_argument("--log", default=".local/desktop/session.jsonl")
+    run.add_argument("--stop-file", default=".local/desktop/STOP",
+                     help="stop before further input when this local file exists")
+    run.add_argument("--last-frame", default=".local/desktop/last-frame.png",
+                     help="save the last captured frame locally for diagnosis")
     return p.parse_args(argv)
 
 
@@ -117,19 +124,25 @@ def main(argv=None):
         def event(data):
             log.write(json.dumps(data) + "\n")
             log.flush()
+        deadline = time.monotonic() + args.max_seconds
         session = DesktopSession(runtime.observe, runtime.act, DesktopPolicy(),
                                  preview=not args.execute, max_actions=args.max_actions,
                                  max_polls=args.max_polls, action_timeout=args.action_timeout,
-                                 event_callback=event)
+                                 event_callback=event, phase_actions=runtime.phase_actions(),
+                                 should_stop=lambda: Path(args.stop_file).exists() or time.monotonic() >= deadline)
         try:
             result = session.run()
         except KeyboardInterrupt:
             event({"event": "stopped", "reason": "keyboard_interrupt"})
             print("Stopped by keyboard interrupt.")
             return
+        finally:
+            if runtime.last_frame is not None:
+                save_image(runtime.last_frame, args.last_frame)
         print(json.dumps(result.to_dict(), indent=2))
-        if result.error or result.reason in {"action_timeout", "unknown_timeout", "next_shop_timeout",
-                                             "turn_unreadable", "illegal_action"}:
+        if result.error or result.pending_action or result.reason in {
+                "action_timeout", "unknown_timeout", "next_shop_timeout", "turn_unreadable",
+                "illegal_action", "transition_timeout", "repeated_transition"}:
             raise RuntimeError(f"desktop session stopped: {result.reason}; see {log_path}")
 
 

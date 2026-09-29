@@ -21,6 +21,7 @@ def board(gold=10):
 def runtime(*, execute=True, current=None):
     profile = SimpleNamespace(
         validate=Mock(), image_size=(100, 100), buttons={"roll": (5, 90), "end_turn": (95, 90)},
+        phase_templates=(),
         shop=[SimpleNamespace(portrait=Rect(10, 60, 10, 10))],
         team=[SimpleNamespace(portrait=Rect(10 + i * 15, 20, 10, 10)) for i in range(5)],
     )
@@ -125,6 +126,141 @@ def test_illegal_action_rejected_before_capture():
     with pytest.raises(ValueError, match="legal"):
         driver.act(Action("sell", 0))
     window.capture.assert_not_called()
+
+
+PHASE_TRANSITIONS = (
+    (Phase.NAMING, "choose_name", ("name_adjective", "name_noun")),
+    (Phase.NAMING_READY, "confirm_name", ("confirm_name",)),
+    (Phase.ROUND_RESULT, "continue_round", ("continue_round",)),
+    (Phase.TIER_UNLOCK, "dismiss_tier", ("dismiss_tier",)),
+)
+
+
+def phase_runtime(phase, *, execute=True):
+    current = Board(phase)
+    driver, window = runtime(execute=execute, current=current)
+    driver.last_board = current
+    driver.profile.phase_templates = (SimpleNamespace(phase=phase),)
+    driver.profile.buttons.update({
+        "name_adjective": (20, 30), "name_noun": (70, 30),
+        "confirm_name": (50, 80), "continue_round": (80, 90), "dismiss_tier": (50, 50),
+    })
+    return driver, window
+
+
+@pytest.mark.parametrize("phase,kind,points", PHASE_TRANSITIONS)
+def test_phase_action_requires_both_template_and_all_calibrated_points(phase, kind, points):
+    driver, window = phase_runtime(phase)
+    assert driver.phase_actions() == {phase: Action(kind)}
+    driver.profile.phase_templates = ()
+    assert driver.phase_actions() == {}
+    driver.profile.phase_templates = (SimpleNamespace(phase=phase),)
+    for point in points:
+        saved = driver.profile.buttons.pop(point)
+        assert driver.phase_actions() == {}
+        driver.profile.buttons[point] = saved
+    window.capture.assert_not_called()
+    window.click.assert_not_called()
+
+
+def test_phase_action_map_contains_only_supported_explicit_transitions():
+    driver, _ = phase_runtime(Phase.NAMING)
+    driver.profile.phase_templates = tuple(SimpleNamespace(phase=phase) for phase in Phase)
+    driver.profile.buttons["continue"] = (50, 60)
+    assert driver.phase_actions() == {phase: Action(kind) for phase, kind, _ in PHASE_TRANSITIONS}
+    driver.profile.buttons.pop("name_noun")
+    assert driver.phase_actions() == {phase: Action(kind) for phase, kind, _ in PHASE_TRANSITIONS
+                                     if phase != Phase.NAMING}
+
+
+def test_choose_name_clicks_adjective_then_noun_with_calibrated_coordinates():
+    driver, window = phase_runtime(Phase.NAMING)
+    driver.act(Action("choose_name"))
+    assert window.click.call_args_list == [call((20, 30), (100, 100)), call((70, 30), (100, 100))]
+    window.drag.assert_not_called()
+
+
+@pytest.mark.parametrize("missing", ["name_adjective", "name_noun"])
+def test_missing_name_point_rejects_whole_sequence_without_partial_selection(missing):
+    driver, window = phase_runtime(Phase.NAMING)
+    driver.profile.buttons.pop(missing)
+    with pytest.raises(ValueError, match="both calibrated name options"):
+        driver.act(Action("choose_name"))
+    window.click.assert_not_called()
+    window.drag.assert_not_called()
+
+
+@pytest.mark.parametrize("failed_click", [1, 2])
+def test_name_selection_failure_is_not_retried(failed_click):
+    driver, window = phase_runtime(Phase.NAMING)
+    window.click.side_effect = [None] * (failed_click - 1) + [DesktopUnavailable("focus")]
+    with pytest.raises(DesktopUnavailable, match="focus"):
+        driver.act(Action("choose_name"))
+    expected = [call((20, 30), (100, 100)), call((70, 30), (100, 100))]
+    assert window.click.call_args_list == expected[:failed_click]
+    window.drag.assert_not_called()
+
+
+@pytest.mark.parametrize("phase,kind,points", PHASE_TRANSITIONS[1:])
+def test_single_phase_button_dispatches_once(phase, kind, points):
+    driver, window = phase_runtime(phase)
+    driver.act(Action(kind))
+    window.click.assert_called_once_with(driver.profile.buttons[points[0]], (100, 100))
+    window.drag.assert_not_called()
+
+
+@pytest.mark.parametrize("phase,kind,points", PHASE_TRANSITIONS)
+def test_transition_wrong_phase_is_rejected_before_capture_or_input(phase, kind, points):
+    driver, window = phase_runtime(Phase.BATTLE)
+    with pytest.raises(ValueError, match="not legal"):
+        driver.act(Action(kind))
+    window.capture.assert_not_called()
+    window.click.assert_not_called()
+
+
+def test_phase_change_during_preflight_prevents_name_selection():
+    driver, window = phase_runtime(Phase.NAMING)
+    driver.perceptor.observe.return_value = Board(Phase.NAMING_READY)
+    with pytest.raises(DesktopUnavailable, match="changed"):
+        driver.act(Action("choose_name"))
+    window.click.assert_not_called()
+
+
+def test_preview_phase_action_never_captures_or_clicks():
+    driver, window = phase_runtime(Phase.NAMING, execute=False)
+    with pytest.raises(DesktopUnavailable, match="disabled"):
+        driver.act(Action("choose_name"))
+    window.capture.assert_not_called()
+    window.click.assert_not_called()
+
+
+def test_observe_retains_failed_perception_frame_for_diagnostics():
+    driver, window = runtime()
+    previous_board = driver.observe()
+    frame = np.full((100, 100, 3), 17, dtype=np.uint8)
+    window.capture.return_value = frame
+    driver.perceptor.observe.side_effect = TimeoutError("OCR timeout")
+    with pytest.raises(TimeoutError, match="OCR timeout"):
+        driver.observe()
+    assert driver.last_frame is frame
+    assert driver.last_board is previous_board
+    assert driver.perceptor.observe.call_args.args[0] is frame
+    window.click.assert_not_called()
+
+
+def test_action_preflight_retains_failed_frame_and_sends_no_input():
+    driver, window = runtime()
+    previous_board = driver.last_board
+    frame = np.full((100, 100, 3), 23, dtype=np.uint8)
+    window.capture.return_value = frame
+    driver.perceptor.observe.side_effect = ValueError("bad frame")
+    with pytest.raises(ValueError, match="bad frame"):
+        driver.act(Action("roll"))
+    assert driver.last_frame is frame
+    assert driver.last_board is previous_board
+    assert driver.perceptor.observe.call_args.args[0] is frame
+    window.click.assert_not_called()
+    window.drag.assert_not_called()
 
 
 def test_click_applies_client_origin_and_checks_before_press():
