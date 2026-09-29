@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import json
 import math
 import time
 from pathlib import Path
+from uuid import uuid4
 
 import numpy as np
 
@@ -34,6 +36,48 @@ def save_image(frame, path):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(frame).save(path)
+
+
+class FrameRecorder:
+    """Bounded local evidence, recording only changes to the observed board."""
+
+    def __init__(self, directory, limit=200):
+        if type(limit) is not int or limit < 1:
+            raise ValueError("record limit must be a positive integer")
+        self.directory = Path(directory).resolve()
+        self.limit = limit
+        self.run_directory = None
+        self.saved = 0
+        self._last_board = None
+
+    def record(self, event, frame):
+        if event.get("event") != "observed":
+            return event
+        board = event.get("board")
+        if not isinstance(board, dict):
+            raise ValueError("observed recording event requires a board dictionary")
+        # Store serialized content so later mutations cannot change history.
+        signature = json.dumps(board, sort_keys=True, separators=(",", ":"))
+        if signature == self._last_board:
+            return event
+        if self.saved >= self.limit:
+            self._last_board = signature
+            return event
+        if frame is None:
+            raise RuntimeError("cannot record an observed board without its captured frame")
+        if self.run_directory is None:
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+            directory = self.directory / f"{stamp}-{uuid4().hex}"
+            directory.mkdir(parents=True, exist_ok=False)
+            self.run_directory = directory
+        path = self.run_directory / f"{self.saved + 1:06d}.png"
+        save_image(frame, path)
+        self.saved += 1
+        self._last_board = signature
+        event = {**event, "frame_path": str(path)}
+        if self.saved == self.limit:
+            event.update(record_limit_reached=True, record_limit=self.limit)
+        return event
 
 
 def annotate(frame, profile):
@@ -88,6 +132,9 @@ def parse_args(argv=None):
                      help="stop before further input when this local file exists")
     run.add_argument("--last-frame", default=".local/desktop/last-frame.png",
                      help="save the last captured frame locally for diagnosis")
+    run.add_argument("--record-dir", help="optionally record changed boards in a private local directory")
+    run.add_argument("--record-limit", type=positive_int, default=200,
+                     help="maximum recorded frames per run; reaching it does not stop control")
     return p.parse_args(argv)
 
 
@@ -118,10 +165,13 @@ def main(argv=None):
     profile.validate(require_calibrated=True)
     window = WindowsGameWindow(args.window)
     runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute)
+    recorder = FrameRecorder(args.record_dir, args.record_limit) if args.record_dir else None
     log_path = Path(args.log)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as log:
         def event(data):
+            if recorder is not None:
+                data = recorder.record(data, runtime.last_frame)
             log.write(json.dumps(data) + "\n")
             log.flush()
         deadline = time.monotonic() + args.max_seconds

@@ -113,6 +113,12 @@ checks. Remove that file explicitly before restarting. The final captured
 frame is saved to `--last-frame` for local diagnosis. Pending, unacknowledged
 input produces a failing exit status even when the poll budget expires.
 
+Use `--record-dir .local/desktop/frames` to retain frames when the observed
+board changes. Logs link each saved frame; each run gets a unique directory.
+`--record-limit` defaults to 200 and stops recording additional images while
+the bounded session continues. Keep these captures private; they may include
+player identifiers. Recording is disabled by default.
+
 Purchases and merges select the shop pet with one click, then click its team
 destination. Both clicks check window focus and geometry. If either fails,
 the session stops without repeating the input sequence.

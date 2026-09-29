@@ -161,6 +161,18 @@ did not sell a pet. Sales now use select-then-click, with calibration checked
 before selection and focus/geometry checks before both clicks. Fifty-nine
 mocked runtime tests pass, including six added sale regressions.
 
+Live validation then confirmed a program-selected sale (gold 4 -> 5 and the
+selected team slot became empty), followed by its chosen replacement purchase
+(gold 5 -> 2, a 3/6 pet entered that slot, and the shop compacted). The chosen
+sale was a 2/3 fish; the ant's level was unreadable, so the policy excluded it.
+End Turn opened an excess-gold confirmation. The program stopped on that
+unknown screen without clicking again. Dialog support is being added.
+
+Optional `--record-dir` now saves changed observed boards with frame paths in
+the event log, distinct directories per run, and a default 200-frame limit.
+Repeated stable polls do not produce duplicate files. Eighteen mocked tests
+cover limits, unique paths, evidence linkage, and stopping on recording errors.
+
 ## Remaining milestones
 
 1. Finish the private 2048x1152 profile using the recorded turn-one through
