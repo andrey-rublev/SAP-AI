@@ -218,6 +218,22 @@ tests do not establish correct coordinates, template quality, OCR accuracy, or
 successful real-client play. Track observed game evidence and remaining work
 in [desktop-progress.md](desktop-progress.md).
 
+Recorded session logs can become typed replay fixtures without opening images
+or desktop dependencies:
+
+```powershell
+python tools/export_desktop_replay.py --log .local/desktop/session.jsonl --output .local/desktop/replay.json
+```
+
+The default selects the newest run; `--session 1` selects the first and negative
+indices count from the end. An incomplete newest run fails instead of selecting
+older evidence. The exporter checks consecutive polls, proposals, dispatches,
+acknowledgments and final counts/state, then copies only Boards, actions and
+relative polls. It refuses existing outputs and failed IO that saved Boards
+cannot reproduce. Review the resulting JSON before adding it to tests. Tests
+must configure session bounds and scripted choices deliberately: the fixture
+does not recreate capture latency, OCR, input errors or the strength of play.
+
 For sustained controller stress tests without desktop access:
 
 ```powershell

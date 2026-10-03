@@ -606,6 +606,21 @@ all 62 unknown remain unknown, and there are no new wrong/false-empty readings
 or observation errors. This is same-session regression evidence; no candidate
 profile or trained model was enabled for live play.
 
+## Reusable offline replay export, 2026-10-03
+
+`tools/export_desktop_replay.py` replaces manual log copying with a typed
+fixture exporter. It handles appended runs with explicit selection, rejects
+incomplete newest evidence, enforces observation/action ordering and final
+counts/state, and refuses overwrites or failed IO that Boards alone cannot
+reproduce. It drops image paths, timestamps, arbitrary account fields and error
+text; it never loads referenced captures or desktop dependencies. Independent
+review caught and fixed an impossible same-poll acknowledgment → new dispatch
+timeline. Thirty-one focused tests pass, including metadata rejection and
+source/output preservation. A smoke export of the actual opening log matches
+every Board, action and relative poll of the sanitized three-purchase fixture.
+Replay bounds and choices still require explicit test configuration; this tool
+does not reconstruct wall-clock OCR/input behavior or establish live play.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
