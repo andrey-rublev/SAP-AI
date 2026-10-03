@@ -276,6 +276,7 @@ PHASE_TRANSITIONS = (
     (Phase.NAMING_READY, "confirm_name", ("confirm_name",)),
     (Phase.ROUND_RESULT, "continue_round", ("continue_round",)),
     (Phase.TIER_UNLOCK, "dismiss_tier", ("dismiss_tier",)),
+    (Phase.LIFE_REWARD, "dismiss_life_reward", ("dismiss_life_reward",)),
     (Phase.END_TURN_CONFIRM, "confirm_end_turn", ("confirm_end_turn",)),
 )
 
@@ -295,6 +296,7 @@ def phase_runtime(phase, *, execute=True):
     driver.profile.buttons.update({
         "name_adjective": (20, 30), "name_noun": (70, 30),
         "confirm_name": (50, 80), "continue_round": (80, 90), "dismiss_tier": (50, 50),
+        "dismiss_life_reward": (40, 55),
         "confirm_end_turn": (60, 70),
         "open_play": (20, 80), "open_arena": (50, 80), "start_arena": (80, 80),
     })
@@ -374,16 +376,18 @@ def test_transition_wrong_phase_is_rejected_before_capture_or_input(phase, kind,
     window.click.assert_not_called()
 
 
-def test_phase_change_during_preflight_prevents_name_selection():
-    driver, window = phase_runtime(Phase.NAMING)
-    driver.perceptor.observe.return_value = Board(Phase.NAMING_READY)
+@pytest.mark.parametrize("phase,kind,points", PHASE_TRANSITIONS)
+def test_transition_preflight_phase_change_prevents_input(phase, kind, points):
+    driver, window = phase_runtime(phase)
+    driver.perceptor.observe.return_value = Board(Phase.UNKNOWN)
     with pytest.raises(DesktopUnavailable, match="changed"):
-        driver.act(Action("choose_name"))
+        driver.act(Action(kind))
     window.click.assert_not_called()
+    window.drag.assert_not_called()
 
 
-@pytest.mark.parametrize("phase,kind", [(Phase.NAMING, "choose_name")] +
-                         [(phase, kind) for phase, kind, _ in MENU_TRANSITIONS])
+@pytest.mark.parametrize("phase,kind", [(phase, kind) for phase, kind, _ in
+                                      PHASE_TRANSITIONS + MENU_TRANSITIONS])
 def test_preview_phase_action_never_captures_or_clicks(phase, kind):
     driver, window = phase_runtime(phase, execute=False)
     with pytest.raises(DesktopUnavailable, match="disabled"):
@@ -406,8 +410,8 @@ def test_menu_proposals_require_opt_in_template_and_button(phase, kind, points):
     window.click.assert_not_called()
 
 
-@pytest.mark.parametrize("phase,kind,points", MENU_TRANSITIONS)
-def test_missing_menu_button_cannot_send_input(phase, kind, points):
+@pytest.mark.parametrize("phase,kind,points", PHASE_TRANSITIONS[1:] + MENU_TRANSITIONS)
+def test_missing_single_transition_button_cannot_send_input(phase, kind, points):
     driver, window = phase_runtime(phase)
     driver.profile.buttons.pop(points[0])
     with pytest.raises(ValueError, match="no calibrated"):

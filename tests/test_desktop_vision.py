@@ -549,10 +549,27 @@ def test_explicit_phase_templates_support_all_known_phases(scene, phase):
 
 
 def test_transition_buttons_are_explicit_optional_calibration(scene):
-    scene[0]["buttons"].update({name: [3, 4] for name in ("name_adjective", "name_noun", "confirm_name", "continue_round", "dismiss_tier", "confirm_end_turn")})
+    scene[0]["buttons"].update({name: [3, 4] for name in ("name_adjective", "name_noun", "confirm_name", "continue_round", "dismiss_tier", "dismiss_life_reward", "confirm_end_turn")})
     profile = VisionProfile.from_dict(scene[0], base_dir=scene[3])
     assert profile.buttons["dismiss_tier"] == (3, 4)
+    assert profile.buttons["dismiss_life_reward"] == (3, 4)
     assert profile.buttons["confirm_end_turn"] == (3, 4)
+
+
+def test_life_reward_calibration_is_optional_and_roundtrips(scene):
+    legacy = VisionProfile.from_dict(scene[0], base_dir=scene[3])
+    assert "dismiss_life_reward" not in legacy.buttons
+    scene[0]["buttons"]["dismiss_life_reward"] = [3, 4]
+    scene[0]["phase_templates"].append({
+        "phase": "life_reward", "region": [0, 0, 4, 4], "template": "shop.png",
+    })
+    calibrated = VisionProfile.from_dict(scene[0], base_dir=scene[3])
+    path = scene[3] / "life-reward.json"
+    calibrated.save(path)
+    restored = VisionProfile.load(path)
+    assert restored == calibrated
+    assert restored.buttons["dismiss_life_reward"] == (3, 4)
+    assert restored.phase_templates[-1].phase == Phase.LIFE_REWARD
 
 
 def gated_shop(scene, turns=(1, 1, 1, 5, 9)):

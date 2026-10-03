@@ -303,6 +303,7 @@ def phase_actions():
             Phase.NAMING_READY: Action("confirm_name"),
             Phase.ROUND_RESULT: Action("continue_round"),
             Phase.TIER_UNLOCK: Action("dismiss_tier"),
+            Phase.LIFE_REWARD: Action("dismiss_life_reward"),
             Phase.END_TURN_CONFIRM: Action("confirm_end_turn")}
 
 
@@ -326,7 +327,7 @@ def test_recorded_round_flow_requires_each_calibrated_ready_phase():
 
 
 @pytest.mark.parametrize("phase", [Phase.NAMING, Phase.NAMING_READY, Phase.ROUND_RESULT, Phase.TIER_UNLOCK,
-                                  Phase.END_TURN_CONFIRM, Phase.MAIN_MENU, Phase.PLAY_MENU,
+                                  Phase.LIFE_REWARD, Phase.END_TURN_CONFIRM, Phase.MAIN_MENU, Phase.PLAY_MENU,
                                   Phase.ARENA_SETUP])
 def test_interstitial_actions_are_disabled_unless_explicitly_configured(phase):
     runner, clicks, _ = session([Board(phase)])
@@ -335,11 +336,13 @@ def test_interstitial_actions_are_disabled_unless_explicitly_configured(phase):
     assert not clicks
 
 
-def test_phase_preview_proposes_only_after_two_ready_frames():
-    runner, clicks, _ = session([Board(Phase.ROUND_RESULT)], phase_actions=phase_actions(), preview=True)
+@pytest.mark.parametrize("phase,kind", [(Phase.ROUND_RESULT, "continue_round"),
+                                      (Phase.LIFE_REWARD, "dismiss_life_reward")])
+def test_phase_preview_proposes_only_after_two_ready_frames(phase, kind):
+    runner, clicks, _ = session([Board(phase)], phase_actions=phase_actions(), preview=True)
     result = runner.run()
     assert (result.reason, result.polls) == ("preview", 2)
-    assert result.proposed_action == Action("continue_round")
+    assert result.proposed_action == Action(kind)
     assert not clicks
 
 
@@ -414,6 +417,124 @@ def test_tier_dismissal_requires_matching_or_positive_observed_turn():
     assert not action_acknowledged(Board(Phase.TIER_UNLOCK), shop(turn=None), action)
     assert not action_acknowledged(Board(Phase.TIER_UNLOCK), shop(turn=2), action, previous_shop_turn=2)
     assert action_acknowledged(Board(Phase.TIER_UNLOCK), shop(turn=3), action, previous_shop_turn=2)
+
+
+@pytest.mark.parametrize("source", list(Phase))
+def test_only_tier_dismissal_from_tier_can_acknowledge_life_reward(source):
+    acknowledged = action_acknowledged(Board(source), Board(Phase.LIFE_REWARD), Action("dismiss_tier"))
+    assert acknowledged is (source == Phase.TIER_UNLOCK)
+
+
+@pytest.mark.parametrize("source,kind", [
+    (Phase.SHOP, "end_turn"), (Phase.ROUND_RESULT, "continue_round"),
+    (Phase.END_TURN_CONFIRM, "confirm_end_turn"), (Phase.NAMING_READY, "confirm_name"),
+    (Phase.NAMING, "choose_name"), (Phase.LIFE_REWARD, "dismiss_life_reward"),
+])
+def test_life_reward_does_not_acknowledge_unrelated_actions(source, kind):
+    assert not action_acknowledged(Board(source, turn=2), Board(Phase.LIFE_REWARD, turn=3), Action(kind))
+
+
+@pytest.mark.parametrize("source", list(Phase))
+def test_life_reward_dismissal_requires_its_exact_source(source):
+    acknowledged = action_acknowledged(Board(source, turn=3), shop(turn=3), Action("dismiss_life_reward"))
+    assert acknowledged is (source == Phase.LIFE_REWARD)
+
+
+@pytest.mark.parametrize("destination", list(Phase))
+def test_life_reward_dismissal_acknowledges_only_shop(destination):
+    acknowledged = action_acknowledged(Board(Phase.LIFE_REWARD, turn=3), Board(destination, turn=3),
+                                      Action("dismiss_life_reward"))
+    assert acknowledged is (destination == Phase.SHOP)
+
+
+@pytest.mark.parametrize("before_turn,after_turn,prior,expected", [
+    (3, 3, 2, True), (3, 4, 2, False), (3, 2, 2, False), (3, None, 2, False),
+    (None, 3, 2, True), (None, 2, 2, False), (None, 1, 2, False),
+    (None, None, None, False), (None, 3, None, True),
+])
+def test_life_reward_dismissal_requires_observed_matching_or_new_shop_turn(before_turn, after_turn, prior, expected):
+    acknowledged = action_acknowledged(Board(Phase.LIFE_REWARD, turn=before_turn), shop(turn=after_turn),
+                                      Action("dismiss_life_reward"), previous_shop_turn=prior)
+    assert acknowledged is expected
+
+
+@pytest.mark.parametrize("phase,kind,destination", [
+    (Phase.TIER_UNLOCK, "dismiss_tier", Phase.LIFE_REWARD),
+    (Phase.LIFE_REWARD, "dismiss_life_reward", Phase.SHOP),
+])
+@pytest.mark.parametrize("indices", [{"slot": 0}, {"target": 0}])
+def test_reward_acknowledgments_reject_slot_arguments(phase, kind, destination, indices):
+    assert not action_acknowledged(Board(phase, turn=3), Board(destination, turn=3), Action(kind, **indices))
+
+
+def reward_flow():
+    before = shop(turn=2, gold=0, team=(FISH, EMPTY, EMPTY, EMPTY, EMPTY))
+    battle, outcome = Board(Phase.BATTLE), Board(Phase.ROUND_RESULT)
+    tier, reward = Board(Phase.TIER_UNLOCK), Board(Phase.LIFE_REWARD)
+    return before, reward, [before, before, battle, outcome, outcome,
+                            tier, tier, tier, reward, reward, reward]
+
+
+def test_observed_round_tier_life_reward_flow_waits_for_new_stable_shop():
+    before, _, frames = reward_flow()
+    next_shop = replace(before, turn=3, gold=10)
+    runner, clicks, events = session([*frames, next_shop, next_shop, next_shop],
+                                     Action("end_turn"), phase_actions=phase_actions())
+    result = runner.run()
+    assert [action.kind for action in clicks] == [
+        "end_turn", "continue_round", "dismiss_tier", "dismiss_life_reward",
+    ]
+    assert (result.reason, result.actions, result.acknowledgments) == ("policy_stopped", 4, 4)
+    assert result.last_board.turn == 3
+    assert [event["poll"] for event in events if event["event"] == "acted"] == [2, 5, 8, 11]
+
+
+def test_life_reward_cannot_resume_on_the_previous_shop_turn():
+    before, _, frames = reward_flow()
+    runner, clicks, _ = session([*frames, before], Action("end_turn"), Action("roll"),
+                                phase_actions=phase_actions(), action_max_polls=4)
+    result = runner.run()
+    assert [action.kind for action in clicks] == [
+        "end_turn", "continue_round", "dismiss_tier", "dismiss_life_reward",
+    ]
+    assert (result.reason, result.acknowledgments) == ("action_timeout", 3)
+    assert result.pending_action == Action("dismiss_life_reward")
+
+
+@pytest.mark.parametrize("after", [Board(Phase.LIFE_REWARD), Board(Phase.UNKNOWN), shop(turn=None)])
+def test_life_reward_dismissal_never_retries_without_expected_shop(after):
+    reward = Board(Phase.LIFE_REWARD)
+    runner, clicks, _ = session([reward, reward, after], phase_actions=phase_actions(), action_max_polls=4)
+    result = runner.run()
+    assert clicks == [Action("dismiss_life_reward")]
+    assert (result.reason, result.acknowledgments) == ("action_timeout", 0)
+    assert result.pending_action == clicks[0]
+
+
+def test_life_reward_reappearing_before_shop_processing_is_not_clicked_twice():
+    reward, next_shop = Board(Phase.LIFE_REWARD), shop(turn=3)
+    runner, clicks, _ = session([reward, reward, next_shop, next_shop, reward, reward],
+                                phase_actions=phase_actions())
+    result = runner.run()
+    assert clicks == [Action("dismiss_life_reward")]
+    assert (result.reason, result.acknowledgments) == ("repeated_transition", 1)
+
+
+def test_life_reward_uses_existing_transition_poll_budget():
+    runner, clicks, _ = session([Board(Phase.LIFE_REWARD)], phase_actions=phase_actions(),
+                                max_transition_polls=3)
+    result = runner.run()
+    assert clicks == [Action("dismiss_life_reward")]
+    assert (result.reason, result.polls, result.acknowledgments) == ("transition_timeout", 3, 0)
+
+
+def test_life_reward_click_counts_toward_action_limit():
+    reward, next_shop = Board(Phase.LIFE_REWARD), shop(turn=3)
+    runner, clicks, _ = session([reward, reward, next_shop, next_shop, next_shop], Action("roll"),
+                                phase_actions=phase_actions(), max_actions=1)
+    result = runner.run()
+    assert clicks == [Action("dismiss_life_reward")]
+    assert (result.reason, result.actions, result.acknowledgments) == ("max_actions", 1, 1)
 
 
 def test_transition_budget_does_not_reset_when_phases_flap():

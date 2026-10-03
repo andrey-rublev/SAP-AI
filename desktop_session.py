@@ -22,6 +22,7 @@ PHASE_ACTION_KINDS = {
     Phase.NAMING_READY: "confirm_name",
     Phase.ROUND_RESULT: "continue_round",
     Phase.TIER_UNLOCK: "dismiss_tier",
+    Phase.LIFE_REWARD: "dismiss_life_reward",
     Phase.END_TURN_CONFIRM: "confirm_end_turn",
 }
 
@@ -121,8 +122,12 @@ def action_acknowledged(before: Board, after: Board, action: Action,
         prior = before.turn if before.turn is not None else previous_shop_turn
         return (after.phase == Phase.SHOP and after.turn is not None
                 and (prior is None or after.turn > prior))
-    if action.kind == "dismiss_tier":
-        if before.phase != Phase.TIER_UNLOCK or after.phase != Phase.SHOP or after.turn is None:
+    if action.kind in {"dismiss_tier", "dismiss_life_reward"}:
+        if not legal_action(before, action):
+            return False
+        if action.kind == "dismiss_tier" and after.phase == Phase.LIFE_REWARD:
+            return True
+        if after.phase != Phase.SHOP or after.turn is None:
             return False
         if before.turn is not None:
             return after.turn == before.turn

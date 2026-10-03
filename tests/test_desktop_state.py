@@ -200,6 +200,7 @@ def test_every_policy_decision_in_representative_boards_is_legal():
     (Phase.ARENA_SETUP, "start_arena"),
     (Phase.NAMING, "choose_name"), (Phase.NAMING_READY, "confirm_name"),
     (Phase.ROUND_RESULT, "continue_round"), (Phase.TIER_UNLOCK, "dismiss_tier"),
+    (Phase.LIFE_REWARD, "dismiss_life_reward"),
     (Phase.END_TURN_CONFIRM, "confirm_end_turn"),
 ])
 def test_transition_action_requires_exact_phase_and_no_slots(phase, kind):
@@ -208,3 +209,12 @@ def test_transition_action_requires_exact_phase_and_no_slots(phase, kind):
     assert not legal_action(Board(phase), Action(kind, slot=0))
     assert not legal_action(Board(phase), Action(kind, target=0))
     assert DesktopPolicy().choose_action(Board(phase)) is None
+
+
+def test_life_reward_phase_and_action_roundtrip():
+    value = Board(Phase.LIFE_REWARD, turn=3, lives=4)
+    data = json.loads(json.dumps(value.to_dict()))
+    assert data["phase"] == "life_reward"
+    assert Board.from_dict(data) == value
+    action = Action("dismiss_life_reward")
+    assert Action.from_dict(json.loads(json.dumps(action.to_dict()))) == action

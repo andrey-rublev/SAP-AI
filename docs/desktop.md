@@ -164,7 +164,10 @@ number; after a battle it waits for a stable shop showing a higher turn.
 Interstitial control is opt-in: both the recognized phase and every required
 button must be in the profile. `naming` uses `name_adjective` and `name_noun`;
 `naming_ready` uses `confirm_name`; `round_result` uses `continue_round`; and
-`tier_unlock` uses `dismiss_tier`. The specific excess-gold dialog is
+`tier_unlock` uses `dismiss_tier`. The turn-three life-recovery overlay is
+`life_reward`, with a `dismiss_life_reward` button. A tier dismissal may reveal
+that overlay; play resumes only after its dismissal reveals a shop with the
+expected observed turn. The specific excess-gold dialog is
 `end_turn_confirm`, with a `confirm_end_turn` button. Each action needs stable recognition and
 its expected following phase. Unknown frames never confirm success, repeated
 dialogs stop, and transition polling has a finite budget. An unconfigured

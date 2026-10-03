@@ -250,6 +250,7 @@ class DesktopRuntime:
             Phase.NAMING_READY: ("confirm_name", ("confirm_name",)),
             Phase.ROUND_RESULT: ("continue_round", ("continue_round",)),
             Phase.TIER_UNLOCK: ("dismiss_tier", ("dismiss_tier",)),
+            Phase.LIFE_REWARD: ("dismiss_life_reward", ("dismiss_life_reward",)),
             Phase.END_TURN_CONFIRM: ("confirm_end_turn", ("confirm_end_turn",)),
         }
         if start_arena:

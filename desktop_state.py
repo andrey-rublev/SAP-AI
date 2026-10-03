@@ -23,6 +23,7 @@ class Phase(str, Enum):
     NAMING_READY = "naming_ready"
     ROUND_RESULT = "round_result"
     TIER_UNLOCK = "tier_unlock"
+    LIFE_REWARD = "life_reward"
     END_TURN_CONFIRM = "end_turn_confirm"
     RESULT = "result"
 
@@ -121,6 +122,7 @@ class Action:
     def __post_init__(self) -> None:
         if self.kind not in {"buy", "roll", "sell", "end_turn", "merge", "continue",
                              "choose_name", "confirm_name", "continue_round", "dismiss_tier",
+                             "dismiss_life_reward",
                              "confirm_end_turn", "open_play", "open_arena", "start_arena"}:
             raise ValueError(f"unknown desktop action: {self.kind!r}")
         _integer(self.slot, "slot", maximum=4)
@@ -157,6 +159,7 @@ def legal_action(board: Board, action: Action) -> bool:
         return False
     transitions = {"choose_name": Phase.NAMING, "confirm_name": Phase.NAMING_READY,
                    "continue_round": Phase.ROUND_RESULT, "dismiss_tier": Phase.TIER_UNLOCK,
+                   "dismiss_life_reward": Phase.LIFE_REWARD,
                    "confirm_end_turn": Phase.END_TURN_CONFIRM,
                    "open_play": Phase.MAIN_MENU, "open_arena": Phase.PLAY_MENU,
                    "start_arena": Phase.ARENA_SETUP}

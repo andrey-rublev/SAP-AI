@@ -358,13 +358,50 @@ A private main-menu Play reference was compared against 295 native captures:
 only its source image changed from UNKNOWN to MAIN_MENU. The Play submenu and
 selected free Turtle-pack setup still need native references and live testing.
 
-A bounded CPU perception sweep is running over 16 independently labeled private
-scenes and 135 image perturbations per scene, with the profile and templates
-frozen at launch. Its checkpoint is under `.local/desktop/frame-evaluations-1003/`.
-Read the final report at the 07:00 continuation before starting another job.
-The interim 1,253-case report has zero incorrect fields, false-empty readings or
-observation errors, but 3,911 unknown fields. These are small same-session data,
-including calibration sources; they do not establish unseen-client accuracy.
+A bounded CPU perception sweep completed all 2,160 cases over 16 labeled private
+scenes and 135 image perturbations per scene in 1,369.5 seconds. The profile and
+templates were frozen at launch. Its final report under
+`.local/desktop/frame-evaluations-1003/` contains 21,944 correct field readings,
+6,271 unknown fields, zero incorrect fields, zero false-empty readings and zero
+observation errors. Team levels are frequently unknown under perturbations.
+These are small same-session data, including calibration sources; they do not
+establish unseen-client accuracy.
+
+## Autonomous menus and life recovery, 2026-10-03
+
+After the account form was dismissed, native Play and selected Turtle-pack
+references were added privately. Across 299 native captures, only the three
+new submenu/setup sources changed phase. A corrupted setup image without the
+green selection check is UNKNOWN. A fresh main-menu preview proposed `open_play`
+with zero inputs.
+
+One standalone `--start-arena --execute` run then opened Play, opened Arena,
+started the free Turtle pack, shopped, selected and confirmed its generated
+name, and completed two battles without agent input or calibration pauses.
+It performed 18 actions with 17 acknowledgments in 176 polls before stopping
+at an unrecognized life-recovery overlay after dismissing the turn-three tier
+screen. The pending tier dismissal was not retried. This establishes fresh
+desktop startup through two battles, with a newly observed interstitial still
+blocking an uninterrupted terminal run.
+
+The new `life_reward` phase and `dismiss_life_reward` action now model the
+observed tier → life → shop sequence. Recognized life recovery can acknowledge
+only a legal tier dismissal; its own dismissal needs a known matching/new shop
+turn. Missing calibration, unknown observations, repeated overlays and stale
+shops stop without retries. Native comparison over 332 captures recovered only
+the two life-overlay images; removing the label remains UNKNOWN. Full suite:
+946 passed, one Windows permission skip. A bounded native run then performed
+one life dismissal with one acknowledgment in six polls, reaching the turn-three
+shop with five lives (the overlay showed four). The program supplied the click.
+
+A read-only level audit found complete level-one digits alongside white UI
+borders that trigger the OCR clipping guard. Numeric templates already read
+the 23 original team-zero-through-three samples correctly. Border-free private
+candidate regions improved a small 161-label perturbation probe from 92 to 134
+correct readings, with zero incorrect readings. Team four also has a dim/tinted
+digit problem. No live geometry or global threshold was changed: actual level
+two/three and clipped-digit negatives remain necessary before adopting these
+candidates. Proposed regions: x=474/666/858/1050/1242, y=368, width=20, height=44.
 
 ## Remaining milestones
 
