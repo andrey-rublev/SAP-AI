@@ -5,7 +5,7 @@
 
 Each seed supplies the same initial Board and independently keyed future shops
 to every policy. This is a synthetic shop-budget study, not a combat model:
-abilities, food, equipment, frozen offers, and actual opponent strength are
+other abilities, food, equipment, frozen offers, and actual opponent strength are
 excluded. Stat gain is an explicit proxy, never a win rate. No production policy
 or model checkpoint is changed. Candidates use only observed Board fields.
 """
@@ -47,7 +47,8 @@ class EconomyPolicy(DesktopPolicy):
 
     Replacements use observed sale income and require a funded next purchase.
     Gain ranking compares immediate stat gains using three gold for a merge
-    and a conservative two for replacement. Unknowns obey the parent policy.
+    and purchase cost minus the supported sale receipt for replacement.
+    Unknowns obey the parent policy.
     """
 
     def __init__(self, *, minimum_upgrade_gain=4, sale_funded=False, rank_gains=False):
@@ -68,7 +69,7 @@ class EconomyPolicy(DesktopPolicy):
             _, offered = max(offers, key=lambda item: (item[1].strength, -item[0]))
             gain = offered.strength - weak.strength
             if gain >= self.minimum_upgrade_gain:
-                replacement = gain, Action("sell", weak_index)
+                replacement = gain, Action("sell", weak_index), 3 - observed_sale_income(weak)
         if self.rank_gains:
             merges = []
             for i, source in offers:
@@ -79,7 +80,7 @@ class EconomyPolicy(DesktopPolicy):
                                 + min(50, max(source.health, target.health) + 1) - target.strength)
                         merges.append((gain, action))
             merge = max(merges, key=lambda item: (item[0], -item[1].slot, -item[1].target), default=None)
-            if replacement and (merge is None or replacement[0] * 3 > merge[0] * 2):
+            if replacement and (merge is None or replacement[0] * 3 > merge[0] * replacement[2]):
                 return replacement[1]
             if merge:
                 return merge[1]
@@ -277,7 +278,7 @@ def evaluate(*, output, pairs=50000, seconds=None, seed=0, checkpoint_seconds=30
         if output.exists():
             raise ValueError("output exists; use --resume or another path")
         report = {"schema_version": 1, "kind": "paired_desktop_shop_economy", "config": config, "source_sha256": signature,
-                  "limitations": "Synthetic stat utility only; excludes pet abilities, food, equipment, freezing, and combat. No win-rate claim.",
+                  "limitations": "Synthetic stat utility with supported sale receipts only; excludes other abilities, food, equipment, freezing, and combat. No win-rate claim.",
                   "pairs": 0, "next_seed": seed, "elapsed_seconds": 0.0, "failure_examples": [],
                   "variants": {name: {**dict.fromkeys(METRICS, 0), "legal_violations": 0, "truncations": 0,
                                        "unexpected_stops": 0, "paired_gain_sum": 0, "paired_gain_square_sum": 0,

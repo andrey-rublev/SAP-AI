@@ -90,6 +90,34 @@ def test_ranked_candidate_compares_replacement_against_merge_net_gold_gain():
     assert economy.EconomyPolicy(rank_gains=True).choose_action(board) == Action("sell", 1)
 
 
+@pytest.mark.parametrize("species,expected", [
+    ("pig", Action("sell", 0)), ("ant", Action("merge", 0, 1)),
+    (None, Action("merge", 0, 1)),
+])
+def test_ranked_replacement_uses_supported_net_cost_without_inventing_pig_bonus(species, expected):
+    board = full_board(shop=(pet("fish", 10, 10),))
+    board = replace(board, team=(pet(species, 9, 7), pet("fish", 7, 7, 2),
+                                  *(pet("ant", 10, 10, 3),) * 3))
+    # Replacement gains four stats for net one gold only for an identified Pig.
+    # The compatible merge gains eight for three; other sales net two gold.
+    assert DesktopPolicy().choose_action(board) == Action("merge", 0, 1)
+    assert economy.EconomyPolicy(rank_gains=True).choose_action(board) == expected
+
+
+def test_ranked_pig_replacement_trace_realizes_one_gold_net_cost():
+    board = full_board(shop=(pet("fish", 10, 10),))
+    board = replace(board, team=(pet("pig", 9, 7), pet("fish", 7, 7, 2),
+                                  *(pet("ant", 10, 10, 3),) * 3))
+    stream = SimpleNamespace(initial=board, copies=(1, 3, 6, 6, 6), size=1)
+    result = economy.run_shop(stream, economy.EconomyPolicy(rank_gains=True), trace=True)
+    assert [row["action"] for row in result["trace"]] == [
+        Action("sell", 0).to_dict(), Action("buy", 0, 0).to_dict(), Action("end_turn").to_dict(),
+    ]
+    assert (result["sale_income"], result["gross_spent"], result["net_spent"], result["stat_gain"]) == (2, 3, 1, 4)
+    assert result["leftover_gold"] == 2
+    assert result["reason"] == "end_turn" and not result["violations"]
+
+
 def test_gain_ranking_picks_best_matching_merge_destination():
     fish = pet("fish", 8, 8)
     board = full_board(shop=(fish,))

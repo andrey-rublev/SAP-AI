@@ -621,6 +621,24 @@ every Board, action and relative poll of the sanitized three-purchase fixture.
 Replay bounds and choices still require explicit test configuration; this tool
 does not reconstruct wall-clock OCR/input behavior or establish live play.
 
+## Experimental ranking uses supported sale costs, 2026-10-03
+
+The offline gain-ranking candidate previously charged every replacement two
+net gold, even for an identified level-one Pig whose supported receipt makes
+the sale → purchase cost one. Ranking now uses purchase cost minus that exact
+supported receipt. A synthetic counterexample compares four replacement stats
+for one gold against eight merge stats for three; ordinary/unknown species
+retain the two-gold replacement cost and select the merge instead. The complete
+Pig sale/purchase trace independently confirms receipt two, spend three, net
+one and four added stats. Production `DesktopPolicy` is unchanged.
+
+All 49 economy tests pass. A bounded paired study completed 10,000 seeds across
+eight experimental policies without illegal actions, truncations or unexpected
+stops. It models supported sale receipts and synthetic stat utility; other
+abilities, food, equipment, combat and experience value remain excluded. These
+results do not establish a competitive strategy or justify enabling a candidate
+for live play. The study and its provenance remain private.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

@@ -252,8 +252,12 @@ not a combat simulator, OCR evaluation, model training, or measured win rate.
 shopping policies on identical initial boards and indexed future offers.
 It reports paired stat gains and gold efficiency, with deterministic replay
 and resumable reports under `.local/desktop/`. Candidates remain separate
-from the live policy: this synthetic stat objective omits abilities, food,
+from the live policy: this synthetic stat objective omits other abilities, food,
 equipment, combat, and the strategic value of experience.
+Experimental gain ranking uses the supported receipt when comparing a
+replacement's net cost against a three-gold merge: one gold for selling an
+identified level-one Pig then buying, two for an ordinary supported sale.
+Missing or unsupported Pig levels cannot supply the bonus.
 
 `tools/eval_desktop_frames.py` evaluates an explicitly labeled private frame
 manifest against a frozen copy of the profile and templates. `--sweep` applies
