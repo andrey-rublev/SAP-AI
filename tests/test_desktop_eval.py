@@ -6,7 +6,7 @@ import pytest
 
 import desktop_session
 from desktop_session import action_acknowledged
-from desktop_state import Action, PetSlot
+from desktop_state import Action, DesktopPolicy, PetSlot, legal_action
 from tools import eval_desktop as evaluation
 
 
@@ -34,7 +34,8 @@ def test_unknown_identity_never_authorizes_merge_or_stat_only_sale():
     assert case["action_kinds"]["buy"] > 0
 
 
-@pytest.mark.parametrize("scenario", ["ignored_input", "wrong_price", "wrong_target", "input_error", "ocr_timeout_after_input", "capped_merge"])
+@pytest.mark.parametrize("scenario", ["ignored_input", "wrong_price", "wrong_target", "input_error", "ocr_timeout_after_input", "capped_merge",
+                                      "wrong_stats", "contradictory_merge"])
 def test_failed_or_unverifiable_effect_is_never_retried(scenario):
     case = evaluation.run_case(1, scenario=scenario)
     assert case["passed"] and case["actions"] == 1 and case["acknowledgments"] == 0
@@ -86,6 +87,56 @@ def test_merge_tracks_partial_experience_and_level_threshold():
     assert fixture.copies[0] == 3
     assert fixture.board.team[0] == PetSlot(True, "fish", 6, 7, 2)
     assert action_acknowledged(before, fixture.board, Action("merge", 0, 0))
+
+
+@pytest.mark.parametrize("scenario,kind", [("wrong_stats", "buy"), ("contradictory_merge", "merge")])
+@pytest.mark.parametrize("seed,field", [(0, "attack"), (1, "health")])
+def test_stat_faults_preserve_purchase_evidence_but_contradict_the_target(scenario, kind, seed, field):
+    fixture = evaluation.SyntheticDesktop(seed, scenario, 2)
+    fixture.observe()
+    fixture.observe()
+    before = fixture.board
+    action = DesktopPolicy().choose_action(before)
+    assert action.kind == kind and legal_action(before, action)
+    if kind == "merge":
+        assert all(pet.occupied is True and pet.strength is not None for pet in before.team)
+    baseline = before.shop[action.slot] if kind == "buy" else before.team[action.target]
+
+    fixture.act(action)
+    after, target = fixture.board, fixture.board.team[action.target]
+    assert after.gold == before.gold - 3
+    assert target.occupied is True and target.species == baseline.species and target.level == baseline.level
+    remaining = [pet for index, pet in enumerate(before.shop) if index != action.slot and pet.occupied]
+    assert after.shop == tuple(remaining + [evaluation.EMPTY] * (len(before.shop) - len(remaining)))
+    assert getattr(target, field) == getattr(baseline, field) - 1
+    other = "health" if field == "attack" else "attack"
+    assert getattr(target, other) == getattr(baseline, other) + (kind == "merge")
+    assert not action_acknowledged(before, after, action)
+
+    case = evaluation.run_case(seed, scenario=scenario, turns=2, trace=True)
+    assert case["passed"], case
+    assert (case["reason"], case["actions"], case["acknowledgments"]) == ("action_timeout", 1, 0)
+    assert case["action_kinds"] == {kind: 1} and case["polls"] <= 22
+    assert case["result"]["pending_action"] == action.to_dict()
+    assert not any(event["event"] == "acknowledged" for event in case["trace"])
+
+
+@pytest.mark.parametrize("scenario,kind", [
+    ("wrong_stats", "buy"), ("contradictory_merge", "merge"), ("capped_merge", "merge"),
+])
+def test_independent_oracle_detects_unverifiable_effect_if_acknowledgment_guard_is_bypassed(monkeypatch, scenario, kind):
+    original = desktop_session.action_acknowledged
+
+    def unchecked_stats(before, after, action, **kwargs):
+        if action.kind == kind:
+            return after.gold == before.gold - 3 and after.team[action.target].occupied is True
+        return original(before, after, action, **kwargs)
+
+    monkeypatch.setattr(desktop_session, "action_acknowledged", unchecked_stats)
+    case = evaluation.run_case(1, scenario=scenario, turns=2, trace=True)
+    assert not case["passed"]
+    assert case["reason"] == "event_error" and case["actions"] == 1
+    assert "acknowledged stale or incorrect action effect" in case["violations"]
 
 
 @pytest.mark.parametrize("pet, income", [

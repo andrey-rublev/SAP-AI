@@ -42,12 +42,14 @@ SCENARIOS = (
     "ignored_input", "wrong_price", "wrong_target", "input_error",
     "ocr_timeout", "ocr_timeout_after_input", "unknown_phase",
     "unknown_slot", "missing_stat", "missing_gold", "capped_merge",
+    "wrong_stats", "contradictory_merge",
 )
 EMPTY = PetSlot(False)
 SPECIES = ("ant", "fish", "beaver", "duck", "pig", "otter")
 EXPECTED = {
     **{name: "result" for name in SCENARIOS[:5]},
-    **{name: "action_timeout" for name in ("ignored_input", "wrong_price", "wrong_target", "capped_merge")},
+    **{name: "action_timeout" for name in ("ignored_input", "wrong_price", "wrong_target", "capped_merge",
+                                         "wrong_stats", "contradictory_merge")},
     "input_error": "action_error", "ocr_timeout": "observation_error",
     "ocr_timeout_after_input": "observation_error", "unknown_phase": "unknown_timeout",
     **{name: "policy_stopped" for name in ("unknown_slot", "missing_stat", "missing_gold")},
@@ -66,6 +68,7 @@ class SyntheticDesktop:
     def __init__(self, seed: int, scenario: str, turns: int):
         self.rng = random.Random(seed)
         self.scenario, self.turns = scenario, turns
+        self.fault_stat = ("attack", "health")[seed % 2]
         self.now = 0.0
         self.rounds = 0
         self.actions = []
@@ -84,10 +87,21 @@ class SyntheticDesktop:
             fish = PetSlot(True, "fish", 50, 50, 1)
             self.board = replace(self.board, gold=3, shop=(replace(fish, attack=2, health=3),) + (EMPTY,) * (self.shop_size - 1),
                                  team=(fish,) + (PetSlot(True, "ant", 20, 20, 3),) * 4)
+        elif scenario == "contradictory_merge":
+            fish = PetSlot(True, "fish", 5, 6, 2)
+            self.board = replace(self.board, gold=3,
+                                 shop=(replace(fish, attack=2, health=3, level=1),) + (EMPTY,) * (self.shop_size - 1),
+                                 team=(fish,) + (PetSlot(True, "ant", 20, 20, 3),) * 4)
+        elif scenario == "wrong_stats":
+            # A health decrease must remain a valid, positive PetSlot reading.
+            self.board = replace(self.board, shop=tuple(replace(pet, health=max(2, pet.health))
+                                                        for pet in self.board.shop))
         self.copies = [0 if not pet.occupied else self.rng.randint(1, 2) if pet.level == 1
                        else self.rng.randint(3, 5) if pet.level == 2 else 6 for pet in self.board.team]
         if scenario == "capped_merge":
             self.copies[0] = 1  # No visible stat or level change on this combine.
+        elif scenario == "contradictory_merge":
+            self.copies[0] = 3  # Stay at level two; isolate the conflicting stat evidence.
         self.initial = self.project(self.board)
 
     def pet(self, level=1):
@@ -156,6 +170,8 @@ class SyntheticDesktop:
                 destination = (j + 1) % 5 if self.scenario == "wrong_target" else j
                 self.require(team[destination].occupied is False, "fixture wrong-target slot occupied")
                 team[destination], self.copies[destination] = source, 1
+                if self.scenario == "wrong_stats":
+                    team[destination] = replace(source, **{self.fault_stat: getattr(source, self.fault_stat) - 1})
             else:
                 self.require(target.occupied is True and source.species == target.species and source.level == 1
                              and target.level in (1, 2), "incompatible species/level combine")
@@ -163,6 +179,8 @@ class SyntheticDesktop:
                 level = 3 if self.copies[j] >= 6 else 2 if self.copies[j] >= 3 else 1
                 team[j] = replace(target, attack=min(50, max(source.attack, target.attack) + 1),
                                   health=min(50, max(source.health, target.health) + 1), level=level)
+                if self.scenario == "contradictory_merge":
+                    team[j] = replace(team[j], **{self.fault_stat: getattr(target, self.fault_stat) - 1})
             offers[i] = EMPTY
             if self.scenario != "gaps":
                 offers = [pet for pet in offers if pet.occupied]
@@ -237,6 +255,16 @@ def run_case(seed: int, *, scenario: str | None = None, turns: int = 5,
                 if proposed_action.kind == "sell":
                     cost = observed_sale_income(proposed_before.team[proposed_action.slot])
                 verified = verified and cost is not None and observed.gold == proposed_before.gold + cost
+                if proposed_action.kind in ("buy", "merge"):
+                    # Check the ordinary fixture's stat contract separately from
+                    # its applied board, which may deliberately contain a fault.
+                    target = observed.team[proposed_action.target]
+                    baseline = (proposed_before.shop[proposed_action.slot] if proposed_action.kind == "buy"
+                                else proposed_before.team[proposed_action.target])
+                    fields = ("attack", "health") if proposed_action.kind == "buy" else ("attack", "health", "level")
+                    verified = verified and all(getattr(target, field) >= getattr(baseline, field) for field in fields)
+                    if proposed_action.kind == "merge":
+                        verified = verified and any(getattr(target, field) > getattr(baseline, field) for field in fields)
             fixture.require(verified, "acknowledged stale or incorrect action effect")
             proposed_before = proposed_action = expected_effect = None
 

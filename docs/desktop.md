@@ -242,8 +242,11 @@ python tools/eval_desktop.py --replay 17 --scenario wrong_price
 ```
 
 The seeded harness exercises purchases, shop compaction, merges, sales, rolls,
-delayed frames, missing observations, and input/OCR failures. An independent
-fixture checks inputs and acknowledged effects. Reports checkpoint atomically;
+delayed frames, missing observations, and input/OCR failures. Its `wrong_stats`
+and `contradictory_merge` scenarios retain the correct price and source removal
+while lowering a target stat. An independent fixture checks inputs and
+acknowledged effects, including nondecreasing target stats and a visible merge
+gain even when the controller acknowledgment check is bypassed. Reports checkpoint atomically;
 `--resume` requires unchanged configuration and source hashes. A stop file or
 Ctrl+C retains the next unfinished seed. This is a controller contract test,
 not a combat simulator, OCR evaluation, model training, or measured win rate.

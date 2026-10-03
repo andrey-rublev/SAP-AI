@@ -639,6 +639,23 @@ abilities, food, equipment, combat and experience value remain excluded. These
 results do not establish a competitive strategy or justify enabling a candidate
 for live play. The study and its provenance remain private.
 
+## Independent receipt fault soak, 2026-10-03
+
+The seeded controller harness now includes purchase stat mismatches and merges
+that raise one stat while lowering another. Both preserve price, source removal,
+target occupancy and identity, isolating the contradictory receipt evidence.
+Seed parity covers attack and health decreases. Each stops after one attempt
+without acknowledgment, retry or follow-up. The independent event oracle checks
+nondecreasing target fields and a visible merge gain separately from the applied
+fixture board. Deliberately bypassing the production acknowledgment guard now
+fails this oracle for both faults and an unchanged capped merge.
+
+All 70 evaluator tests pass. A bounded final-code soak completed 50,000 seeded
+cases across 18 scenarios, with eight simulated rounds per healthy case:
+50,000 passed, zero failed. The full suite passes 1,231 tests with one Windows
+symlink-permission skip. This verifies synthetic controller contracts; it does
+not evaluate OCR, combat or native desktop play. Reports remain private.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
