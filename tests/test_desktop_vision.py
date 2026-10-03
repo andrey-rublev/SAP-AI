@@ -242,6 +242,42 @@ def test_mixed_phase_modes_require_all_eligible_evidence_to_agree(white_text_sce
         assert_unknown_without_input(board)
 
 
+@pytest.mark.parametrize("match_mode", ["rgb", "white_text"])
+@pytest.mark.parametrize("evidence", ["hidden", "abstain", "agree"])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_same_phase_variants_preserve_mode_eligibility_before_collapse(white_text_scene, match_mode, evidence, reverse):
+    from PIL import Image
+    config, frame, mask, directory = white_text_scene
+    crop = frame[3:23, 2:62]
+    crop[~mask] = 150
+    if match_mode == "rgb":
+        other_mode = config["phase_templates"][0]
+    else:
+        Image.fromarray(crop).save(directory / "exact-rgb.png")
+        other_mode = {"phase": "battle", "region": [2, 3, 60, 20], "template": "exact-rgb.png"}
+    variants = []
+    for difference, name in ((1, "strict.png"), (2, "farther.png")):
+        reference = crop.copy()
+        if match_mode == "rgb":
+            reference[~mask] = 150 + difference
+        else:
+            for y, x in np.argwhere(mask)[:difference]:
+                reference[y, x] = 150
+        Image.fromarray(reference).save(directory / name)
+        eligible = evidence == "agree" or (evidence == "hidden" and difference == 2)
+        variants.append({"phase": "battle" if evidence == "agree" else "result",
+                         "region": [2, 3, 60, 20], "template": name, "match_mode": match_mode,
+                         "max_distance": 0.06 if eligible else 0})
+    config["phase_templates"] = [other_mode, *variants]
+    if reverse:
+        config["phase_templates"].reverse()
+    board = observe_white_text(white_text_scene)
+    if evidence == "hidden":
+        assert_unknown_without_input(board)
+    else:
+        assert board.phase == Phase.BATTLE
+
+
 @pytest.mark.parametrize("fields", [
     {"match_mode": "ocr"}, {"match_mode": True}, {"match_mode": None},
     {"match_mode": ["white_text"]}, {"white_text": {}}, {"unexpected": 1},
@@ -574,6 +610,36 @@ def test_same_value_reference_variants_do_not_compete(scene):
 def test_unmatched_numeric_references_allow_ordinary_ocr(scene):
     add_number_reference(scene, value=7, color=200)
     assert observe(scene).gold == 10
+
+
+@pytest.mark.parametrize("ocr_text", [None, "10", "7", "?"])
+def test_eligible_numeric_rival_cannot_be_bypassed_by_ineligible_closest_reference(scene, ocr_text):
+    add_number_reference(scene, color=11, max_distance=0, name="strict-ten.png")
+    add_number_reference(scene, value=7, color=12, max_distance=0.01, name="eligible-seven.png")
+    ocr = None if ocr_text is None else lambda crop: ocr_text
+    assert observe(scene, ocr=ocr).gold is None
+
+
+@pytest.mark.parametrize("ocr_text", [None, "10", "7", "?"])
+def test_ineligible_closest_number_variant_cannot_hide_eligible_same_value_reference(scene, ocr_text):
+    add_number_reference(scene, value=7, color=11, max_distance=0, name="strict-seven.png")
+    add_number_reference(scene, value=7, color=12, max_distance=0.01, name="eligible-seven.png")
+    ocr = None if ocr_text is None else lambda crop: ocr_text
+    assert observe(scene, ocr=ocr).gold is None
+
+
+def test_all_ineligible_numeric_references_still_allow_ordinary_ocr(scene):
+    add_number_reference(scene, color=11, max_distance=0, name="strict-ten.png")
+    add_number_reference(scene, value=7, color=12, max_distance=0, name="strict-seven.png")
+    assert observe(scene).gold == 10
+
+
+@pytest.mark.parametrize("ocr_text,expected", [(None, 10), ("10", 10), ("?", 10), ("7", None)])
+def test_eligible_best_number_reference_preserves_ocr_agreement_and_conflict(scene, ocr_text, expected):
+    add_number_reference(scene, max_distance=0)
+    add_number_reference(scene, value=7, color=20, max_distance=0, name="strict-seven.png")
+    ocr = None if ocr_text is None else lambda crop: ocr_text
+    assert observe(scene, ocr=ocr).gold == expected
 
 
 def test_numeric_references_do_not_override_ocr_runtime_failure(scene):

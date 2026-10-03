@@ -85,6 +85,8 @@ other screens. RGB remains the default for existing profiles.
 RGB and white-text distances use separate competitor margins. A mode with no
 eligible evidence abstains; eligible ambiguity or disagreement between modes
 returns UNKNOWN. A white-text match cannot override conflicting RGB evidence.
+Eligibility is checked on every reference before grouping same-phase variants;
+a closer reference with a stricter threshold cannot hide eligible evidence.
 
 ```powershell
 python desktop.py inspect --profile .local/desktop/profile.json --image .local/desktop/shop.png --overlay .local/desktop/overlay.png
@@ -108,6 +110,9 @@ fields, for example `{"field": "gold", "value": 0, "template": "gold-zero.png",
 region. A match can resolve blank OCR, but conflicting OCR or ambiguous
 references remain unknown. Keep reference images beside the private profile.
 Shop dice show tier, not pet level.
+OCR fallback is allowed only when no numeric reference meets its threshold.
+An eligible reference hidden by a closer ineligible variant still blocks
+fallback, just as ambiguous or contradictory reference evidence does.
 
 Calibrate later shop positions with `available_from_turn` on each shop slot
 (default 1). Values must be nondecreasing so the active slots remain a prefix

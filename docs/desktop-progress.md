@@ -586,6 +586,26 @@ unknown. Contradictions time out after one attempt with no retry or follow-up.
 The focused controller/evaluation/recorded replay suites pass 315 tests. This
 is synthetic contract evidence, not an observed native merge or combat result.
 
+## Preserve eligible template conflicts, 2026-10-03
+
+Synthetic scenes exposed two paths that hid eligible evidence while grouping
+reference variants. Numeric matching could discard a closer strict reference,
+miss an eligible farther reference and accept contradictory OCR. Phase matching
+could hide an eligible RGB/white-text reference behind a stricter same-phase
+variant, allowing a conflicting mode to authorize a phase. Eligibility is now
+tracked before grouping, per numeric field and phase matching mode. An eligible
+mode with an ineligible best reference abstains; it cannot silently enable OCR
+fallback or another phase. Existing distances, margins and thresholds remain.
+
+Twenty-five new cases cover hidden rivals and same-value variants, both phase
+modes and reference orders, valid all-ineligible fallback, agreement and OCR
+conflicts. Perception/frame-study/comparison suites pass 309 tests. The same
+private four-scene, seven-variant audit against its frozen candidate profile
+completed 28 cases in 44.1 seconds: all 267 correct readings remain correct,
+all 62 unknown remain unknown, and there are no new wrong/false-empty readings
+or observation errors. This is same-session regression evidence; no candidate
+profile or trained model was enabled for live play.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

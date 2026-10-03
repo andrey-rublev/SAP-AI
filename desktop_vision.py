@@ -338,14 +338,20 @@ class Perceptor:
 
     def _reference_number(self, frame, region, field_name):
         scores = {}
+        eligible = False
         for item in self._numeric_templates.get(field_name, ()):
             score = self._distance(frame, region, item.template)
+            # Check every reference before collapsing same-value variants: a
+            # closer strict reference can otherwise hide eligible evidence.
+            eligible = eligible or score <= item.max_distance
             if item.value not in scores or score < scores[item.value][0]:
                 scores[item.value] = (score, item)
         ordered = sorted(scores.values(), key=lambda pair: pair[0])
-        if not ordered or ordered[0][0] > ordered[0][1].max_distance:
+        if not eligible:
             return None, False
         score, item = ordered[0]
+        if score > item.max_distance:
+            return None, True
         if len(ordered) > 1 and ordered[1][0] - score <= item.margin:
             return None, True
         return item.value, True
@@ -372,21 +378,24 @@ class Perceptor:
 
     def _phase(self, frame):
         modes = {}
+        eligible_modes = set()
         for item in self.profile.phase_templates:
             options = item.matching_options()
             score = (self._distance(frame, item.region, item.template) if options is None
                      else _white_text_distance(item.region.crop(frame), self._template(item.template, item.region), options))
+            if score <= item.max_distance:
+                eligible_modes.add(item.match_mode)
             scores = modes.setdefault(item.match_mode, {})
             if item.phase not in scores or score < scores[item.phase][0]:
                 scores[item.phase] = (score, item)
         winners = set()
         # RGB and Jaccard errors have different meanings. Compare competitors
         # within each mode; every mode with eligible evidence must confidently
-        # agree. A mode abstains only if none of its phase scores meets its own
-        # threshold, so an ambiguous eligible rival cannot be bypassed.
-        for scores in modes.values():
+        # agree. Check eligibility before collapsing same-phase variants, so
+        # an eligible reference cannot disappear behind a stricter close match.
+        for mode, scores in modes.items():
             ordered = sorted(scores.values(), key=lambda pair: pair[0])
-            if not any(score <= item.max_distance for score, item in ordered):
+            if mode not in eligible_modes:
                 continue
             score, item = ordered[0]
             runner_up = ordered[1][0] if len(ordered) > 1 else float("inf")
