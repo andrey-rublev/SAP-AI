@@ -309,6 +309,29 @@ live-model integration. Final full-suite validation: 739 passed, one skipped
 because this Windows account cannot create test symlinks; the separate Windows
 reparse-point regression passed.
 
+## Moving-background phases and fresh-start work, 2026-10-03
+
+Phase templates now support calibrated white-text masks, retaining RGB as the
+default. The matcher uses symmetric union-normalized error, rejects inadequate
+ink, preserves competing-phase margins and refuses conflicting evidence from
+different modes. This addresses the fixed PAUSE label over a moving moon.
+Across 167 private native recordings, two previously UNKNOWN battle frames
+became BATTLE and all other phase results were unchanged. Visual inspection
+confirms PAUSE is present in the recovered frames. Full suite: 786 passed,
+one Windows symlink-permission skip.
+
+The user requested work now and one continuation at 07:00 Eastern after the
+reset; that single continuation is configured in this chat. Local jobs and
+focused delegation should conserve usage, stopping before ordinary usage is
+exhausted instead of using paid credits.
+
+Menu navigation started a fresh Turtle-pack arena. The standalone bot then
+bought three pets, verified each purchase, ended the turn and confirmed excess
+gold. It stopped at the unrecognized naming screen without retrying. The
+unselected naming footer and both choice points now have native calibration;
+ready-state recognition is the next live validation step. Agent menu setup is
+distinct from program-controlled gameplay.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

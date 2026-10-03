@@ -65,13 +65,51 @@ class PhaseTemplate:
     template: str
     max_distance: float = 0.06
     margin: float = 0.015
+    match_mode: str = "rgb"
+    white_text: dict[str, int | float] | None = None
+
+    def matching_options(self):
+        if type(self.match_mode) is not str or self.match_mode not in {"rgb", "white_text"}:
+            raise ValueError("phase match_mode must be 'rgb' or 'white_text'")
+        if self.match_mode == "rgb":
+            if self.white_text is not None:
+                raise ValueError("white_text options require match_mode 'white_text'")
+            return None
+        options = {"min_channel": 220, "max_channel_spread": 25,
+                   "min_ink_pixels": 8, "min_ink_fraction": 0.01,
+                   "max_ink_fraction": 0.6}
+        if self.white_text is not None:
+            if not isinstance(self.white_text, dict) or set(self.white_text) - set(options):
+                raise ValueError("white_text must contain only supported matching options")
+            options.update(self.white_text)
+        for name in ("min_channel", "max_channel_spread"):
+            value = options[name]
+            if type(value) is not int or not 0 <= value <= 255:
+                raise ValueError(f"white_text {name} must be an integer between 0 and 255")
+        if type(options["min_ink_pixels"]) is not int or options["min_ink_pixels"] < 1:
+            raise ValueError("white_text min_ink_pixels must be a positive integer")
+        for name in ("min_ink_fraction", "max_ink_fraction"):
+            value = options[name]
+            if type(value) not in (int, float) or not math.isfinite(value) or not 0 < value < 1:
+                raise ValueError(f"white_text {name} must be finite and strictly between 0 and 1")
+        if options["min_ink_fraction"] >= options["max_ink_fraction"]:
+            raise ValueError("white_text min_ink_fraction must be below max_ink_fraction")
+        return options
 
     @classmethod
     def from_dict(cls, data):
-        return cls(Phase(data["phase"]), Rect.from_list(data["region"]), data["template"], data.get("max_distance", 0.06), data.get("margin", 0.015))
+        allowed = {"phase", "region", "template", "max_distance", "margin", "match_mode", "white_text"}
+        if not isinstance(data, dict) or set(data) - allowed:
+            raise ValueError("phase template must contain only supported fields")
+        return cls(Phase(data["phase"]), Rect.from_list(data["region"]), data["template"], data.get("max_distance", 0.06), data.get("margin", 0.015), data.get("match_mode", "rgb"), data.get("white_text"))
 
     def to_dict(self):
-        return {"phase": self.phase.value, "region": self.region.to_list(), "template": self.template, "max_distance": self.max_distance, "margin": self.margin}
+        data = {"phase": self.phase.value, "region": self.region.to_list(), "template": self.template, "max_distance": self.max_distance, "margin": self.margin}
+        if self.match_mode != "rgb":
+            data["match_mode"] = self.match_mode
+        if self.white_text is not None:
+            data["white_text"] = dict(self.white_text)
+        return data
 
 
 @dataclass(frozen=True)
@@ -159,6 +197,7 @@ class VisionProfile:
             item.region.validate(self.image_size)
             self.template_path(item.template)
             _thresholds(item.max_distance, item.margin)
+            item.matching_options()
         for row in (self.shop, self.team):
             if len(row) > 5:
                 raise ValueError("shop and team may each contain at most five slots")
@@ -240,6 +279,26 @@ def image_distance(left, right):
     return float(np.abs(left.astype(np.float32) - right.astype(np.float32)).mean() / 255)
 
 
+def _white_text_distance(left, right, options):
+    """Symmetric mask error; insufficient or filled crops cannot match."""
+    if left.shape != right.shape:
+        raise ValueError("template dimensions differ from calibrated crop")
+    masks = []
+    for image in (left, right):
+        darkest = image.min(axis=2)
+        spread = image.max(axis=2).astype(np.int16) - darkest.astype(np.int16)
+        mask = (darkest >= options["min_channel"]) & (spread <= options["max_channel_spread"])
+        ink = int(mask.sum())
+        fraction = ink / mask.size
+        if (ink < options["min_ink_pixels"] or fraction < options["min_ink_fraction"]
+                or fraction > options["max_ink_fraction"]):
+            return float("inf")
+        masks.append(mask)
+    # Normalizing by the union keeps blank background from diluting missing
+    # strokes, and penalizes extra white strokes as well as absent ones.
+    return float(np.count_nonzero(masks[0] ^ masks[1]) / np.count_nonzero(masks[0] | masks[1]))
+
+
 class Perceptor:
     """Read one atomic frame. The injected OCR callable accepts an RGB array."""
 
@@ -299,17 +358,29 @@ class Perceptor:
         return value
 
     def _phase(self, frame):
-        scores = {}
+        modes = {}
         for item in self.profile.phase_templates:
-            score = self._distance(frame, item.region, item.template)
+            options = item.matching_options()
+            score = (self._distance(frame, item.region, item.template) if options is None
+                     else _white_text_distance(item.region.crop(frame), self._template(item.template, item.region), options))
+            scores = modes.setdefault(item.match_mode, {})
             if item.phase not in scores or score < scores[item.phase][0]:
                 scores[item.phase] = (score, item)
-        ordered = sorted(scores.values(), key=lambda pair: pair[0])
-        if not ordered:
-            return Phase.UNKNOWN
-        score, item = ordered[0]
-        runner_up = ordered[1][0] if len(ordered) > 1 else float("inf")
-        return item.phase if score <= item.max_distance and runner_up - score > item.margin else Phase.UNKNOWN
+        winners = set()
+        # RGB and Jaccard errors have different meanings. Compare competitors
+        # within each mode; every mode with eligible evidence must confidently
+        # agree. A mode abstains only if none of its phase scores meets its own
+        # threshold, so an ambiguous eligible rival cannot be bypassed.
+        for scores in modes.values():
+            ordered = sorted(scores.values(), key=lambda pair: pair[0])
+            if not any(score <= item.max_distance for score, item in ordered):
+                continue
+            score, item = ordered[0]
+            runner_up = ordered[1][0] if len(ordered) > 1 else float("inf")
+            if score > item.max_distance or runner_up - score <= item.margin:
+                return Phase.UNKNOWN
+            winners.add(item.phase)
+        return next(iter(winners)) if len(winners) == 1 else Phase.UNKNOWN
 
     def _slot(self, frame, slot, field_prefix=None):
         attack = self._number(frame, slot.attack, 0, 99, f"{field_prefix}.attack")

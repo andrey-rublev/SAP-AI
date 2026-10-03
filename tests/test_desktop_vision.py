@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from desktop_state import Action, DesktopPolicy, Phase, legal_action
-from desktop_vision import Perceptor, Rect, VisionProfile, image_distance, read_number
+from desktop_vision import PhaseTemplate, Perceptor, Rect, VisionProfile, _white_text_distance, image_distance, read_number
 
 
 def save_template(path, color, size=(4, 4)):
@@ -79,6 +79,209 @@ def test_ambiguous_phase_returns_unknown(scene):
 def test_multiple_references_of_same_phase_do_not_compete(scene):
     scene[0]["phase_templates"].append(copy.deepcopy(scene[0]["phase_templates"][0]))
     assert observe(scene).phase == Phase.SHOP
+
+
+@pytest.fixture
+def white_text_scene(tmp_path):
+    from PIL import Image
+    # A fixed PAUSE silhouette in a roomy crop; no OCR or real game pixels.
+    glyphs = ("110 101 110 100 100", "010 101 111 101 101",
+              "101 101 101 101 111", "111 100 111 001 111",
+              "111 100 110 100 111")
+    letters = [np.array([[pixel == "1" for pixel in row] for row in glyph.split()])
+               for glyph in glyphs]
+    word = np.concatenate([np.pad(letter, ((0, 0), (0, 1))) for letter in letters], axis=1)
+    mask = np.zeros((20, 60), dtype=bool)
+    mask[5:15, 8:48] = np.repeat(np.repeat(word, 2, axis=0), 2, axis=1)
+    crop = np.full((20, 60, 3), 35, dtype=np.uint8)
+    crop[mask] = 255
+    Image.fromarray(crop).save(tmp_path / "pause.png")
+    frame = np.zeros((30, 80, 3), dtype=np.uint8)
+    frame[3:23, 2:62] = crop
+    config = {"version": 1, "image_size": [80, 30], "calibrated": True,
+              "phase_templates": [{"phase": "battle", "region": [2, 3, 60, 20],
+                                   "template": "pause.png", "match_mode": "white_text"}]}
+    return config, frame, mask, tmp_path
+
+
+def observe_white_text(scene):
+    def unexpected_ocr(crop):
+        pytest.fail("phase text matching must not invoke OCR")
+    return Perceptor(VisionProfile.from_dict(scene[0], base_dir=scene[3]), ocr=unexpected_ocr).observe(scene[1])
+
+
+def assert_unknown_without_input(board):
+    assert board.phase == Phase.UNKNOWN
+    assert board.gold is None and not board.shop and not board.team
+    assert DesktopPolicy().choose_action(board) is None
+    assert not legal_action(board, Action("roll"))
+    assert not legal_action(board, Action("end_turn"))
+
+
+def test_white_text_survives_changing_background_and_moving_moon(white_text_scene):
+    _, frame, mask, directory = white_text_scene
+    crop = frame[3:23, 2:62]
+    for moon_x in (0, 25, 45):
+        crop[:] = (130, 160, 185)
+        crop[:8, moon_x:moon_x + 10] = (200, 210, 215)
+        crop[mask] = 255
+        assert observe_white_text(white_text_scene).phase == Phase.BATTLE
+    # The same calibrated RGB reference still rejects this background change.
+    white_text_scene[0]["phase_templates"][0].pop("match_mode")
+    assert_unknown_without_input(observe_white_text(white_text_scene))
+
+
+@pytest.mark.parametrize("change", ["missing_letter", "extra_strokes", "different_word", "colored_text"])
+def test_white_text_rejects_changed_or_missing_text(white_text_scene, change):
+    crop = white_text_scene[1][3:23, 2:62]
+    if change == "missing_letter":
+        crop[:, 8:14] = 35
+    elif change == "extra_strokes":
+        crop[3:8, 50:58] = 255
+    elif change == "different_word":
+        crop[:] = 35
+        crop[np.roll(white_text_scene[2], 6, axis=1)] = 255
+    else:
+        crop[white_text_scene[2]] = (255, 230, 200)
+    assert_unknown_without_input(observe_white_text(white_text_scene))
+
+
+@pytest.mark.parametrize("target", ["reference", "observation", "both"])
+@pytest.mark.parametrize("ink", ["blank", "sparse", "filled"])
+def test_white_text_invalid_ink_never_matches_even_at_max_threshold(white_text_scene, target, ink):
+    from PIL import Image
+    crop = np.full((20, 60, 3), 35, dtype=np.uint8)
+    if ink == "sparse":
+        crop[0, :7] = 255
+    elif ink == "filled":
+        crop[:] = 255
+    if target in {"reference", "both"}:
+        Image.fromarray(crop).save(white_text_scene[3] / "pause.png")
+    if target in {"observation", "both"}:
+        white_text_scene[1][3:23, 2:62] = crop
+    white_text_scene[0]["phase_templates"][0]["max_distance"] = 1
+    assert_unknown_without_input(observe_white_text(white_text_scene))
+
+
+@pytest.mark.parametrize("option,value", [("min_ink_pixels", 1000), ("min_ink_fraction", 0.4), ("max_ink_fraction", 0.02)])
+def test_white_text_ink_limits_use_calibrated_options(white_text_scene, option, value):
+    template = white_text_scene[0]["phase_templates"][0]
+    template["white_text"] = {option: value}
+    assert_unknown_without_input(observe_white_text(white_text_scene))
+
+
+def test_white_text_channel_threshold_and_spread_use_calibrated_options(white_text_scene):
+    from PIL import Image
+    crop = white_text_scene[1][3:23, 2:62]
+    crop[white_text_scene[2]] = (215, 225, 230)
+    Image.fromarray(crop).save(white_text_scene[3] / "pause.png")
+    template = white_text_scene[0]["phase_templates"][0]
+    assert_unknown_without_input(observe_white_text(white_text_scene))
+    template["white_text"] = {"min_channel": 210, "max_channel_spread": 15}
+    assert observe_white_text(white_text_scene).phase == Phase.BATTLE
+    template["white_text"]["max_channel_spread"] = 14
+    assert_unknown_without_input(observe_white_text(white_text_scene))
+
+
+def test_white_text_error_is_symmetric_and_normalized_by_ink_union():
+    left = np.zeros((10, 10, 3), dtype=np.uint8)
+    right = left.copy()
+    left[0, :] = 255
+    right[0, :5] = right[1, :5] = 255
+    options = PhaseTemplate(Phase.BATTLE, Rect(0, 0, 10, 10), "pause.png", match_mode="white_text").matching_options()
+    assert _white_text_distance(left, right, options) == pytest.approx(2 / 3)
+    assert _white_text_distance(right, left, options) == pytest.approx(2 / 3)
+    assert _white_text_distance(left, left, options) == 0
+
+
+@pytest.mark.parametrize("same_phase", [False, True])
+def test_white_text_runner_up_margin_and_same_phase_variants(white_text_scene, same_phase):
+    from PIL import Image
+    reference = white_text_scene[1][3:23, 2:62].copy()
+    y, x = np.argwhere(white_text_scene[2])[0]
+    reference[y, x] = 35  # Almost identical, below the configured margin.
+    Image.fromarray(reference).save(white_text_scene[3] / "variant.png")
+    variant = {**white_text_scene[0]["phase_templates"][0], "template": "variant.png",
+               "phase": "battle" if same_phase else "result"}
+    white_text_scene[0]["phase_templates"].append(variant)
+    board = observe_white_text(white_text_scene)
+    if same_phase:
+        assert board.phase == Phase.BATTLE
+    else:
+        assert_unknown_without_input(board)
+
+
+@pytest.mark.parametrize("evidence", ["abstain", "agree", "conflict", "ambiguous", "eligible_runner"])
+def test_mixed_phase_modes_require_all_eligible_evidence_to_agree(white_text_scene, evidence):
+    from PIL import Image
+    config, frame, mask, directory = white_text_scene
+    crop = frame[3:23, 2:62]
+    crop[~mask] = 150  # RGB pause.png cannot match, white mask still can.
+    rgb_reference = crop.copy()
+    if evidence == "abstain":
+        rgb_reference[~mask] = 35
+    elif evidence == "eligible_runner":
+        rgb_reference[~mask] = 170
+    Image.fromarray(rgb_reference).save(directory / "rgb.png")
+    rgb = {"phase": "battle" if evidence == "agree" else "result", "region": [2, 3, 60, 20],
+           "template": "rgb.png"}
+    config["phase_templates"].append(rgb)
+    if evidence == "ambiguous":
+        config["phase_templates"].append({**rgb, "phase": "battle"})
+    elif evidence == "eligible_runner":
+        # Lowest RGB error fails its stricter threshold; a slightly worse
+        # rival passes its own threshold. That group must veto a white winner.
+        rgb["max_distance"] = 0.01
+        rgb_reference[~mask] = 172
+        Image.fromarray(rgb_reference).save(directory / "runner.png")
+        config["phase_templates"].append({**rgb, "phase": "shop", "template": "runner.png", "max_distance": 0.1})
+    board = observe_white_text(white_text_scene)
+    if evidence in {"abstain", "agree"}:
+        assert board.phase == Phase.BATTLE
+    else:
+        assert_unknown_without_input(board)
+
+
+@pytest.mark.parametrize("fields", [
+    {"match_mode": "ocr"}, {"match_mode": True}, {"match_mode": None},
+    {"match_mode": ["white_text"]}, {"white_text": {}}, {"unexpected": 1},
+    {"white_text": []}, {"white_text": {"unknown": 1}},
+    {"white_text": {"min_channel": True}}, {"white_text": {"min_channel": 256}},
+    {"white_text": {"max_channel_spread": -1}}, {"white_text": {"max_channel_spread": 2.5}},
+    {"white_text": {"min_ink_pixels": 0}}, {"white_text": {"min_ink_pixels": True}},
+    {"white_text": {"min_ink_fraction": 0}}, {"white_text": {"min_ink_fraction": float("nan")}},
+    {"white_text": {"max_ink_fraction": 1}}, {"white_text": {"max_ink_fraction": float("inf")}},
+    {"white_text": {"min_ink_fraction": 0.6, "max_ink_fraction": 0.6}},
+])
+def test_invalid_phase_mode_or_white_text_options_are_rejected(white_text_scene, fields):
+    template = white_text_scene[0]["phase_templates"][0]
+    if fields == {"white_text": {}}:
+        template["match_mode"] = "rgb"
+    template.update(fields)
+    with pytest.raises(ValueError):
+        VisionProfile.from_dict(white_text_scene[0], base_dir=white_text_scene[3])
+
+
+def test_phase_modes_roundtrip_and_legacy_v1_remains_rgb(scene, white_text_scene):
+    legacy = VisionProfile.from_dict(scene[0], base_dir=scene[3])
+    assert all(item.match_mode == "rgb" and item.white_text is None for item in legacy.phase_templates)
+    assert all("match_mode" not in item and "white_text" not in item for item in legacy.to_dict()["phase_templates"])
+    template = white_text_scene[0]["phase_templates"][0]
+    template["white_text"] = {"min_channel": 240, "max_channel_spread": 12, "min_ink_pixels": 20,
+                              "min_ink_fraction": 0.03, "max_ink_fraction": 0.5}
+    profile = VisionProfile.from_dict(white_text_scene[0], base_dir=white_text_scene[3])
+    path = white_text_scene[3] / "white-text.json"
+    profile.save(path)
+    loaded = VisionProfile.load(path)
+    assert loaded == profile
+    assert loaded.to_dict()["version"] == 1
+    assert loaded.to_dict()["phase_templates"][0]["white_text"] == template["white_text"]
+    assert Perceptor(loaded).observe(white_text_scene[1]).phase == Phase.BATTLE
+
+
+def test_no_phase_references_cannot_authorize_input(scene):
+    scene[0]["phase_templates"] = []
+    assert_unknown_without_input(observe(scene))
 
 
 @pytest.mark.parametrize("attack,health", [(255, 3), (2, 255), (255, 255), (2, 0), (100, 3)])

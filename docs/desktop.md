@@ -67,6 +67,18 @@ and an ambiguity `margin` to 0.015. Verify these against both positive and
 negative frames. A template match is not a probability. Profiles are specific
 to game resolution and appearance; changes require recalibration.
 
+Phase templates can opt into `"match_mode": "white_text"` for fixed white
+labels over moving backgrounds. This compares bright, nearly neutral pixel
+masks using symmetric mismatch divided by their union. Blank, sparse and
+mostly filled crops cannot match. Optional `white_text` settings calibrate
+`min_channel`, `max_channel_spread`, `min_ink_pixels`, `min_ink_fraction` and
+`max_ink_fraction`. Keep the crop narrow and validate changed/missing text and
+other screens. RGB remains the default for existing profiles.
+
+RGB and white-text distances use separate competitor margins. A mode with no
+eligible evidence abstains; eligible ambiguity or disagreement between modes
+returns UNKNOWN. A white-text match cannot override conflicting RGB evidence.
+
 ```powershell
 python desktop.py inspect --profile .local/desktop/profile.json --image .local/desktop/shop.png --overlay .local/desktop/overlay.png
 ```
