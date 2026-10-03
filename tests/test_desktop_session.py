@@ -158,6 +158,41 @@ def test_sell_requires_emptied_slot_and_one_gold():
     assert not action_acknowledged(before, replace(after, team=before.team), Action("sell", 0))
 
 
+@pytest.mark.parametrize("income,acknowledged", [(0, False), (1, False), (2, True), (3, False)])
+def test_known_level_one_pig_sale_requires_exact_two_gold(income, acknowledged):
+    pig = replace(ANT, species="pig")
+    before = shop(team=(pig, EMPTY, EMPTY, EMPTY, EMPTY))
+    after = replace(before, gold=before.gold + income, team=(EMPTY,) * 5)
+    assert action_acknowledged(before, after, Action("sell", 0)) is acknowledged
+
+
+@pytest.mark.parametrize("species", [None, "ant", "fish"])
+def test_two_gold_sale_requires_identified_pig(species):
+    before = shop(team=(replace(ANT, species=species), EMPTY, EMPTY, EMPTY, EMPTY))
+    after = replace(before, gold=12, team=(EMPTY,) * 5)
+    assert not action_acknowledged(before, after, Action("sell", 0))
+
+
+@pytest.mark.parametrize("level", [None, 2, 3])
+@pytest.mark.parametrize("income", [1, 2])
+def test_known_pig_with_unsupported_level_never_acknowledges_sale(level, income):
+    before = shop(team=(replace(ANT, species="pig", level=level), EMPTY, EMPTY, EMPTY, EMPTY))
+    after = replace(before, gold=before.gold + income, team=(EMPTY,) * 5)
+    assert not action_acknowledged(before, after, Action("sell", 0))
+
+
+@pytest.mark.parametrize("wrong_evidence", ["target", "turn"])
+def test_pig_sale_still_requires_selected_slot_removal_and_same_turn(wrong_evidence):
+    pig = replace(ANT, species="pig")
+    before = shop(team=(pig, ANT, EMPTY, EMPTY, EMPTY))
+    after = replace(before, gold=12, team=(EMPTY, ANT, EMPTY, EMPTY, EMPTY))
+    if wrong_evidence == "target":
+        after = replace(after, team=(pig, EMPTY, EMPTY, EMPTY, EMPTY))
+    else:
+        after = replace(after, turn=2)
+    assert not action_acknowledged(before, after, Action("sell", 0))
+
+
 def test_merge_requires_target_improvement_as_well_as_purchase_evidence():
     before = shop(team=(ANT, EMPTY, EMPTY, EMPTY, EMPTY))
     purchased = replace(before, gold=7, shop=(EMPTY, ANT, ANT))

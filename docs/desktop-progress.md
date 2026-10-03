@@ -403,6 +403,27 @@ digit problem. No live geometry or global threshold was changed: actual level
 two/three and clipped-digit negatives remain necessary before adopting these
 candidates. Proposed regions: x=474/666/858/1050/1242, y=368, width=20, height=44.
 
+That private border-free level candidate is now undergoing the same bounded
+2,160-case sweep under `.local/desktop/level-region-evaluations-1003/`. The live
+profile retains the original level regions. Compare both final reports at the
+07:00 continuation; improved level-one readings alone cannot validate levels
+two/three or authorize live adoption.
+
+The post-reward continuation performed 22 actions with 21 acknowledgments and
+stopped after selling a level-one Pig in turn five: the selected slot became
+empty and gold increased from ten to twelve. The previous one-gold rule rejected
+that legitimate result without retrying. Direct tooltip inspection confirms
+the Pig's extra one-gold sale ability and the base Sell(1) button.
+
+Sale acknowledgment now accepts exactly two gold for an identified level-one
+Pig. Unknown/other species retain the exact one-gold rule; an identified Pig
+with an unreadable or higher level is unsupported and abstains. Same turn,
+known gold and selected-slot removal remain required. Private Pig portrait
+references for team slots zero/one matched 82 crops across 233 shop images;
+inspection of their ten distinct pixel crops found only Pigs. The recorded
+ten-to-twelve sale now acknowledges with this calibration. Full suite: 961
+passed, one Windows permission skip. Unseen species and artwork remain unvalidated.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

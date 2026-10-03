@@ -142,9 +142,15 @@ def action_acknowledged(before: Board, after: Board, action: Action,
         return delta == -1
     if action.kind == "sell":
         i = action.slot
+        if i is not None and i < len(before.team) and before.team[i].species == "pig":
+            if before.team[i].level != 1:
+                return False
+            income = 2
+        else:
+            income = 1
         return (i is not None and i < len(before.team) and i < len(after.team)
                 and before.team[i].occupied is True
-                and after.team[i].occupied is False and delta == 1)
+                and after.team[i].occupied is False and delta == income)
     if action.kind not in ("buy", "merge"):
         return False
     i, j = action.slot, action.target
