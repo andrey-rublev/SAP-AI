@@ -162,6 +162,38 @@ def test_snapshot_is_immutable_when_original_calibration_changes(source):
         assert image.size == (3, 3)
 
 
+def test_snapshot_freezes_every_alternate_species_reference_before_ocr(source):
+    frame_path = source / "frame.png"
+    with Image.open(frame_path) as image:
+        frame = np.asarray(image.convert("RGB")).copy()
+    frame[4:8, 8:12] = 140
+    Image.fromarray(frame).save(frame_path)
+    references = {"pig.png": 90, "pig-alternate.png": 140}
+    original = {}
+    for name, color in references.items():
+        Image.new("RGB", (4, 4), (color,) * 3).save(source / name)
+        original[name] = (source / name).read_bytes()
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text())
+    profile["team"] = [{"portrait": [8, 4, 4, 4], "attack": [4, 8, 1, 1],
+                        "health": [5, 8, 1, 1], "species_templates": {"pig": list(references)}}]
+    profile_path.write_text(json.dumps(profile))
+    manifest_path = source / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["frames"][0]["labels"] = {"phase": "shop", "team.0.occupied": True,
+                                        "team.0.species": "pig"}
+    manifest_path.write_text(json.dumps(manifest))
+    def changing_ocr(crop):
+        for name in references:
+            (source / name).write_bytes(b"changed after freezing")
+        return "2"
+    path, report = run(source, ocr=changing_ocr, max_cases=2)
+    assert report["counts"] == {"correct": 6, "unknown": 0, "incorrect": 0, "unsafe_false_empty": 0}
+    for name, data in original.items():
+        assert (path.parent / "profile" / name).read_bytes() == data
+        assert report["profile"]["templates"][name] == study.digest(data)
+
+
 def test_non_shop_phase_never_invokes_ocr(source):
     profile_path = source / "profile.json"
     profile = json.loads(profile_path.read_text())

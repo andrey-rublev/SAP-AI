@@ -11,7 +11,7 @@ import math
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterator
 
 import numpy as np
 
@@ -119,10 +119,27 @@ class SlotConfig:
     health: Rect | None = None
     level: Rect | None = None
     empty_template: str | None = None
-    species_templates: dict[str, str] = field(default_factory=dict)
+    species_templates: dict[str, str | list[str]] = field(default_factory=dict)
     max_distance: float = 0.06
     margin: float = 0.015
     available_from_turn: int = 1
+
+    def species_references(self) -> Iterator[tuple[str, str]]:
+        """Yield canonical species/path pairs without changing stored JSON values."""
+        if not isinstance(self.species_templates, dict):
+            raise ValueError("species_templates must map species names to local images")
+        for species, references in self.species_templates.items():
+            if not isinstance(species, str) or not species.strip():
+                raise ValueError("species names must be nonempty strings")
+            if isinstance(references, str):
+                references = [references]
+            elif not isinstance(references, list) or not references:
+                raise ValueError("species references must be a path or a nonempty list of paths")
+            canonical = " ".join(species.split()).casefold()
+            for path in references:
+                if not isinstance(path, str) or not path.strip():
+                    raise ValueError("species reference paths must be nonempty strings")
+                yield canonical, path
 
     @classmethod
     def from_dict(cls, data):
@@ -210,11 +227,7 @@ class VisionProfile:
             _thresholds(slot.max_distance, slot.margin)
             if slot.empty_template is not None:
                 self.template_path(slot.empty_template)
-            if not isinstance(slot.species_templates, dict):
-                raise ValueError("species_templates must map species names to local images")
-            for species, path in slot.species_templates.items():
-                if not isinstance(species, str) or not species.strip():
-                    raise ValueError("species names must be nonempty strings")
+            for _, path in slot.species_references():
                 self.template_path(path)
         if any(slot.available_from_turn != 1 for slot in self.team):
             raise ValueError("team slots must be available from turn 1")
@@ -386,7 +399,11 @@ class Perceptor:
         attack = self._number(frame, slot.attack, 0, 99, f"{field_prefix}.attack")
         health = self._number(frame, slot.health, 1, 99, f"{field_prefix}.health")
         stats_present = attack is not None and health is not None
-        scores = sorted((self._distance(frame, slot.portrait, path), name) for name, path in slot.species_templates.items())
+        species_scores = {}
+        for name, path in slot.species_references():
+            distance = self._distance(frame, slot.portrait, path)
+            species_scores[name] = min(distance, species_scores.get(name, float("inf")))
+        scores = sorted((distance, name) for name, distance in species_scores.items())
         empty_score = self._distance(frame, slot.portrait, slot.empty_template) if slot.empty_template is not None else float("inf")
         if empty_score <= slot.max_distance:
             # Blank OCR alone cannot resolve competing visual evidence. Empty

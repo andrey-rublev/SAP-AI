@@ -46,8 +46,14 @@ Fields:
 
 Each slot contains `portrait`, `attack`, `health`, and optional `level`
 rectangles. `empty_template` references an image of that exact portrait region
-when empty. `species_templates` optionally maps species names to matching
-portrait images. Reference paths must stay inside the profile directory.
+when empty. `species_templates` optionally maps species names to a portrait
+image path or a nonempty list of paths, for example
+`{"fish": ["fish-day.png", "fish-night.png"]}`. Reference paths must stay
+inside the profile directory. Matching uses the closest reference per species;
+alternate images of one species do not compete with each other. Different
+species still need the configured margin, and missing stats or competing empty
+evidence remain unknown. Validate alternate portraits against other occupied
+pets and empty slots before enabling them in a live profile.
 
 Extract template crops from a screenshot using observed coordinates:
 
@@ -250,6 +256,8 @@ then trains a small CPU classifier on private extracted sprites over recorded
 empty backgrounds. Exact-pixel sprite variants and background sources are
 separated between synthetic training and validation. Model inputs consistently
 use RGB, bilinear resizing to 64×32, and float values from zero to one.
+Geometry fitting uses the first calibrated reference per species; additional
+portrait references affect template matching, not the classifier's training set.
 
 ```powershell
 python tools/train_desktop_species.py prepare --profile .local/desktop/calibration-native.json --assets .local/desktop/assets --negatives .local/desktop/species-negative-assets --output .local/desktop/species-run

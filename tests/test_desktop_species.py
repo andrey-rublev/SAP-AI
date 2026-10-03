@@ -230,3 +230,38 @@ def test_evaluate_refuses_overwrite_without_loading_model(private):
     with pytest.raises(ValueError, match="new report"):
         species.evaluate_checkpoint("missing", "missing", "missing", target)
     assert target.read_text() == "preserved"
+
+
+def test_prepare_accepts_alternate_portraits_and_keeps_first_geometry_reference(private, monkeypatch):
+    for name, color in (("empty0.png", 20), ("empty1.png", 40),
+                        ("fish.png", 80), ("fish-alternate.png", 120)):
+        Image.new("RGB", (12, 8), (color,) * 3).save(private / name)
+    profile = {"version": 1, "image_size": [24, 8],
+               "shop": [{"portrait": [0, 0, 12, 8], "empty_template": "empty0.png",
+                          "species_templates": {"fish": ["fish.png", "fish-alternate.png"]}}],
+               "team": [{"portrait": [12, 0, 12, 8], "empty_template": "empty1.png",
+                          "species_templates": {}}]}
+    profile_path = private / "profile.json"
+    profile_path.write_text(json.dumps(profile))
+    for directory, label in (("assets", "fish"), ("negatives", "ant")):
+        location = private / directory
+        location.mkdir()
+        textures = []
+        for index, color in enumerate(("red", "blue")):
+            name = f"{index}.png"
+            sprite = Image.new("RGBA", (16, 16), color)
+            sprite.save(location / name)
+            textures.append({"candidate_species": label, "file": name, "path_id": index,
+                             "rgba_sha256": hashlib.sha256(sprite.tobytes()).hexdigest()})
+        (location / "manifest.json").write_text(json.dumps({"textures": textures}))
+    fits = []
+    def fit(crop, sprite, background):
+        fits.append(np.asarray(crop).copy())
+        return dict(size=16, x=0, y=0, width=12, height=8, mirror=False, mse=.01)
+    monkeypatch.setattr(species, "fit_sprite", fit)
+    result = species.prepare(profile_path, private / "assets", private / "negatives", private / "prepared")
+    assert all(np.all(crop == 80) for crop in fits) and len(fits) == 2
+    assert result["references"]["fish"] == {"path": str(private / "fish.png"),
+                                               "sha256": species.digest(private / "fish.png")}
+    assert len(result["entries"]) == 4 and result["labels"] == [UNKNOWN, "fish"]
+    assert (private / "prepared/profile-snapshot.json").read_bytes() == profile_path.read_bytes()

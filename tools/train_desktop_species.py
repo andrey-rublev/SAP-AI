@@ -15,15 +15,22 @@ import os
 from pathlib import Path
 import random
 import stat
+import sys
 import tempfile
 import time
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageEnhance, ImageOps
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from desktop_vision import SlotConfig
+
 UNKNOWN = "__unknown__"
 INPUT_SIZE = (64, 32)
-PRIVATE_ROOT = Path(__file__).resolve().parents[1] / ".local"
+PRIVATE_ROOT = ROOT / ".local"
 # Capture the implementation loaded for this process, never a later file revision.
 IMPLEMENTATION_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 PREPROCESSING = "RGB; BILINEAR resize to 64x32; CHW float32 / 255"
@@ -139,7 +146,9 @@ def prepare(profile_path, assets_path, negatives_path, output):
     references = {}
     for row in ("shop", "team"):
         for slot in profile[row]:
-            for species, path in slot["species_templates"].items():
+            # Geometry fitting retains the first reference for each species;
+            # alternate portraits belong to calibrated template matching.
+            for species, path in SlotConfig.from_dict(slot).species_references():
                 references.setdefault(species, str((profile_path.parent / path).resolve()))
     entries, previews = [], []
     for negative, directory in ((False, assets_path), (True, negatives_path)):

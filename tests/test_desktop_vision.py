@@ -304,6 +304,97 @@ def test_ambiguous_species_does_not_invent_merge_identity(scene):
     assert slot.occupied is True and slot.species is None
 
 
+@pytest.mark.parametrize("alternate_first", [False, True])
+def test_alternate_species_reference_recognizes_variation_without_relaxing_threshold(scene, alternate_first):
+    save_template(scene[3] / "ant-variant.png", 80)
+    scene[1][5:9, :4] = 80
+    assert observe(scene).shop[0].species is None
+    references = ["ant.png", "ant-variant.png"]
+    scene[0]["shop"][0]["species_templates"]["ant"] = references[::-1] if alternate_first else references
+    pet = observe(scene).shop[0]
+    assert (pet.occupied, pet.species, pet.attack, pet.health) == (True, "ant", 2, 3)
+
+
+@pytest.mark.parametrize("alternate_color", [150, 151])
+def test_same_species_reference_ties_do_not_compete(scene, alternate_color):
+    save_template(scene[3] / "ant-variant.png", alternate_color)
+    scene[0]["shop"][0]["species_templates"]["ant"] = ["ant.png", "ant-variant.png"]
+    assert observe(scene).shop[0].species == "ant"
+
+
+def test_canonical_species_aliases_share_one_competitor(scene):
+    save_template(scene[3] / "ant-variant.png", 151)
+    scene[0]["shop"][0]["species_templates"].update({
+        " ANT ": ["ant-variant.png"], "Ant": "ant.png",
+    })
+    assert observe(scene).shop[0].species == "ant"
+
+
+@pytest.mark.parametrize("rival_color", [150, 151])
+def test_distinct_species_alternate_reference_ties_still_abstain(scene, rival_color):
+    save_template(scene[3] / "fish-variant.png", rival_color)
+    scene[0]["shop"][0]["species_templates"]["fish"] = ["fish.png", "fish-variant.png"]
+    pet = observe(scene).shop[0]
+    assert (pet.occupied, pet.species, pet.attack, pet.health) == (True, None, 2, 3)
+
+
+@pytest.mark.parametrize("alternate_color,expected", [(2, None), (10, False)])
+def test_empty_competes_with_every_species_alternate(scene, alternate_color, expected):
+    save_template(scene[3] / "ant-variant.png", alternate_color)
+    scene[0]["shop"][0]["species_templates"]["ant"] = ["ant.png", "ant-variant.png"]
+    scene[1][5:9, :4] = 0
+    scene[1][5, 5:8] = 255
+    assert observe(scene).shop[0].occupied is expected
+
+
+def test_alternate_species_match_does_not_replace_required_stats(scene):
+    save_template(scene[3] / "ant-variant.png", 80)
+    scene[0]["shop"][0]["species_templates"]["ant"] = ["ant.png", "ant-variant.png"]
+    scene[1][5:9, :4] = 80
+    scene[1][5, 6] = 255
+    pet = observe(scene).shop[0]
+    assert pet.occupied is None and pet.species is None
+
+
+def test_species_reference_helper_and_roundtrip_preserve_legacy_strings(scene):
+    references = {" ANT ": "ant.png", "  Ground   Hog ": ["fish.png", "ant.png"]}
+    scene[0]["shop"][0]["species_templates"] = copy.deepcopy(references)
+    profile = VisionProfile.from_dict(scene[0], base_dir=scene[3])
+    assert list(profile.shop[0].species_references()) == [
+        ("ant", "ant.png"), ("ground hog", "fish.png"), ("ground hog", "ant.png"),
+    ]
+    assert profile.to_dict()["shop"][0]["species_templates"] == references
+    path = scene[3] / "alternate-species.json"
+    profile.save(path)
+    loaded = VisionProfile.load(path)
+    assert loaded == profile
+    assert loaded.shop[0].species_templates == references
+    assert isinstance(loaded.shop[0].species_templates[" ANT "], str)
+
+
+@pytest.mark.parametrize("references", [
+    [], [None], [""], ["  "], [1], ["ant.png", []], ["ant.png", {}],
+    ["ant.png", None], [["ant.png"]], ("ant.png",), {}, True, None,
+])
+def test_malformed_species_reference_lists_are_rejected(scene, references):
+    scene[0]["shop"][0]["species_templates"]["ant"] = references
+    with pytest.raises(ValueError, match="species reference"):
+        VisionProfile.from_dict(scene[0], base_dir=scene[3])
+
+
+@pytest.mark.parametrize("escape", ["../outside.png", "/tmp/outside.png"])
+def test_alternate_species_paths_cannot_escape_profile(scene, escape):
+    scene[0]["shop"][0]["species_templates"]["ant"] = ["ant.png", escape]
+    with pytest.raises(ValueError, match="template paths"):
+        VisionProfile.from_dict(scene[0], base_dir=scene[3])
+
+
+def test_missing_alternate_reference_remains_configuration_error(scene):
+    scene[0]["shop"][0]["species_templates"]["ant"] = ["ant.png", "missing.png"]
+    with pytest.raises(FileNotFoundError):
+        observe(scene)
+
+
 def test_empty_portrait_with_stats_is_contradictory(scene):
     scene[1][5:9, :4] = 0
     assert observe(scene).shop[0].occupied is None

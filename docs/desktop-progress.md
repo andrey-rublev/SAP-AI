@@ -480,6 +480,31 @@ the next adoption requirements. Comparison suite: 40 passed. Combined full
 suite: 1,020 passed, one Windows symlink-permission skip. Live fresh-start
 validation still needs the registration form dismissed by the user.
 
+## Alternate species references and account handoff, 2026-10-03
+
+Species templates now accept a legacy image path or a nonempty list of paths.
+Matching takes the best distance per canonical species before comparing rival
+species, retaining the original thresholds, occupancy/stat guards and empty-slot
+competition. Same-species references do not create false ambiguity. Legacy
+string profiles serialize unchanged. Offline studies freeze every alternate
+image; sprite geometry fitting retains the first reference per species.
+The full suite passes 1,049 tests with one Windows symlink-permission skip.
+
+A private candidate adds an independently inspected native night-shop Fish
+portrait for team slot zero, retaining its earlier reference. Its source scene
+is not one of the four species-audit scenes. Paired evaluation of the same
+28 cases recovers six unknown Fish readings without losing correct readings or
+adding wrong/false-empty readings or observation errors: 267 correct fields and
+62 unknown. The candidate remains separate from the live profile pending broader
+occupied/empty negatives; this small same-session gain is not general accuracy.
+
+The user completed account setup themselves. A fresh read-only observation
+confirmed the normal main menu, and the standalone preview proposed `open_play`
+with zero inputs in two polls. No account fields, credentials or settings were
+handled by the agent. Fresh native execution can now resume with the existing
+private profile; the experimental level regions and species model remain
+disconnected from live control.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

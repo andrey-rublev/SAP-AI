@@ -131,7 +131,7 @@ def snapshot_profile(path, directory):
     profile = VisionProfile.from_dict(json.loads(raw), base_dir=path.parent)
     names = {item.template for item in (*profile.phase_templates, *profile.numeric_templates)}
     for slot in (*profile.shop, *profile.team):
-        names.update(slot.species_templates.values())
+        names.update(path for _, path in slot.species_references())
         if slot.empty_template:
             names.add(slot.empty_template)
     directory.mkdir()
