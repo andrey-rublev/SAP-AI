@@ -347,6 +347,25 @@ skip. Native menu calibration remains pending: returning from the terminal
 opened an optional account-registration form, which needs user dismissal under
 the Computer Use authentication-dialog restriction. No fields were entered.
 
+The turn-four-to-terminal recording is now a sanitized offline fixture. Its
+replay preserves all 41 action and acknowledgment poll numbers and stops at
+RESULT even with menu observations queued afterward. A corrupted tier-dismissal
+observation showing stale turn six instead of turn seven times out without
+retrying. These tests replay recorded choices; they do not test OCR or strategy.
+Full suite after adding the replay: 854 passed, one Windows permission skip.
+
+A private main-menu Play reference was compared against 295 native captures:
+only its source image changed from UNKNOWN to MAIN_MENU. The Play submenu and
+selected free Turtle-pack setup still need native references and live testing.
+
+A bounded CPU perception sweep is running over 16 independently labeled private
+scenes and 135 image perturbations per scene, with the profile and templates
+frozen at launch. Its checkpoint is under `.local/desktop/frame-evaluations-1003/`.
+Read the final report at the 07:00 continuation before starting another job.
+The interim 1,253-case report has zero incorrect fields, false-empty readings or
+observation errors, but 3,911 unknown fields. These are small same-session data,
+including calibration sources; they do not establish unseen-client accuracy.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
