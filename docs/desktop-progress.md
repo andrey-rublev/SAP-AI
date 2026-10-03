@@ -424,6 +424,22 @@ inspection of their ten distinct pixel crops found only Pigs. The recorded
 ten-to-twelve sale now acknowledges with this calibration. Full suite: 961
 passed, one Windows permission skip. Unseen species and artwork remain unvalidated.
 
+The next native continuation performed 33 actions with 33 acknowledgments over
+288 polls in 162.1 seconds and stopped at the turn-seven loss terminal. It
+identified the remaining level-one Pig, sold it and verified gold six → eight.
+Seven consecutive observations around that sale are now a sanitized replay
+fixture: temporary identity/occupancy loss does not acknowledge the sale, and
+the stable empty slot plus exact two-gold receipt does. Missing identity or
+bonus evidence times out without retries. Final full suite: 964 passed, one
+Windows permission skip.
+
+Returning to the menu opened the guest registration form again. No fields were
+entered; user dismissal is required before the next uninterrupted fresh arena.
+This arena had zero wins, so stronger strategy and species/ability observation
+remain necessary. At 07:00, read the experimental level-sweep result, then
+continue fresh-start validation if the normal menu is available. Do not claim
+the calibration-paused arena was an uninterrupted start-to-terminal run.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
