@@ -88,6 +88,84 @@ def test_merge_tracks_partial_experience_and_level_threshold():
     assert action_acknowledged(before, fixture.board, Action("merge", 0, 0))
 
 
+@pytest.mark.parametrize("pet, income", [
+    (PetSlot(True, "pig", 3, 1, 1), 2),
+    (PetSlot(True, "ant", 2, 1, 1), 1),
+    (PetSlot(True, "fish", 5, 6, 2), 1),
+    (PetSlot(True, "beaver", 8, 8, 3), 1),
+    (PetSlot(True, None, 3, 2, None), 1),
+], ids=["level-one-pig", "ordinary-level-one", "ordinary-level-two",
+        "ordinary-level-three", "unidentified"])
+def test_sale_transition_credits_observed_income_and_acknowledges(pet, income):
+    fixture = ready_fixture()
+    fixture.board = replace(fixture.board, gold=1,
+                            team=(pet,) + (evaluation.EMPTY,) * 4)
+    fixture.copies[0] = 1
+    fixture.observe()
+    fixture.observe()
+    before = fixture.board
+    action = Action("sell", 0)
+
+    fixture.act(action)
+    # The fixture may emit stale frames before the completed sale becomes visible.
+    observed = fixture.observe()
+    while fixture.frames:
+        observed = fixture.observe()
+    if observed == before:
+        observed = fixture.observe()
+
+    assert observed.gold == before.gold + income
+    assert observed.team == (evaluation.EMPTY,) * 5
+    assert observed.shop == before.shop
+    assert fixture.copies == [0] * 5
+    assert action_acknowledged(before, observed, action)
+
+
+@pytest.mark.parametrize("level", [None, 2, 3], ids=["missing-level", "level-two", "level-three"])
+def test_unsupported_pig_sale_rejects_before_board_or_copy_mutation(level):
+    fixture = ready_fixture()
+    pig = PetSlot(True, "pig", 5, 3, level)
+    fixture.board = replace(fixture.board, gold=1,
+                            team=(pig,) + (evaluation.EMPTY,) * 4)
+    fixture.copies[0] = 3
+    fixture.observe()
+    fixture.observe()
+    before, copies = fixture.board, list(fixture.copies)
+
+    with pytest.raises(AssertionError, match="^unsupported observed sale income$"):
+        fixture.act(Action("sell", 0))
+
+    assert fixture.board == before
+    assert fixture.copies == copies
+    assert not fixture.frames
+    assert fixture.violations == ["unsupported observed sale income"]
+
+
+def test_controller_oracle_accepts_pig_sale_that_funds_purchase(monkeypatch):
+    class PigSaleDesktop(evaluation.SyntheticDesktop):
+        def __init__(self, seed, scenario, turns):
+            super().__init__(seed, scenario, turns)
+            pig = PetSlot(True, "pig", 3, 1, 1)
+            survivor = PetSlot(True, "ant", 10, 10, 3)
+            offer = PetSlot(True, "fish", 8, 8, 1)
+            self.board = replace(self.board, gold=1, shop=(offer,) + (evaluation.EMPTY,) * (self.shop_size - 1),
+                                 team=(pig,) + (survivor,) * 4)
+            self.copies = [1, 6, 6, 6, 6]
+            self.initial = self.project(self.board)
+
+    monkeypatch.setattr(evaluation, "SyntheticDesktop", PigSaleDesktop)
+    case = evaluation.run_case(2, scenario="nominal", turns=1, trace=True)
+
+    assert case["passed"], case
+    assert case["reason"] == "result"
+    assert case["actions"] == case["acknowledgments"] == 3
+    assert case["action_kinds"] == {"sell": 1, "buy": 1, "end_turn": 1}
+    sale = next(event for event in case["trace"]
+                if event["event"] == "acknowledged" and event["action"]["kind"] == "sell")
+    assert sale["board"]["gold"] == 3
+    assert sale["board"]["team"][0]["occupied"] is False
+
+
 def test_transition_oracle_rejects_illegal_purchase_independently():
     fixture = ready_fixture()
     fixture.board = replace(fixture.board, gold=2)

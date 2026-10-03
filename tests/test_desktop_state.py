@@ -1,10 +1,11 @@
 """Desktop decisions are validated without reading or changing the screen."""
 import json
 from dataclasses import FrozenInstanceError, replace
+from pathlib import Path
 
 import pytest
 
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
+from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action, observed_sale_income
 
 
 EMPTY = PetSlot(False)
@@ -155,7 +156,68 @@ def test_replacement_margin_and_budget_keep_small_upgrades_from_churning():
                   team=(pet(2, 3, level=1),) * 5)
     assert DesktopPolicy().choose_action(value) == Action("end_turn")
     assert DesktopPolicy(minimum_upgrade_gain=2).choose_action(value) == Action("sell", 0)
-    assert DesktopPolicy(minimum_upgrade_gain=2).choose_action(replace(value, gold=2)) == Action("end_turn")
+    assert DesktopPolicy(minimum_upgrade_gain=2).choose_action(replace(value, gold=2)) == Action("sell", 0)
+
+
+@pytest.mark.parametrize("value,income", [
+    (pet(species="pig", level=1), 2),
+    (pet(species="pig"), None), (pet(species="pig", level=2), None),
+    (pet(species="pig", level=3), None),
+    (pet(species="ant", level=1), 1), (pet(level=1), 1),
+    (pet(species="fish", level=2), 1), (pet(), 1),
+    (EMPTY, None), (PetSlot(None, "pig", level=1), None),
+])
+def test_sale_income_preserves_exact_supported_receipts(value, income):
+    assert observed_sale_income(value) == income
+
+
+@pytest.mark.parametrize("species,gold,expected", [
+    ("ant", 2, "sell"), (None, 2, "sell"), ("pig", 1, "sell"),
+    ("ant", 1, "end_turn"), (None, 1, "end_turn"), ("pig", 0, "end_turn"),
+])
+def test_replacement_requires_sale_receipt_to_fund_purchase(species, gold, expected):
+    value = board(gold=gold, shop=(pet(5, 5),),
+                  team=(pet(1, 1, species, 1),) + (pet(8, 8, level=2),) * 4)
+    action = DesktopPolicy().choose_action(value)
+    assert action == (Action("sell", 0) if expected == "sell" else Action("end_turn"))
+    assert legal_action(value, action)
+
+
+def test_replacement_selects_weakest_affordable_pet_before_comparing_gain():
+    value = board(gold=1, shop=(pet(4, 4),),
+                  team=(pet(1, 1, "ant", 1), pet(2, 2, "pig", 1))
+                  + (pet(8, 8, level=2),) * 3)
+    assert DesktopPolicy().choose_action(value) == Action("sell", 1)
+    assert DesktopPolicy().choose_action(replace(value, shop=(pet(4, 3),))) == Action("end_turn")
+
+
+def test_sale_funding_never_sells_when_team_already_has_empty_space():
+    value = board(gold=2, shop=(pet(8, 8),),
+                  team=(pet(1, 1, "pig", 1), EMPTY) + (pet(8, 8, level=2),) * 3)
+    assert DesktopPolicy().choose_action(value) == Action("end_turn")
+    assert DesktopPolicy().choose_action(replace(value, gold=3)) == Action("buy", 0, 1)
+
+
+def test_funded_merge_keeps_priority_over_replacement():
+    value = board(gold=3, shop=(pet(8, 8, "fish", 1),),
+                  team=(pet(1, 1, "fish", 1),) + (pet(8, 8, level=2),) * 4)
+    assert DesktopPolicy().choose_action(value) == Action("merge", 0, 0)
+
+
+def test_recorded_turn_six_upgrade_is_affordable_after_observed_sale():
+    path = Path(__file__).parent / "fixtures" / "desktop_turns_4_to_terminal.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    boards = [Board.from_dict(value) for value in data["boards"]]
+    frames = [boards[index] for index, count in data["observation_runs"] for _ in range(count)]
+    before = frames[215]
+    assert before.phase == Phase.SHOP and (before.turn, before.gold) == (6, 2)
+    assert (before.team[0].strength, before.shop[1].strength) == (5, 9)
+    assert before.team[0].level == 1 and before.team[0].species is None
+    assert next(row["action"] for row in data["actions"] if row["poll"] == 216) == {"kind": "end_turn"}
+    policy = DesktopPolicy()
+    assert policy.choose_action(before) == Action("sell", 0)
+    after = replace(before, gold=3, team=(EMPTY, *before.team[1:]))
+    assert policy.choose_action(after) == Action("buy", 1, 0)
 
 
 @pytest.mark.parametrize("gold,expected", [(0, "end_turn"), (1, "end_turn"), (3, "end_turn"), (4, "roll")])

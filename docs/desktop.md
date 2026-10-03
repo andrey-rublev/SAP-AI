@@ -2,8 +2,9 @@
 
 The new desktop pipeline is separate from the toy simulator and its DQN. It
 reads real attack/health, explicit slot occupancy, optional species/levels, and
-the game phase. Its first policy is a conservative stat-based baseline. It does
-not yet model food, pet abilities, frozen offers, or team positioning.
+the game phase. Its first policy is a conservative stat-based baseline with
+supported sale receipts for funding replacements. It does not yet model food,
+other pet abilities, frozen offers, or team positioning.
 
 ```text
 game client image -> calibrated Perceptor -> typed Board
@@ -148,6 +149,11 @@ destination. Both clicks check window focus and geometry. If either fails,
 the session stops without repeating the input sequence.
 Sales select the teammate, then click the calibrated `sell` point. That
 button appears after selection; its point must be present before either click.
+The policy can replace a level-one pet with two gold remaining, or an identified
+level-one Pig with one gold, when the exact expected sale receipt funds the
+three-gold purchase and the offer clears the existing stat-gain margin. It
+requires a full team and stable sale acknowledgment before purchasing. Missing
+levels, insufficient funds and small upgrades do not justify a sale.
 
 Purchase acknowledgment checks gold, the destination pet, and removal of the
 selected shop offer. Remaining offers may stay in place or shift left, but

@@ -505,6 +505,42 @@ handled by the agent. Fresh native execution can now resume with the existing
 private profile; the experimental level regions and species model remain
 disconnected from live control.
 
+## Dessert-theme calibration and funded replacements, 2026-10-03
+
+The registered account uses a dessert background and pet hats. The first native
+menu run made two actions with one acknowledgment, then stopped UNKNOWN after
+opening Arena. A private reference for the already selected free Turtle card
+recovered only its two new setup captures among 418 compared images; removing
+the check still yields UNKNOWN. No thresholds or input points changed.
+
+Two agent-directed Back clicks reset the menus as test setup. The next
+standalone run opened Play, opened Arena and started the selected Turtle pack:
+three actions, two acknowledgments, 33 polls. It stopped UNKNOWN at the new
+turn-one shop before any purchase. An added dessert Shop-sign reference
+recovered only that new shop image among 420 compared images; removing the sign
+remains UNKNOWN. The existing HUD/stat and empty-slot calibration read the
+new shop correctly without relaxing thresholds. A bounded standalone shop
+session then bought all three opening pets: three actions, three acknowledgments,
+11 polls, gold ten → one. The program supplied every gameplay input. These
+calibration-paused segments are not an uninterrupted fresh-to-terminal run.
+
+The policy now considers a sale-funded level-one replacement with two gold
+remaining, or one gold for an identified level-one Pig. It filters candidates
+by the supported exact receipt before choosing the weakest affordable pet,
+retains the four-stat minimum gain and existing buy/merge priority, and never
+sells to fund a purchase when the team already has an empty slot. Policy,
+acknowledgment and offline accounting share the existing one-/two-gold receipt
+rule; unsupported Pig levels still abstain. Wrong or unstable receipts cannot
+trigger a purchase or retry.
+
+The recorded turn-six fixture has a full level-one team, gold two and an offer
+with strength nine versus the weakest teammate's five. Previously the policy
+ended the turn; it now proposes selling that teammate, then buying only after
+the exact one-gold receipt and empty-slot evidence. This is an observed
+affordability improvement, not a measured combat advantage. Both simulators
+now include the verified Pig bonus; the economy harness retains its level-one
+sale restriction. Full suite: 1,102 passed, one Windows permission skip.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

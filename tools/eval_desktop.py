@@ -8,8 +8,8 @@ Examples (run from the repository checkout)::
 
 This is a controller contract test, not a Super Auto Pets combat simulator or
 training job. It models ordinary three-gold purchases, ordered shop compaction,
-one-gold rolls, level-based sales, duplicate combines, and shop/battle phases.
-Abilities, food, combat, freezes, OCR accuracy, and actual mouse IO are excluded.
+one-gold rolls, observed sale income, duplicate combines, and shop/battle phases.
+Other abilities, food, combat, freezes, OCR accuracy, and mouse IO are excluded.
 No toy DQN is loaded: its scalar observations and six actions cannot represent
 Board uncertainty, pet identities, or explicit source/destination actions.
 """
@@ -34,7 +34,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from desktop_session import DesktopSession
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase
+from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, observed_sale_income
 
 
 SCENARIOS = (
@@ -171,7 +171,9 @@ class SyntheticDesktop:
         elif action.kind == "sell":
             i = action.slot
             self.require(i is not None and 0 <= i < len(team) and action.target is None and team[i].occupied is True, "invalid sell target")
-            gold += team[i].level
+            income = observed_sale_income(team[i])
+            self.require(income is not None, "unsupported observed sale income")
+            gold += income
             team[i], self.copies[i] = EMPTY, 0
         elif action.kind == "roll":
             self.require(action.slot is None and action.target is None and gold >= 1, "invalid/unaffordable roll")
@@ -233,7 +235,7 @@ def run_case(seed: int, *, scenario: str | None = None, turns: int = 5,
                 verified = observed == expected_effect
                 cost = {"buy": -3, "merge": -3, "roll": -1}.get(proposed_action.kind)
                 if proposed_action.kind == "sell":
-                    cost = proposed_before.team[proposed_action.slot].level
+                    cost = observed_sale_income(proposed_before.team[proposed_action.slot])
                 verified = verified and cost is not None and observed.gold == proposed_before.gold + cost
             fixture.require(verified, "acknowledged stale or incorrect action effect")
             proposed_before = proposed_action = expected_effect = None

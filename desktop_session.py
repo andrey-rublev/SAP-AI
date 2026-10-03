@@ -11,7 +11,7 @@ from math import isfinite
 from dataclasses import asdict, dataclass
 from typing import Callable
 
-from desktop_state import Action, Board, Phase, legal_action
+from desktop_state import Action, Board, Phase, legal_action, observed_sale_income
 
 
 PHASE_ACTION_KINDS = {
@@ -142,15 +142,10 @@ def action_acknowledged(before: Board, after: Board, action: Action,
         return delta == -1
     if action.kind == "sell":
         i = action.slot
-        if i is not None and i < len(before.team) and before.team[i].species == "pig":
-            if before.team[i].level != 1:
-                return False
-            income = 2
-        else:
-            income = 1
-        return (i is not None and i < len(before.team) and i < len(after.team)
-                and before.team[i].occupied is True
-                and after.team[i].occupied is False and delta == income)
+        if i is None or i >= len(before.team) or i >= len(after.team):
+            return False
+        income = observed_sale_income(before.team[i])
+        return income is not None and after.team[i].occupied is False and delta == income
     if action.kind not in ("buy", "merge"):
         return False
     i, j = action.slot, action.target

@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
+from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action, observed_sale_income
 from tools.eval_desktop import save_report
 
 
@@ -45,9 +45,9 @@ VARIANTS = {
 class EconomyPolicy(DesktopPolicy):
     """Experimental subclass; every proposal remains a normal desktop Action.
 
-    Sale funding uses the one-gold floor for a known level-one pet. Gain ranking
-    compares immediate stat gains per net gold: three for a merge, two for a
-    level-one replacement. Unknown observations still obey the parent policy.
+    Replacements use observed sale income and require a funded next purchase.
+    Gain ranking compares immediate stat gains using three gold for a merge
+    and a conservative two for replacement. Unknowns obey the parent policy.
     """
 
     def __init__(self, *, minimum_upgrade_gain=4, sale_funded=False, rank_gains=False):
@@ -58,10 +58,12 @@ class EconomyPolicy(DesktopPolicy):
         original = super().choose_action(board)
         if original is None or original.kind == "buy" or not all(pet.occupied is True for pet in board.team):
             return original
-        replaceable = [(i, pet) for i, pet in enumerate(board.team) if pet.level == 1]
+        replaceable = [(i, pet) for i, pet in enumerate(board.team)
+                       if pet.level == 1 and (income := observed_sale_income(pet)) is not None
+                       and board.gold + income >= 3]
         offers = [(i, pet) for i, pet in enumerate(board.shop) if pet.occupied]
         replacement = None
-        if replaceable and offers and board.gold >= (2 if self.sale_funded else 3):
+        if replaceable and offers:
             weak_index, weak = min(replaceable, key=lambda item: (item[1].strength, item[0]))
             _, offered = max(offers, key=lambda item: (item[1].strength, -item[0]))
             gain = offered.strength - weak.strength
@@ -179,14 +181,20 @@ def run_shop(stream, policy, *, max_actions=50, trace=False):
             offers, gold = stream.offers(rolls), gold - 1
             gross_spent += 1
         elif action.kind == "sell":
-            # Every tested policy restricts sales to observed level-one pets.
-            if team[action.slot].level != 1:
-                violations.append({"unsupported_sale_level": team[action.slot].level})
+            sold = team[action.slot]
+            # This experiment supports only observed level-one replacements.
+            if sold.level != 1:
+                violations.append({"unsupported_sale_level": sold.level})
+                reason = "unsupported_action"
+                break
+            income = observed_sale_income(sold)
+            if income is None:
+                violations.append({"unsupported_sale_income": {"species": sold.species, "level": sold.level}})
                 reason = "unsupported_action"
                 break
             team[action.slot], copies[action.slot] = EMPTY, 0
-            gold += 1
-            sale_income += 1
+            gold += income
+            sale_income += income
             sells += 1
         elif action.kind in ("buy", "merge"):
             source = offers.pop(action.slot)

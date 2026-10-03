@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from desktop_state import Action, Board, PetSlot, Phase
+from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase
 from desktop_session import DesktopSession, action_acknowledged
 
 
@@ -191,6 +191,41 @@ def test_pig_sale_still_requires_selected_slot_removal_and_same_turn(wrong_evide
     else:
         after = replace(after, turn=2)
     assert not action_acknowledged(before, after, Action("sell", 0))
+
+
+@pytest.mark.parametrize("species,gold,receipt", [("ant", 2, 1), (None, 2, 1), ("pig", 1, 2)])
+def test_sale_funded_replacement_waits_for_stable_receipt_before_purchase(species, gold, receipt):
+    weak = replace(ANT, species=species)
+    offered = replace(FISH, attack=4, health=4)
+    before = shop(gold=gold, shop=(offered, ANT, ANT),
+                  team=(weak,) + (replace(FISH, level=2),) * 4)
+    sold = replace(before, gold=gold + receipt, team=(EMPTY, *before.team[1:]))
+    bought = replace(sold, gold=0, shop=(EMPTY, ANT, ANT),
+                     team=(offered, *before.team[1:]))
+    runner, clicks, events = session(
+        [before, before, sold, Board(Phase.UNKNOWN), sold, sold, sold, bought, bought, bought],
+        max_actions=2,
+    )
+    runner.policy = DesktopPolicy()
+    result = runner.run()
+    assert clicks == [Action("sell", 0), Action("buy", 0, 0)]
+    assert (result.reason, result.actions, result.acknowledgments) == ("max_actions", 2, 2)
+    assert [e["poll"] for e in events if e["event"] == "acted"] == [2, 7]
+    assert [e["poll"] for e in events if e["event"] == "acknowledged"] == [6, 9]
+
+
+@pytest.mark.parametrize("species,gold,wrong_receipt", [("ant", 2, 2), ("pig", 1, 1)])
+def test_wrong_sale_receipt_never_triggers_funded_purchase_or_retry(species, gold, wrong_receipt):
+    offered = replace(FISH, attack=4, health=4)
+    before = shop(gold=gold, shop=(offered, ANT, ANT),
+                  team=(replace(ANT, species=species),) + (replace(FISH, level=2),) * 4)
+    wrong = replace(before, gold=gold + wrong_receipt, team=(EMPTY, *before.team[1:]))
+    runner, clicks, _ = session([before, before, wrong], action_max_polls=4)
+    runner.policy = DesktopPolicy()
+    result = runner.run()
+    assert clicks == [Action("sell", 0)]
+    assert (result.reason, result.actions, result.acknowledgments) == ("action_timeout", 1, 0)
+    assert result.pending_action == Action("sell", 0)
 
 
 def test_merge_requires_target_improvement_as_well_as_purchase_evidence():

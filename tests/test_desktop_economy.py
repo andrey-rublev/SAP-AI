@@ -44,14 +44,32 @@ def test_all_variants_see_same_immutable_initial_board_and_replay():
     assert all(board == starts[0] for board in starts)
 
 
-def test_sale_funds_purchase_at_two_gold_without_changing_baseline():
+def test_sale_funds_purchase_at_two_gold_in_baseline_and_candidate():
     board = full_board(gold=2)
-    assert DesktopPolicy().choose_action(board) == Action("end_turn")
+    assert DesktopPolicy().choose_action(board) == Action("sell", 0)
     policy = economy.EconomyPolicy(sale_funded=True)
     assert policy.choose_action(board) == Action("sell", 0)
     after_sale = replace(board, gold=3, team=(economy.EMPTY, *board.team[1:]))
     assert policy.choose_action(after_sale) == Action("buy", 0, 0)
     assert legal_action(board, policy.choose_action(board))
+
+
+@pytest.mark.parametrize("name", list(economy.VARIANTS))
+def test_every_variant_chooses_affordable_pig_over_weaker_unaffordable_pet(name):
+    board = replace(full_board(gold=1),
+                    team=(pet("ant", 1, 1), pet("pig", 2, 2), *(pet("pig", 8, 8, 3),) * 3))
+    policy = economy.make_policy(name)
+    assert policy.choose_action(board) == Action("sell", 1)
+    after_sale = replace(board, gold=3, team=(board.team[0], economy.EMPTY, *board.team[2:]))
+    assert policy.choose_action(after_sale) == Action("buy", 0, 1)
+    assert policy.choose_action(replace(board, gold=0)) == Action("end_turn")
+
+
+@pytest.mark.parametrize("level", [None, 2, 3])
+def test_custom_policy_abstains_from_unsupported_pig_sales(level):
+    board = replace(full_board(), team=(pet("pig", 1, 1, level), *(pet("pig", 8, 8, 3),) * 4))
+    assert DesktopPolicy().choose_action(board) == Action("end_turn")
+    assert economy.EconomyPolicy(sale_funded=True, rank_gains=True).choose_action(board) == Action("end_turn")
 
 
 def test_sale_funded_roll_can_leave_two_gold_but_requires_replaceable_pet():
@@ -92,14 +110,39 @@ def test_fill_empty_slot_precedes_speculative_economy_changes():
     assert economy.EconomyPolicy(sale_funded=True, rank_gains=True).choose_action(board) == Action("buy", 0, 0)
 
 
-def test_shop_transition_accounts_for_sale_income_purchase_cost_and_stat_gain():
-    initial = full_board(gold=2)
+@pytest.mark.parametrize("species,gold,income,net_spent", [("ant", 2, 1, 2), ("pig", 1, 2, 1),
+                                                         (None, 2, 1, 2)])
+def test_shop_transition_accounts_for_sale_income_purchase_cost_and_stat_gain(species, gold, income, net_spent):
+    initial = replace(full_board(gold=gold), team=(pet(species, 1, 1), *full_board().team[1:]))
     stream = SimpleNamespace(initial=initial, copies=(1, 6, 6, 6, 6), size=1)
-    result = economy.run_shop(stream, economy.EconomyPolicy(sale_funded=True), trace=True)
+    result = economy.run_shop(stream, DesktopPolicy(), trace=True)
     assert result["reason"] == "end_turn" and not result["violations"]
     assert [event["action"]["kind"] for event in result["trace"]] == ["sell", "buy", "end_turn"]
-    assert (result["gross_spent"], result["sale_income"], result["net_spent"], result["leftover_gold"]) == (3, 1, 2, 0)
+    assert (result["gross_spent"], result["sale_income"], result["net_spent"], result["leftover_gold"]) == (3, income, net_spent, 0)
     assert result["stat_gain"] == 16
+
+
+@pytest.mark.parametrize("level", [None, 2, 3])
+def test_simulator_rejects_unsupported_pig_sale_without_mutating_board(level):
+    initial = replace(full_board(), team=(pet("pig", 1, 1, level), *full_board().team[1:]))
+    stream = SimpleNamespace(initial=initial, copies=(1, 6, 6, 6, 6), size=1)
+    forced_sale = SimpleNamespace(choose_action=lambda board: Action("sell", 0))
+    result = economy.run_shop(stream, forced_sale, trace=True)
+    assert result["reason"] == "unsupported_action" and result["violations"]
+    assert (result["sells"], result["sale_income"], result["gross_spent"]) == (0, 0, 0)
+    assert result["final_board"] == initial.to_dict()
+
+
+@pytest.mark.parametrize("level", [None, 2, 3])
+def test_simulator_rejects_non_level_one_ordinary_sale_without_mutating_board(level):
+    initial = replace(full_board(), team=(pet("ant", 1, 1, level), *full_board().team[1:]))
+    stream = SimpleNamespace(initial=initial, copies=(1, 6, 6, 6, 6), size=1)
+    forced_sale = SimpleNamespace(choose_action=lambda board: Action("sell", 0))
+    result = economy.run_shop(stream, forced_sale, trace=True)
+    assert result["reason"] == "unsupported_action"
+    assert result["violations"] == [{"unsupported_sale_level": level}]
+    assert (result["sells"], result["sale_income"], result["gross_spent"]) == (0, 0, 0)
+    assert result["final_board"] == initial.to_dict()
 
 
 def test_merge_levelup_offer_uses_separate_stream():
@@ -127,11 +170,14 @@ def test_illegal_policy_is_reported_and_not_applied():
 
 def test_pair_metrics_obey_economy_identity_and_bound():
     for seed in range(40):
-        for result in economy.run_pair(seed).values():
+        for result in economy.run_pair(seed, trace=True).values():
             assert not result["violations"] and result["reason"] == "end_turn"
             assert result["initial_gold"] - result["leftover_gold"] == result["net_spent"]
             assert result["gross_spent"] == 3 * (result["buys"] + result["merges"]) + result["rolls"]
-            assert result["sale_income"] == result["sells"]
+            pig_bonuses = sum(event["action"]["kind"] == "sell"
+                              and event["board"]["team"][event["action"]["slot"]]["species"] == "pig"
+                              for event in result["trace"])
+            assert result["sale_income"] == result["sells"] + pig_bonuses
             assert 0 <= result["unproductive_rolls"] <= result["rolls"]
             assert result["actions"] <= 50
 

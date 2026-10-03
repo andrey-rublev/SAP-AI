@@ -67,6 +67,15 @@ class PetSlot:
         return self.attack + self.health
 
 
+def observed_sale_income(pet: PetSlot) -> int | None:
+    """Expected receipt for an occupied pet, using only supported sale effects."""
+    if pet.occupied is not True:
+        return None
+    if pet.species == "pig":
+        return 2 if pet.level == 1 else None
+    return 1
+
+
 @dataclass(frozen=True)
 class Board:
     phase: Phase
@@ -231,9 +240,14 @@ class DesktopPolicy:
             if merges:
                 return Action("merge", *merges[0])
 
+        if offers and empty is None:
+            # Sell only an observed level-one pet whose receipt funds the offer.
             # A positive margin ensures replacements increase observed stats.
-            # Do not discard unknown-level or upgraded pets for stat-only gains.
-            replaceable = [(index, pet) for index, pet in enumerate(board.team) if pet.level == 1]
+            replaceable = []
+            for index, pet in enumerate(board.team):
+                income = observed_sale_income(pet)
+                if pet.level == 1 and income is not None and board.gold + income >= 3:
+                    replaceable.append((index, pet))
             if replaceable:
                 weakest, pet = min(replaceable, key=lambda pair: (pair[1].strength, pair[0]))
                 if offers[0][1].strength - pet.strength >= self.minimum_upgrade_gain:
