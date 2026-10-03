@@ -328,9 +328,24 @@ exhausted instead of using paid credits.
 Menu navigation started a fresh Turtle-pack arena. The standalone bot then
 bought three pets, verified each purchase, ended the turn and confirmed excess
 gold. It stopped at the unrecognized naming screen without retrying. The
-unselected naming footer and both choice points now have native calibration;
-ready-state recognition is the next live validation step. Agent menu setup is
-distinct from program-controlled gameplay.
+unselected naming footer and both choice points now have native calibration.
+The program selected both name components and stopped at the initially
+unrecognized Confirm state. After calibrating that state, a standalone run
+performed 20 actions with 20 acknowledgments through naming confirmation,
+three battles and the fourth shop. A continuation then performed 41 actions
+with 41 acknowledgments over 375 polls in 197.1 seconds and stopped at the
+turn-seven loss terminal. The arena finished with two wins. No agent gameplay
+clicks were used; calibration pauses mean this is not yet an uninterrupted
+fresh-start-to-terminal run.
+
+The controller now has opt-in menu transitions, enabled by `--start-arena`.
+Each requires its recognized source phase, calibrated button and observed
+destination. Starting an arena requires a known turn-one shop; unknown frames,
+stale shops, repeated menus, missing calibration and a terminal result cannot
+authorize another start. Full suite: 852 passed, one Windows symlink-permission
+skip. Native menu calibration remains pending: returning from the terminal
+opened an optional account-registration form, which needs user dismissal under
+the Computer Use authentication-dialog restriction. No fields were entered.
 
 ## Remaining milestones
 

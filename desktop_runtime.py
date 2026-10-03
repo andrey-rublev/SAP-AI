@@ -243,8 +243,8 @@ class DesktopRuntime:
         self.last_board = None
         self.last_frame = None
 
-    def phase_actions(self):
-        """Enable only transitions with both a recognized phase and all points."""
+    def phase_actions(self, *, start_arena=False):
+        """Enable calibrated transitions; entering a new arena is opt-in."""
         requirements = {
             Phase.NAMING: ("choose_name", ("name_adjective", "name_noun")),
             Phase.NAMING_READY: ("confirm_name", ("confirm_name",)),
@@ -252,6 +252,12 @@ class DesktopRuntime:
             Phase.TIER_UNLOCK: ("dismiss_tier", ("dismiss_tier",)),
             Phase.END_TURN_CONFIRM: ("confirm_end_turn", ("confirm_end_turn",)),
         }
+        if start_arena:
+            requirements.update({
+                Phase.MAIN_MENU: ("open_play", ("open_play",)),
+                Phase.PLAY_MENU: ("open_arena", ("open_arena",)),
+                Phase.ARENA_SETUP: ("start_arena", ("start_arena",)),
+            })
         recognized = {item.phase for item in self.profile.phase_templates}
         return {phase: Action(kind) for phase, (kind, points) in requirements.items()
                 if phase in recognized and all(point in self.profile.buttons for point in points)}

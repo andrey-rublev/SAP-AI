@@ -183,7 +183,7 @@ class VisionProfile:
             raise ValueError("profile must be explicitly calibrated before desktop control")
         if set(self.hud) - {"gold", "turn", "wins", "lives"}:
             raise ValueError("unknown HUD field")
-        if set(self.buttons) - {"roll", "end_turn", "sell", "continue", "name_adjective", "name_noun", "confirm_name", "continue_round", "dismiss_tier", "confirm_end_turn"}:
+        if set(self.buttons) - {"roll", "end_turn", "sell", "continue", "name_adjective", "name_noun", "confirm_name", "continue_round", "dismiss_tier", "confirm_end_turn", "open_play", "open_arena", "start_arena"}:
             raise ValueError("unknown button")
         for region in self.hud.values():
             region.validate(self.image_size)

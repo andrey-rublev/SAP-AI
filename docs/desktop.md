@@ -168,8 +168,18 @@ button must be in the profile. `naming` uses `name_adjective` and `name_noun`;
 `end_turn_confirm`, with a `confirm_end_turn` button. Each action needs stable recognition and
 its expected following phase. Unknown frames never confirm success, repeated
 dialogs stop, and transition polling has a finite budget. An unconfigured
-dialog stops without clicking. Initial game setup still requires manual
-handling. The legacy `play.py --live` bridge remains available, but this
+dialog stops without clicking.
+
+`run --start-arena` additionally enables `main_menu` → `play_menu` →
+`arena_setup` → turn-one `shop`, using the `open_play`, `open_arena`, and
+`start_arena` buttons. Each phase and point needs calibration; the setup
+reference must identify the selected free pack as well as the Start screen.
+The bot does not choose packs, dismiss account forms, or restart after a
+terminal result. Without the flag, menu phases stop without input. Preview
+the calibrated proposal before adding `--execute`. This menu flow has offline
+coverage; native validation is tracked in the progress document.
+
+The legacy `play.py --live` bridge remains available, but this
 structured pipeline is the path for ongoing desktop development.
 
 ## Validation boundaries

@@ -15,6 +15,9 @@ from desktop_state import Action, Board, Phase, legal_action
 
 
 PHASE_ACTION_KINDS = {
+    Phase.MAIN_MENU: "open_play",
+    Phase.PLAY_MENU: "open_arena",
+    Phase.ARENA_SETUP: "start_arena",
     Phase.NAMING: "choose_name",
     Phase.NAMING_READY: "confirm_name",
     Phase.ROUND_RESULT: "continue_round",
@@ -90,6 +93,11 @@ def _shop_purchase_observed(before, after, purchased: int) -> bool:
 def action_acknowledged(before: Board, after: Board, action: Action,
                         *, previous_shop_turn: int | None = None) -> bool:
     """Recognize only action-specific evidence, never arbitrary screen changes."""
+    if action.kind in {"open_play", "open_arena", "start_arena"}:
+        destination = {"open_play": Phase.PLAY_MENU, "open_arena": Phase.ARENA_SETUP,
+                       "start_arena": Phase.SHOP}[action.kind]
+        return (legal_action(before, action) and after.phase == destination
+                and (action.kind != "start_arena" or after.turn == 1))
     if action.kind == "end_turn":
         return before.phase == Phase.SHOP and (after.phase in (
             Phase.NAMING, Phase.BATTLE, Phase.ROUND_RESULT, Phase.END_TURN_CONFIRM,

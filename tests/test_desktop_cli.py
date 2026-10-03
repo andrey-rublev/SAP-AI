@@ -7,7 +7,7 @@ import pytest
 
 import desktop
 from desktop_session import SessionResult
-from desktop_state import Action, Phase
+from desktop_state import Action, Board, Phase
 
 
 @pytest.fixture
@@ -37,7 +37,8 @@ def test_existing_stop_file_prevents_observation_and_input(tmp_path, cli_runtime
     assert '"reason": "stopped"' in (tmp_path / "session.jsonl").read_text()
 
 
-def test_cli_passes_calibrated_phase_actions_and_checks_deadline(tmp_path, cli_runtime, monkeypatch):
+@pytest.mark.parametrize("start_arena", [False, True])
+def test_cli_passes_calibrated_phase_actions_and_checks_deadline(tmp_path, cli_runtime, monkeypatch, start_arena):
     runtime, _ = cli_runtime
     clock = [10.0]
     monkeypatch.setattr(desktop.time, "monotonic", lambda: clock[0])
@@ -52,7 +53,30 @@ def test_cli_passes_calibrated_phase_actions_and_checks_deadline(tmp_path, cli_r
         return SimpleNamespace(run=lambda: SessionResult(0, 0, 0, "stopped"))
 
     monkeypatch.setattr(desktop, "DesktopSession", session)
-    desktop.main(arguments(tmp_path) + ["--max-seconds", "1.5"])
+    flags = ["--start-arena"] if start_arena else []
+    desktop.main(arguments(tmp_path) + ["--max-seconds", "1.5"] + flags)
+    runtime.phase_actions.assert_called_once_with(start_arena=start_arena)
+
+
+def test_start_arena_flag_stays_in_preview_until_execute_is_enabled(tmp_path, cli_runtime):
+    runtime, _ = cli_runtime
+    runtime.observe.return_value = Board(Phase.MAIN_MENU)
+    runtime.phase_actions.return_value = {Phase.MAIN_MENU: Action("open_play")}
+    desktop.main(arguments(tmp_path) + ["--start-arena"])
+    assert desktop.DesktopRuntime.call_args.kwargs["execute"] is False
+    runtime.phase_actions.assert_called_once_with(start_arena=True)
+    assert runtime.observe.call_count == 2
+    runtime.act.assert_not_called()
+    log = (tmp_path / "session.jsonl").read_text()
+    assert '"reason": "preview"' in log
+    assert '"kind": "open_play"' in log
+
+
+def test_start_arena_is_disabled_by_default():
+    assert desktop.parse_args(["run", "--profile", "unused.json"]).start_arena is False
+    args = desktop.parse_args(["run", "--profile", "unused.json", "--start-arena"])
+    assert args.start_arena is True
+    assert args.execute is False
 
 
 def test_failed_observation_saves_last_frame_for_diagnosis(tmp_path, cli_runtime):

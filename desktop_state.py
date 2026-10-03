@@ -14,6 +14,9 @@ from typing import Any, Mapping
 
 class Phase(str, Enum):
     UNKNOWN = "unknown"
+    MAIN_MENU = "main_menu"
+    PLAY_MENU = "play_menu"
+    ARENA_SETUP = "arena_setup"
     SHOP = "shop"
     BATTLE = "battle"
     NAMING = "naming"
@@ -118,7 +121,7 @@ class Action:
     def __post_init__(self) -> None:
         if self.kind not in {"buy", "roll", "sell", "end_turn", "merge", "continue",
                              "choose_name", "confirm_name", "continue_round", "dismiss_tier",
-                             "confirm_end_turn"}:
+                             "confirm_end_turn", "open_play", "open_arena", "start_arena"}:
             raise ValueError(f"unknown desktop action: {self.kind!r}")
         _integer(self.slot, "slot", maximum=4)
         _integer(self.target, "target", maximum=4)
@@ -154,7 +157,9 @@ def legal_action(board: Board, action: Action) -> bool:
         return False
     transitions = {"choose_name": Phase.NAMING, "confirm_name": Phase.NAMING_READY,
                    "continue_round": Phase.ROUND_RESULT, "dismiss_tier": Phase.TIER_UNLOCK,
-                   "confirm_end_turn": Phase.END_TURN_CONFIRM}
+                   "confirm_end_turn": Phase.END_TURN_CONFIRM,
+                   "open_play": Phase.MAIN_MENU, "open_arena": Phase.PLAY_MENU,
+                   "start_arena": Phase.ARENA_SETUP}
     if action.kind in transitions:
         return (board.phase == transitions[action.kind]
                 and action.slot is None and action.target is None)

@@ -326,7 +326,8 @@ def test_recorded_round_flow_requires_each_calibrated_ready_phase():
 
 
 @pytest.mark.parametrize("phase", [Phase.NAMING, Phase.NAMING_READY, Phase.ROUND_RESULT, Phase.TIER_UNLOCK,
-                                  Phase.END_TURN_CONFIRM])
+                                  Phase.END_TURN_CONFIRM, Phase.MAIN_MENU, Phase.PLAY_MENU,
+                                  Phase.ARENA_SETUP])
 def test_interstitial_actions_are_disabled_unless_explicitly_configured(phase):
     runner, clicks, _ = session([Board(phase)])
     result = runner.run()
@@ -472,3 +473,111 @@ def test_excess_gold_modal_cannot_be_confirmed_again_before_new_shop():
     result = runner.run()
     assert clicks == [Action("confirm_end_turn")]
     assert (result.reason, result.acknowledgments) == ("repeated_transition", 1)
+
+
+def arena_phase_actions():
+    return {Phase.MAIN_MENU: Action("open_play"),
+            Phase.PLAY_MENU: Action("open_arena"),
+            Phase.ARENA_SETUP: Action("start_arena")}
+
+
+def test_arena_start_waits_for_each_menu_acknowledgment_and_observed_first_shop():
+    menu, play, setup = Board(Phase.MAIN_MENU), Board(Phase.PLAY_MENU), Board(Phase.ARENA_SETUP)
+    first = shop()
+    bought = replace(first, gold=7, shop=(EMPTY, ANT, ANT),
+                     team=(ANT, EMPTY, EMPTY, EMPTY, EMPTY))
+    runner, clicks, events = session(
+        [menu, menu, play, play, play, setup, setup, setup,
+         Board(Phase.UNKNOWN, turn=1), shop(turn=2), shop(turn=2),
+         first, first, first, bought, bought, bought],
+        Action("buy", 0, 0), phase_actions=arena_phase_actions(), max_actions=4,
+    )
+    result = runner.run()
+    assert clicks == [Action("open_play"), Action("open_arena"),
+                      Action("start_arena"), Action("buy", 0, 0)]
+    assert (result.reason, result.actions, result.acknowledgments) == ("max_actions", 4, 4)
+    assert [event["poll"] for event in events if event["event"] == "acted"] == [2, 5, 8, 14]
+    assert [event["poll"] for event in events if event["event"] == "acknowledged"] == [4, 7, 13, 16]
+
+
+@pytest.mark.parametrize("phase,kind,expected", [
+    (Phase.MAIN_MENU, "open_play", Phase.PLAY_MENU),
+    (Phase.PLAY_MENU, "open_arena", Phase.ARENA_SETUP),
+])
+def test_menu_acknowledgment_requires_exact_source_and_next_phase(phase, kind, expected):
+    for candidate in Phase:
+        assert action_acknowledged(Board(phase), Board(candidate), Action(kind)) is (candidate == expected)
+        assert action_acknowledged(Board(candidate), Board(expected), Action(kind)) is (candidate == phase)
+
+
+@pytest.mark.parametrize("after", [
+    Board(Phase.UNKNOWN, turn=1), Board(Phase.SHOP), shop(turn=0), shop(turn=2), shop(turn=9),
+    Board(Phase.NAMING), Board(Phase.BATTLE),
+])
+def test_start_arena_rejects_unknown_and_stale_shop_frames(after):
+    assert not action_acknowledged(Board(Phase.ARENA_SETUP), after, Action("start_arena"))
+
+
+@pytest.mark.parametrize("phase", list(Phase))
+def test_start_arena_acknowledges_first_shop_only_from_arena_setup(phase):
+    assert action_acknowledged(Board(phase), shop(), Action("start_arena")) is (phase == Phase.ARENA_SETUP)
+
+
+@pytest.mark.parametrize("phase,action", list(arena_phase_actions().items()))
+def test_arena_menu_preview_proposes_without_input(phase, action):
+    runner, clicks, _ = session([Board(phase)], phase_actions=arena_phase_actions(), preview=True)
+    result = runner.run()
+    assert (result.reason, result.polls, result.actions) == ("preview", 2, 0)
+    assert result.proposed_action == action
+    assert not clicks
+
+
+@pytest.mark.parametrize("before,after,action", [
+    (Board(Phase.MAIN_MENU), Board(Phase.MAIN_MENU, wins=1), Action("open_play")),
+    (Board(Phase.MAIN_MENU), Board(Phase.ARENA_SETUP), Action("open_play")),
+    (Board(Phase.PLAY_MENU), shop(), Action("open_arena")),
+    (Board(Phase.ARENA_SETUP), shop(turn=2), Action("start_arena")),
+])
+def test_unacknowledged_menu_click_is_never_retried(before, after, action):
+    runner, clicks, _ = session([before, before, after],
+                                phase_actions=arena_phase_actions(), action_max_polls=3)
+    result = runner.run()
+    assert clicks == [action]
+    assert (result.reason, result.actions, result.acknowledgments) == ("action_timeout", 1, 0)
+    assert result.pending_action == action
+
+
+def test_menu_reappearing_after_acknowledgment_cannot_be_clicked_again():
+    menu, play = Board(Phase.MAIN_MENU), Board(Phase.PLAY_MENU)
+    runner, clicks, _ = session([menu, menu, play, play, menu, menu],
+                                phase_actions=arena_phase_actions())
+    result = runner.run()
+    assert clicks == [Action("open_play")]
+    assert (result.reason, result.acknowledgments) == ("repeated_transition", 1)
+
+
+def test_arena_menu_actions_share_session_action_budget():
+    menu, play = Board(Phase.MAIN_MENU), Board(Phase.PLAY_MENU)
+    runner, clicks, _ = session([menu, menu, play, play, play],
+                                phase_actions=arena_phase_actions(), max_actions=1)
+    result = runner.run()
+    assert clicks == [Action("open_play")]
+    assert (result.reason, result.actions, result.acknowledgments) == ("max_actions", 1, 1)
+
+
+def test_stop_after_menu_input_preserves_unacknowledged_action_without_retry():
+    runner, clicks, _ = session([Board(Phase.MAIN_MENU)], phase_actions=arena_phase_actions())
+    runner.should_stop = lambda: bool(clicks)
+    result = runner.run()
+    assert clicks == [Action("open_play")]
+    assert (result.reason, result.actions, result.acknowledgments) == ("stopped", 1, 0)
+    assert result.pending_action == Action("open_play")
+
+
+def test_terminal_result_stops_pending_arena_start():
+    menu = Board(Phase.MAIN_MENU)
+    runner, clicks, _ = session([menu, menu, Board(Phase.RESULT)], phase_actions=arena_phase_actions())
+    result = runner.run()
+    assert clicks == [Action("open_play")]
+    assert (result.reason, result.actions, result.acknowledgments) == ("result", 1, 0)
+    assert result.pending_action == Action("open_play")

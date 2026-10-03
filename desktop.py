@@ -121,6 +121,8 @@ def parse_args(argv=None):
     run.add_argument("--profile", required=True)
     run.add_argument("--window", default="Super Auto Pets")
     run.add_argument("--execute", action="store_true")
+    run.add_argument("--start-arena", action="store_true",
+                     help="enable calibrated main menu, Play, and arena start transitions")
     run.add_argument("--max-actions", type=positive_int, default=40)
     run.add_argument("--max-polls", type=positive_int, default=600)
     run.add_argument("--max-seconds", type=positive_seconds, default=1800,
@@ -181,7 +183,8 @@ def main(argv=None):
         session = DesktopSession(runtime.observe, runtime.act, DesktopPolicy(),
                                  preview=not args.execute, max_actions=args.max_actions,
                                  max_polls=args.max_polls, action_timeout=args.action_timeout,
-                                 event_callback=event, phase_actions=runtime.phase_actions(),
+                                 event_callback=event,
+                                 phase_actions=runtime.phase_actions(start_arena=args.start_arena),
                                  should_stop=should_stop)
         try:
             result = session.run()

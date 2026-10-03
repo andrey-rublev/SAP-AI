@@ -135,7 +135,7 @@ def fake_runtime(monkeypatch, frame):
     board = Board(Phase.SHOP, gold=10, turn=1,
                   shop=(PetSlot(True, attack=2, health=3),), team=(PetSlot(False),) * 5)
     runtime = SimpleNamespace(observe=Mock(return_value=board), act=Mock(),
-                              last_frame=frame, phase_actions=lambda: {})
+                              last_frame=frame, phase_actions=lambda *, start_arena=False: {})
     monkeypatch.setattr(desktop.VisionProfile, "load", lambda path: SimpleNamespace(validate=Mock()))
     monkeypatch.setattr(desktop, "Perceptor", Mock())
     monkeypatch.setattr(desktop, "WindowsGameWindow", Mock())

@@ -280,6 +280,13 @@ PHASE_TRANSITIONS = (
 )
 
 
+MENU_TRANSITIONS = (
+    (Phase.MAIN_MENU, "open_play", ("open_play",)),
+    (Phase.PLAY_MENU, "open_arena", ("open_arena",)),
+    (Phase.ARENA_SETUP, "start_arena", ("start_arena",)),
+)
+
+
 def phase_runtime(phase, *, execute=True):
     current = Board(phase)
     driver, window = runtime(execute=execute, current=current)
@@ -289,6 +296,7 @@ def phase_runtime(phase, *, execute=True):
         "name_adjective": (20, 30), "name_noun": (70, 30),
         "confirm_name": (50, 80), "continue_round": (80, 90), "dismiss_tier": (50, 50),
         "confirm_end_turn": (60, 70),
+        "open_play": (20, 80), "open_arena": (50, 80), "start_arena": (80, 80),
     })
     return driver, window
 
@@ -313,6 +321,9 @@ def test_phase_action_map_contains_only_supported_explicit_transitions():
     driver.profile.phase_templates = tuple(SimpleNamespace(phase=phase) for phase in Phase)
     driver.profile.buttons["continue"] = (50, 60)
     assert driver.phase_actions() == {phase: Action(kind) for phase, kind, _ in PHASE_TRANSITIONS}
+    assert driver.phase_actions(start_arena=True) == {
+        phase: Action(kind) for phase, kind, _ in PHASE_TRANSITIONS + MENU_TRANSITIONS
+    }
     driver.profile.buttons.pop("name_noun")
     assert driver.phase_actions() == {phase: Action(kind) for phase, kind, _ in PHASE_TRANSITIONS
                                      if phase != Phase.NAMING}
@@ -346,7 +357,7 @@ def test_name_selection_failure_is_not_retried(failed_click):
     window.drag.assert_not_called()
 
 
-@pytest.mark.parametrize("phase,kind,points", PHASE_TRANSITIONS[1:])
+@pytest.mark.parametrize("phase,kind,points", PHASE_TRANSITIONS[1:] + MENU_TRANSITIONS)
 def test_single_phase_button_dispatches_once(phase, kind, points):
     driver, window = phase_runtime(phase)
     driver.act(Action(kind))
@@ -354,7 +365,7 @@ def test_single_phase_button_dispatches_once(phase, kind, points):
     window.drag.assert_not_called()
 
 
-@pytest.mark.parametrize("phase,kind,points", PHASE_TRANSITIONS)
+@pytest.mark.parametrize("phase,kind,points", PHASE_TRANSITIONS + MENU_TRANSITIONS)
 def test_transition_wrong_phase_is_rejected_before_capture_or_input(phase, kind, points):
     driver, window = phase_runtime(Phase.BATTLE)
     with pytest.raises(ValueError, match="not legal"):
@@ -371,12 +382,48 @@ def test_phase_change_during_preflight_prevents_name_selection():
     window.click.assert_not_called()
 
 
-def test_preview_phase_action_never_captures_or_clicks():
-    driver, window = phase_runtime(Phase.NAMING, execute=False)
+@pytest.mark.parametrize("phase,kind", [(Phase.NAMING, "choose_name")] +
+                         [(phase, kind) for phase, kind, _ in MENU_TRANSITIONS])
+def test_preview_phase_action_never_captures_or_clicks(phase, kind):
+    driver, window = phase_runtime(phase, execute=False)
     with pytest.raises(DesktopUnavailable, match="disabled"):
-        driver.act(Action("choose_name"))
+        driver.act(Action(kind))
     window.capture.assert_not_called()
     window.click.assert_not_called()
+
+
+@pytest.mark.parametrize("phase,kind,points", MENU_TRANSITIONS)
+def test_menu_proposals_require_opt_in_template_and_button(phase, kind, points):
+    driver, window = phase_runtime(phase)
+    assert driver.phase_actions() == {}
+    assert driver.phase_actions(start_arena=True) == {phase: Action(kind)}
+    driver.profile.phase_templates = ()
+    assert driver.phase_actions(start_arena=True) == {}
+    driver.profile.phase_templates = (SimpleNamespace(phase=phase),)
+    driver.profile.buttons.pop(points[0])
+    assert driver.phase_actions(start_arena=True) == {}
+    window.capture.assert_not_called()
+    window.click.assert_not_called()
+
+
+@pytest.mark.parametrize("phase,kind,points", MENU_TRANSITIONS)
+def test_missing_menu_button_cannot_send_input(phase, kind, points):
+    driver, window = phase_runtime(phase)
+    driver.profile.buttons.pop(points[0])
+    with pytest.raises(ValueError, match="no calibrated"):
+        driver.act(Action(kind))
+    window.click.assert_not_called()
+    window.drag.assert_not_called()
+
+
+@pytest.mark.parametrize("phase,kind,points", MENU_TRANSITIONS)
+def test_menu_preflight_phase_change_prevents_input(phase, kind, points):
+    driver, window = phase_runtime(phase)
+    driver.perceptor.observe.return_value = Board(Phase.UNKNOWN)
+    with pytest.raises(DesktopUnavailable, match="changed"):
+        driver.act(Action(kind))
+    window.click.assert_not_called()
+    window.drag.assert_not_called()
 
 
 def test_observe_retains_failed_perception_frame_for_diagnostics():

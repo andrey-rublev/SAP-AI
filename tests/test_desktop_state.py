@@ -196,6 +196,8 @@ def test_every_policy_decision_in_representative_boards_is_legal():
 
 
 @pytest.mark.parametrize("phase,kind", [
+    (Phase.MAIN_MENU, "open_play"), (Phase.PLAY_MENU, "open_arena"),
+    (Phase.ARENA_SETUP, "start_arena"),
     (Phase.NAMING, "choose_name"), (Phase.NAMING_READY, "confirm_name"),
     (Phase.ROUND_RESULT, "continue_round"), (Phase.TIER_UNLOCK, "dismiss_tier"),
     (Phase.END_TURN_CONFIRM, "confirm_end_turn"),
