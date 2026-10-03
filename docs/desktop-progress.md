@@ -440,6 +440,29 @@ remain necessary. At 07:00, read the experimental level-sweep result, then
 continue fresh-start validation if the normal menu is available. Do not claim
 the calibration-paused arena was an uninterrupted start-to-terminal run.
 
+## 07:00 continuation, 2026-10-03
+
+The single requested continuation fired; no recurring schedule was created.
+The working tree was clean and `origin/main` synchronized. Ordinary Plus usage
+was available after reset. A fresh read-only game observation still showed the
+guest registration form, so live input remains paused pending the existing
+user-dismissal handoff. No authentication input was sent.
+
+The frame evaluator now accepts independently labeled species on known occupied
+slots and reports correct, unknown and wrong identities separately, including
+species confusion per slot. Canonical names and occupied=true are mandatory;
+missing identities are omitted from labels. Synthetic Perceptor tests include
+an occupied non-Pig that falsely matches a Pig reference, ensuring this is
+reported as incorrect rather than unknown.
+
+A bounded private audit of four recorded shop scenes and seven photometric
+variants completed 28 cases: 261 correct fields, 68 unknown, zero incorrect,
+zero false-empty and zero observation errors. Its 147 species readings were
+79 correct and 68 unknown. This combines earlier independent same-session
+labels with a newly inspected Pig/Rat/Fish/Beaver scene; it is not general
+held-out accuracy. Captures, labels and frozen profile remain private. No
+species model or candidate level geometry was enabled in the live bot.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

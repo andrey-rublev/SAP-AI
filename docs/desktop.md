@@ -222,6 +222,10 @@ counts; errors and incorrect readings give a failing exit status. Time, case,
 and saved-example limits bound the job. This checks the supplied scenes and
 does not measure accuracy on unseen gameplay. See the tool docstring for the
 manifest format; keep labels, images, and reports under `.local/desktop/`.
+Known `shop.N.species` and `team.N.species` labels require `occupied=true` and
+canonical names (lowercase, single spaces). Omit unknown identities. Reports
+include species confusion per slot, separating missing identities from wrong
+identifications; label occupied nonmatching pets to test false matches.
 
 `tools/extract_desktop_assets.py` can extract selected named textures from an
 installed Unity 6000.3 Windows client for private recognition experiments.

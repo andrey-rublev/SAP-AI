@@ -34,7 +34,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from desktop_runtime import CachedOCR, tesseract_ocr
-from desktop_state import Phase
+from desktop_state import PetSlot, Phase
 from desktop_vision import Perceptor, VisionProfile
 from evaluation import positive_int
 
@@ -80,13 +80,17 @@ def validate_labels(labels):
         if field == "phase":
             Phase(value)
             continue
-        match = re.fullmatch(r"(shop|team)\.([0-4])\.(occupied|attack|health|level)", field)
+        match = re.fullmatch(r"(shop|team)\.([0-4])\.(occupied|species|attack|health|level)", field)
         if field not in {"gold", "turn", "wins", "lives"} and not match:
             raise ValueError(f"unsupported label field: {field}")
         stat = match[3] if match else field
         if stat == "occupied":
             if type(value) is not bool:
                 raise ValueError("occupancy labels must be known booleans")
+        elif stat == "species":
+            if (type(value) is not str or not value
+                    or value != PetSlot(True, species=value).species):
+                raise ValueError("species labels must be nonempty canonical text")
         elif type(value) is not int or not (1 if stat in {"turn", "health", "level"} else 0) <= value <= (3 if stat == "level" else 99):
             raise ValueError(f"label must be a known integer in range: {field}")
         if match and stat != "occupied" and labels.get(f"{match[1]}.{match[2]}.occupied") is not True:
@@ -214,7 +218,8 @@ def run(manifest_path, profile_path, output_dir, *, max_seconds=3600, max_cases=
               "python": platform.python_version(), "packages": packages, "variants": settings,
               "limits": {"seconds": max_seconds, "cases": max_cases, "examples": max_examples},
               "counts": {"correct": 0, "unknown": 0, "incorrect": 0, "unsafe_false_empty": 0},
-              "per_field": {}, "per_variant": {}, "phase_confusion": {}, "cases": [],
+              "per_field": {}, "per_variant": {}, "phase_confusion": {},
+              "species_confusion": {}, "cases": [],
               "ocr_calls": 0, "ocr_seconds": 0, "examples_saved": 0, "observation_errors": 0}
     report_path = directory / "report.json"
 
@@ -279,6 +284,12 @@ def run(manifest_path, profile_path, output_dir, *, max_seconds=3600, max_cases=
             confusion = report["phase_confusion"].setdefault(expected, {})
             actual = "observation_error" if error is not None else observed["phase"]
             confusion[actual] = confusion.get(actual, 0) + 1
+            for field, expected in source["labels"].items():
+                if field.endswith(".species"):
+                    actual = ("<observation_error>" if error is not None else
+                              field_value(observed, field) or "<unknown>")
+                    confusion = report["species_confusion"].setdefault(field, {}).setdefault(expected, {})
+                    confusion[actual] = confusion.get(actual, 0) + 1
             report["elapsed_seconds"] = clock() - started
             checkpoint(report_path, report)
         report["status"] = "complete"

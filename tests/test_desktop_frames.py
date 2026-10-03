@@ -71,6 +71,70 @@ def test_boolean_does_not_equal_numeric_reading():
     assert counts["incorrect"] == 1
 
 
+@pytest.mark.parametrize("row,index,species", [("team", 0, "pig"), ("shop", 4, "green ant")])
+def test_species_labels_accept_canonical_known_text_only_on_occupied_slots(row, index, species):
+    labels = {"phase": "shop", f"{row}.{index}.occupied": True,
+              f"{row}.{index}.species": species}
+    study.validate_labels(labels)
+
+
+@pytest.mark.parametrize("species", [None, 1, True, [], "", " ", "Pig", " pig", "green  ant"])
+def test_species_labels_reject_unknown_or_noncanonical_text(species):
+    with pytest.raises(ValueError):
+        study.validate_labels({"phase": "shop", "team.0.occupied": True,
+                               "team.0.species": species})
+
+
+@pytest.mark.parametrize("occupied", [False, None])
+def test_species_labels_require_known_occupied_slot(occupied):
+    with pytest.raises(ValueError):
+        study.validate_labels({"phase": "shop", "team.0.occupied": occupied,
+                               "team.0.species": "pig"})
+
+
+@pytest.mark.parametrize("expected,portrait,observed,outcome", [
+    ("pig", 100, "pig", "correct"),
+    ("ant", 160, None, "unknown"),
+    ("ant", 100, "pig", "incorrect"),
+])
+def test_real_perceptor_species_labels_distinguish_match_unknown_and_false_pig(
+        source, expected, portrait, observed, outcome):
+    # The non-Pig label is independent of the profile's deliberately limited
+    # Pig reference; a false visual match must count as wrong, not unknown.
+    frame_path = source / "frame.png"
+    frame = np.asarray(Image.open(frame_path).convert("RGB")).copy()
+    frame[4:8, 8:12] = portrait
+    Image.fromarray(frame).save(frame_path)
+    Image.new("RGB", (4, 4), (100, 100, 100)).save(source / "pig.png")
+    Image.new("RGB", (4, 4), (0, 0, 0)).save(source / "empty.png")
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text())
+    profile["team"] = [{"portrait": [8, 4, 4, 4], "attack": [4, 8, 1, 1],
+                        "health": [5, 8, 1, 1], "empty_template": "empty.png",
+                        "species_templates": {"pig": "pig.png"}}]
+    profile_path.write_text(json.dumps(profile))
+    manifest_path = source / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["frames"][0]["labels"] = {"phase": "shop", "team.0.occupied": True,
+                                        "team.0.species": expected}
+    manifest_path.write_text(json.dumps(manifest))
+    path, report = run(source, ocr=lambda crop: "2", max_cases=1, max_examples=0)
+    assert report["cases"][0]["observed"]["team"][0]["occupied"] is True
+    assert report["cases"][0]["observed"]["team"][0]["species"] == observed
+    assert report["counts"] == {"correct": 2 + (outcome == "correct"),
+                                "unknown": int(outcome == "unknown"),
+                                "incorrect": int(outcome == "incorrect"), "unsafe_false_empty": 0}
+    assert report["per_field"]["team.0.species"] == {
+        name: int(name == outcome) for name in ("correct", "unknown", "incorrect")
+    }
+    assert report["species_confusion"] == {
+        "team.0.species": {expected: {observed or "<unknown>": 1}}
+    }
+    assert report["observation_errors"] == 0
+    assert json.loads(path.read_text())["species_confusion"] == report["species_confusion"]
+    assert (path.parent / "profile/pig.png").is_file()
+
+
 def test_real_perceptor_uses_injected_cached_ocr_and_checkpoints_provenance(source):
     calls = []
     path, report = run(source, ocr=lambda crop: calls.append(crop.copy()) or "10", max_cases=2)
