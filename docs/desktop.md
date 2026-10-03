@@ -227,6 +227,14 @@ canonical names (lowercase, single spaces). Omit unknown identities. Reports
 include species confusion per slot, separating missing identities from wrong
 identifications; label occupied nonmatching pets to test false matches.
 
+`python tools/compare_desktop_frames.py baseline/report.json candidate/report.json`
+pairs completed studies with identical source labels/hashes, perturbations and
+runtime packages. It reports each field's outcome transitions, so gains cannot
+hide lost correct readings or new wrong/false-empty readings. Partial,
+duplicate or internally inconsistent reports are rejected. Regressions return
+a failing exit status; the comparison never changes a live profile. Keep its
+JSON output private because it includes study provenance.
+
 `tools/extract_desktop_assets.py` can extract selected named textures from an
 installed Unity 6000.3 Windows client for private recognition experiments.
 It supports only the explicitly checked version-22 layout and DXT1/DXT5 formats,

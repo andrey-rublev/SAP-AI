@@ -403,11 +403,11 @@ digit problem. No live geometry or global threshold was changed: actual level
 two/three and clipped-digit negatives remain necessary before adopting these
 candidates. Proposed regions: x=474/666/858/1050/1242, y=368, width=20, height=44.
 
-That private border-free level candidate is now undergoing the same bounded
-2,160-case sweep under `.local/desktop/level-region-evaluations-1003/`. The live
-profile retains the original level regions. Compare both final reports at the
-07:00 continuation; improved level-one readings alone cannot validate levels
-two/three or authorize live adoption.
+That private border-free level candidate completed the same bounded 2,160-case
+sweep in 1,424.9 seconds under `.local/desktop/level-region-evaluations-1003/`.
+Its totals are 23,722 correct fields, 4,493 unknown, zero incorrect, zero
+false-empty and zero observation errors. The live profile retains the original
+regions: improved level-one readings alone cannot validate levels two/three.
 
 The post-reward continuation performed 22 actions with 21 acknowledgments and
 stopped after selling a level-one Pig in turn five: the selected slot became
@@ -462,6 +462,23 @@ zero false-empty and zero observation errors. Its 147 species readings were
 labels with a newly inspected Pig/Rat/Fish/Beaver scene; it is not general
 held-out accuracy. Captures, labels and frozen profile remain private. No
 species model or candidate level geometry was enabled in the live bot.
+
+Completed perception studies can now be compared case by case with
+`tools/compare_desktop_frames.py`. The comparison verifies identical recorded
+data/labels, variants and runtime environment, checks all case counts against
+observations, and rejects partial or duplicate reports. It records implementation
+and profile provenance while distinguishing gains from regressions, new wrong
+readings, false-empty readings and observation errors. Aggregate improvements
+cannot cancel a loss in another field or slot.
+
+The paired overnight level comparison covers all 2,160 cases: 21,944 readings
+remain correct, 4,493 remain unknown and 1,778 change unknown → correct, all in
+team levels. There are zero lost correct readings, new incorrect readings,
+new false-empty readings or new observation errors. These are same-session
+level-one samples, so real level-two/three and clipped-digit negatives remain
+the next adoption requirements. Comparison suite: 40 passed. Combined full
+suite: 1,020 passed, one Windows symlink-permission skip. Live fresh-start
+validation still needs the registration form dismissed by the user.
 
 ## Remaining milestones
 
