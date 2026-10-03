@@ -574,6 +574,18 @@ desktop arena remains unverified. Next live work, only after renewed user
 authorization, is to observe the current game state and continue the new-theme
 validation through naming, battle transitions and terminal results.
 
+## Merge receipt consistency, 2026-10-03
+
+Mocked legal merges showed that an increase in one target field could previously
+hide a decrease in another: a 5/6 level-two teammate was accepted as 6/5 or 4/7,
+and a falling level was accepted alongside rising stats. Acknowledgment now
+rejects any known target attack, health or level decrease and known identity
+conflicts while retaining the required observed gain. Stable corrected evidence
+can still recover within the original budget; missing species/level remain
+unknown. Contradictions time out after one attempt with no retry or follow-up.
+The focused controller/evaluation/recorded replay suites pass 315 tests. This
+is synthetic contract evidence, not an observed native merge or combat result.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

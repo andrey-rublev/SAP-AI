@@ -160,14 +160,16 @@ def action_acknowledged(before: Board, after: Board, action: Action,
         return (target_before.occupied is False
                 and source.attack is not None and source.health is not None
                 and target_after.attack >= source.attack and target_after.health >= source.health)
-    if target_before.occupied is not True:
+    if (target_before.occupied is not True
+            or (target_before.species and target_after.species
+                and target_before.species != target_after.species)):
         return False
-    return any(
-        old is not None and new is not None and new > old
-        for old, new in ((target_before.attack, target_after.attack),
-                         (target_before.health, target_after.health),
-                         (target_before.level, target_after.level))
-    )
+    changes = ((target_before.attack, target_after.attack),
+               (target_before.health, target_after.health),
+               (target_before.level, target_after.level))
+    if any(old is not None and new is not None and new < old for old, new in changes):
+        return False
+    return any(old is not None and new is not None and new > old for old, new in changes)
 
 
 class DesktopSession:

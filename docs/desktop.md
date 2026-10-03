@@ -164,6 +164,9 @@ stat may be lower than its observed source. Higher stats remain compatible
 with a buff, but do not prove one occurred. Missing or lower readings leave
 the action pending until valid stable evidence arrives or the session stops;
 the program does not retry the purchase or send another action while pending.
+Combines require an observed attack, health or level increase and reject any
+known decrease in another field or conflicting known target identity. Missing
+identity or level stays unknown; it cannot cancel a contradictory stat reading.
 
 Each Tesseract call has a three-second subprocess timeout. If a numeric crop
 times out, observation stops immediately and the session reports an error

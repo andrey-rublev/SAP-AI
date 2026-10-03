@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase
+from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
 from desktop_session import DesktopSession, action_acknowledged
 
 
@@ -268,6 +268,79 @@ def test_merge_requires_target_improvement_as_well_as_purchase_evidence():
     improved = replace(purchased, team=(replace(ANT, attack=3), EMPTY, EMPTY, EMPTY, EMPTY))
     assert not action_acknowledged(before, purchased, Action("merge", 0, 0))
     assert action_acknowledged(before, improved, Action("merge", 0, 0))
+
+
+@pytest.mark.parametrize("attack,health,level", [(6, 5, 2), (4, 7, 2), (6, 7, 1), (4, 6, 3)])
+def test_merge_rejects_known_target_drops_without_retry_or_followup(attack, health, level):
+    teammate = replace(FISH, attack=5, health=6, level=2)
+    before = shop(shop=(FISH, ANT, ANT), team=(teammate, EMPTY, EMPTY, EMPTY, EMPTY))
+    target = replace(teammate, attack=attack, health=health, level=level)
+    after = replace(before, gold=7, shop=(EMPTY, ANT, ANT),
+                    team=(target, EMPTY, EMPTY, EMPTY, EMPTY))
+    action = Action("merge", 0, 0)
+    assert legal_action(before, action)
+    assert not action_acknowledged(before, after, action)
+    runner, clicks, events = session([before, before, after, after], action, Action("roll"),
+                                     action_max_polls=4)
+    result = runner.run()
+    assert (result.reason, result.actions, result.acknowledgments, result.polls) == (
+        "action_timeout", 1, 0, 6,
+    )
+    assert clicks == [action] and result.pending_action == action
+    assert not any(event["event"] == "acknowledged" for event in events)
+
+
+@pytest.mark.parametrize("before_stats,after_stats", [
+    ((5, 6, 2), (6, 6, 2)), ((5, 6, 2), (5, 7, 2)),
+    ((50, 50, 2), (50, 50, 3)), ((5, 6, 2), (6, 7, None)),
+])
+@pytest.mark.parametrize("species", ["fish", None])
+def test_merge_accepts_nondropping_gain_with_optional_identity_and_level(before_stats, after_stats, species):
+    teammate = replace(FISH, attack=before_stats[0], health=before_stats[1], level=before_stats[2])
+    before = shop(shop=(FISH, ANT, ANT), team=(teammate, EMPTY, EMPTY, EMPTY, EMPTY))
+    target = replace(teammate, species=species, attack=after_stats[0], health=after_stats[1],
+                     level=after_stats[2])
+    after = replace(before, gold=7, shop=(EMPTY, ANT, ANT),
+                    team=(target, EMPTY, EMPTY, EMPTY, EMPTY))
+    action = Action("merge", 0, 0)
+    assert legal_action(before, action)
+    assert action_acknowledged(before, after, action)
+
+
+@pytest.mark.parametrize("source_species,old_species,new_species", [
+    (None, "fish", "ant"), ("fish", "ant", "fish"),
+])
+def test_merge_acknowledgment_rejects_conflicting_known_target_identity(source_species, old_species, new_species):
+    source = replace(FISH, species=source_species)
+    teammate = replace(FISH, species=old_species)
+    before = shop(shop=(source, ANT, ANT), team=(teammate, EMPTY, EMPTY, EMPTY, EMPTY))
+    after = replace(before, gold=7, shop=(EMPTY, ANT, ANT),
+                    team=(replace(teammate, species=new_species, attack=3), EMPTY, EMPTY, EMPTY, EMPTY))
+    action = Action("merge", 0, 0)
+    # These inconsistent snapshots cannot authorize a merge, even through the public ack helper.
+    assert not legal_action(before, action)
+    assert not action_acknowledged(before, after, action)
+
+
+def test_merge_waits_through_conflicting_stats_until_stable_nondropping_evidence():
+    teammate = replace(FISH, attack=5, health=6, level=2)
+    before = shop(shop=(FISH, ANT, ANT), team=(teammate, EMPTY, EMPTY, EMPTY, EMPTY))
+    conflicting = replace(before, gold=7, shop=(EMPTY, ANT, ANT),
+                          team=(replace(teammate, attack=6, health=5), EMPTY, EMPTY, EMPTY, EMPTY))
+    corrected = replace(conflicting,
+                        team=(replace(teammate, attack=6, health=7, species=None, level=None),
+                              EMPTY, EMPTY, EMPTY, EMPTY))
+    action = Action("merge", 0, 0)
+    runner, clicks, events = session(
+        [before, before, conflicting, conflicting, corrected, corrected, corrected],
+        action, max_actions=1,
+    )
+    result = runner.run()
+    assert (result.reason, result.actions, result.acknowledgments, result.polls) == (
+        "max_actions", 1, 1, 7,
+    )
+    assert clicks == [action] and result.pending_action is None
+    assert [event["poll"] for event in events if event["event"] == "acknowledged"] == [6]
 
 
 def test_roll_can_acknowledge_identical_random_shop():
