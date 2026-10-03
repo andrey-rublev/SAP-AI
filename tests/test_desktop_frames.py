@@ -230,6 +230,31 @@ def test_ocr_timeout_is_an_error_not_a_correct_read(source):
     assert report["phase_confusion"] == {"shop": {"observation_error": 1}}
 
 
+@pytest.mark.parametrize("failure", [ImportError("OCR package unavailable"),
+                                   RuntimeError("OCR subprocess unavailable"), OSError("OCR engine failed")])
+def test_ocr_engine_failure_is_scored_as_an_error_and_cli_failure(source, monkeypatch, capsys, failure):
+    calls = []
+    def failed(crop):
+        calls.append(crop)
+        raise failure
+    path, report = run(source, ocr=failed, max_cases=1, max_examples=0)
+    assert report["counts"] == {"correct": 0, "unknown": 2, "incorrect": 0, "unsafe_false_empty": 0}
+    assert report["cases"][0]["error"] == f"{type(failure).__name__}: {failure}"
+    assert report["observation_errors"] == 1 and report["ocr_calls"] == len(calls) == 1
+    assert report["phase_confusion"] == {"shop": {"observation_error": 1}}
+    assert json.loads(path.read_text())["observation_errors"] == 1
+    monkeypatch.setattr(study, "run", lambda *args, **kwargs: (path, report))
+    assert study.main(["--manifest", "labels.json", "--profile", "profile.json"]) == 1
+    assert json.loads(capsys.readouterr().out)["observation_errors"] == 1
+
+
+def test_blank_ocr_remains_unknown_without_an_observation_error(source):
+    _, report = run(source, ocr=lambda crop: "", max_cases=1, max_examples=0)
+    assert report["counts"] == {"correct": 1, "unknown": 1, "incorrect": 0, "unsafe_false_empty": 0}
+    assert report["observation_errors"] == 0 and report["cases"][0]["error"] is None
+    assert report["phase_confusion"] == {"shop": {"shop": 1}}
+
+
 def test_unknown_label_does_not_turn_observation_exception_into_success(source, monkeypatch):
     path = source / "manifest.json"
     data = json.loads(path.read_text())

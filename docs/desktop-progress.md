@@ -656,6 +656,36 @@ cases across 18 scenarios, with eight simulated rounds per healthy case:
 symlink-permission skip. This verifies synthetic controller contracts; it does
 not evaluate OCR, combat or native desktop play. Reports remain private.
 
+## OCR engine failures and private portrait audit, 2026-10-03
+
+An offline portrait study launched with the global Python environment exposed
+a swallowed missing `pytesseract` dependency. That first attempt is invalid
+perception evidence and is excluded from the results below. OCR engine,
+dependency and process exceptions now abort the observation at the first failing
+crop, rather than silently counting unreadable fields. A missing binding reports
+the requirement in the current Python environment. Blank or invalid returned
+text still becomes unknown; deliberate reference-only observation remains
+supported. Numeric references cannot conceal an invoked OCR engine failure.
+
+Mocked sessions verify zero actions before an initial failure, or one pending
+purchase without acknowledgment, retry or follow-up when the engine fails after
+dispatch. Frame studies persist observation errors and return a failing CLI
+status. The focused perception/runtime/frame suites pass 393 tests; the full
+suite passes 1,231 with one Windows symlink-permission skip.
+
+Two previously recorded dessert/clockwork-hat scenes were manually checked as
+Ant, Cricket, Cricket. A private six-reference candidate, tested with the project
+environment on the existing four-scene/seven-variant audit, completed 28 cases:
+268 correct, 61 unknown, zero wrong, false-empty or observation-error readings.
+Compared with that audit's matching baseline (261 correct, 68 unknown), all seven
+gains were shop slot two becoming correctly identified as Cricket, with no
+regressions. A separate source-scene study reached its 120-second bound after
+only three of fourteen candidate cases (69 correct labels); it is incomplete
+and is not a complete paired result. These source scenes are calibration data,
+not held-out evidence. The live profile, thresholds and model selection remain
+unchanged; candidate references, images and reports stay private. No desktop
+apps were launched, captured or controlled during this continuation.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

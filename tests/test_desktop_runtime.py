@@ -634,7 +634,41 @@ def test_ocr_timeout_aborts_observation_without_retrying_other_crops_or_clicking
     click.assert_not_called()
 
 
-def test_other_ocr_runtime_errors_still_yield_unknown(fake_tesseract):
-    fake_tesseract.image_to_string.side_effect = RuntimeError("OCR unavailable")
+def test_other_ocr_runtime_errors_propagate(fake_tesseract):
+    failure = RuntimeError("OCR unavailable")
+    fake_tesseract.image_to_string.side_effect = failure
     perceptor = Perceptor(VisionProfile(image_size=(36, 30)), ocr=tesseract_ocr)
-    assert perceptor._number(numeric_crop(), Rect(0, 0, 36, 30), 0, 99) is None
+    with pytest.raises(RuntimeError, match="OCR unavailable") as caught:
+        perceptor._number(numeric_crop(), Rect(0, 0, 36, 30), 0, 99)
+    assert caught.value is failure
+
+
+def test_missing_pytesseract_reports_the_current_python_environment_requirement(monkeypatch):
+    monkeypatch.setitem(sys.modules, "pytesseract", None)
+    with pytest.raises(DesktopUnavailable, match="pytesseract in the current Python environment") as caught:
+        tesseract_ocr(numeric_crop())
+    assert isinstance(caught.value.__cause__, ImportError)
+
+
+@pytest.mark.parametrize("failure", [RuntimeError("OCR unavailable"), OSError("OCR process failed")])
+@pytest.mark.parametrize("pending", [False, True])
+def test_ocr_engine_failure_stops_session_without_more_crops_actions_or_retries(
+        fake_tesseract, monkeypatch, failure, pending):
+    fake_tesseract.image_to_string.side_effect = failure
+    profile = VisionProfile(image_size=(72, 30),
+                            hud={"gold": Rect(0, 0, 36, 30), "turn": Rect(36, 0, 36, 30)})
+    perceptor = Perceptor(profile, ocr=tesseract_ocr)
+    monkeypatch.setattr(perceptor, "_phase", lambda frame: Phase.SHOP)
+    frame = np.concatenate([numeric_crop(), numeric_crop()], axis=1)
+    initial = iter([board(), board()] if pending else [])
+    def observe():
+        known = next(initial, None)
+        return known if known is not None else perceptor.observe(frame)
+    click = Mock()
+    result = DesktopSession(observe, click, DesktopPolicy(), sleep=lambda _: None).run()
+    assert result.reason == "observation_error"
+    assert result.error == f"{type(failure).__name__}: {failure}"
+    assert (result.actions, result.acknowledgments, result.polls) == (int(pending), 0, 2 if pending else 0)
+    assert result.pending_action == (Action("buy", 0, 0) if pending else None)
+    assert click.call_args_list == ([call(Action("buy", 0, 0))] if pending else [])
+    fake_tesseract.image_to_string.assert_called_once()

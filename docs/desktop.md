@@ -103,6 +103,12 @@ pads the result before one recognition call. Blank or substantially clipped
 glyphs return unknown; they are not repaired by guessing a number. Validate
 counter zeroes, levels, and larger stats as well as the opening shop.
 
+An OCR engine or dependency failure aborts the observation and stops the session
+with `observation_error`, including when an action is awaiting acknowledgment.
+It is not scored as an unreadable digit; frame studies report the error and fail
+their CLI invocation. Blank or invalid returned text can still become unknown.
+Use the project's Python environment so its OCR dependencies are available.
+
 Optional `numeric_templates` entries provide verified references for individual
 fields, for example `{"field": "gold", "value": 0, "template": "gold-zero.png",
 "max_distance": 0.006, "margin": 0.01}`. Fields include HUD names and

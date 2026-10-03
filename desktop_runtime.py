@@ -211,7 +211,10 @@ def tesseract_ocr(image):
     crop = prepare_numeric_crop(image)
     if crop is None:
         return ""
-    import pytesseract
+    try:
+        import pytesseract
+    except ImportError as exc:
+        raise DesktopUnavailable("Tesseract OCR requires pytesseract in the current Python environment") from exc
 
     if not shutil.which("tesseract"):
         executable = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")

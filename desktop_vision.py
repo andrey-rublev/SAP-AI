@@ -364,14 +364,9 @@ class Perceptor:
             return None
         if self.ocr is None:
             return reference
-        try:
-            value = read_number(self.ocr(region.crop(frame)), minimum, maximum)
-        except TimeoutError:
-            # Abort this observation instead of timing out again on every crop.
-            raise
-        except Exception:
-            # OCR process failures must never authorize a mouse action.
-            return None
+        # Engine failures invalidate the observation; only unreadable raw text
+        # may become unknown or use a calibrated numeric reference.
+        value = read_number(self.ocr(region.crop(frame)), minimum, maximum)
         if matched:
             return reference if value is None or value == reference else None
         return value

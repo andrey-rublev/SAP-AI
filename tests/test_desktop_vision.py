@@ -465,13 +465,29 @@ def test_empty_requires_visual_evidence(scene):
     assert observe(scene).team[0].occupied is None
 
 
-def test_ocr_absence_or_exception_preserves_unknown(scene):
+def test_ocr_absence_preserves_unknown(scene):
     board = observe(scene, ocr=None)
     assert board.gold is None and board.shop[0].occupied is None
     assert board.team[0].occupied is False
+
+
+@pytest.mark.parametrize("failure", [RuntimeError("OCR subprocess unavailable"),
+                                   ImportError("OCR package unavailable"), OSError("OCR engine failed")])
+def test_ocr_engine_failure_aborts_observation_at_first_crop(scene, failure):
+    calls = []
     def broken_ocr(image):
-        raise RuntimeError("OCR subprocess unavailable")
-    assert observe(scene, ocr=broken_ocr).gold is None
+        calls.append(image)
+        raise failure
+    with pytest.raises(type(failure)) as caught:
+        observe(scene, ocr=broken_ocr)
+    assert caught.value is failure and len(calls) == 1
+
+
+@pytest.mark.parametrize("text", ["", "?", "not a number", None])
+def test_unreadable_raw_ocr_preserves_unknown_without_an_observation_error(scene, text):
+    board = observe(scene, ocr=lambda crop: text)
+    assert board.phase == Phase.SHOP and board.gold is None and board.shop[0].occupied is None
+    assert board.team[0].occupied is False
 
 
 @pytest.mark.parametrize("text", ["", "?", "3/5", "1O", "2 3", "-1", "+1", "1.0", "100", "١", None, 3])
@@ -642,11 +658,14 @@ def test_eligible_best_number_reference_preserves_ocr_agreement_and_conflict(sce
     assert observe(scene, ocr=ocr).gold == expected
 
 
-def test_numeric_references_do_not_override_ocr_runtime_failure(scene):
+@pytest.mark.parametrize("failure", [RuntimeError("OCR unavailable"), ImportError("OCR package unavailable")])
+def test_numeric_references_do_not_override_ocr_engine_failure(scene, failure):
     add_number_reference(scene)
     def broken(crop):
-        raise RuntimeError("OCR unavailable")
-    assert observe(scene, ocr=broken).gold is None
+        raise failure
+    with pytest.raises(type(failure)) as caught:
+        observe(scene, ocr=broken)
+    assert caught.value is failure
 
 
 def test_numeric_references_do_not_hide_ocr_timeout(scene):
