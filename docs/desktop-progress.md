@@ -541,6 +541,39 @@ affordability improvement, not a measured combat advantage. Both simulators
 now include the verified Pig bonus; the economy harness retains its level-one
 sale restriction. Full suite: 1,102 passed, one Windows permission skip.
 
+## Background purchase validation, 2026-10-03
+
+The user stopped Computer Use with Escape, then requested continued development
+without desktop control. Work in this continuation used source edits, mocked
+IO and existing typed recordings only. No apps were opened, focused or captured,
+and no desktop inputs were sent. Live validation remains paused under this
+latest instruction.
+
+An offline corruption of the turn-six purchase exposed a false acknowledgment:
+the recorded shop offer was 3/6, but an observed destination of 1/6 or 3/1 was
+accepted when the three-gold receipt and source removal were correct. The
+controller could then send its next action. Fresh-purchase acknowledgment now
+requires complete observed source stats and destination attack/health at least
+as high in each field. Missing or lower readings remain pending and stop without
+a retry or follow-up input. Higher stats remain compatible; species uncertainty
+is retained, and this does not establish that a buff or specific identity was
+observed.
+
+The prior native opening purchases are now a sanitized 11-poll replay fixture.
+The real policy preserves all three buys at polls 2/5/8 and their acknowledgments
+at 4/7/10, including left compaction and a known shop Ant becoming unidentified
+on the team. Only typed Boards/actions and relative polls are public; captures,
+calibration, timestamps and account data remain private. Recorded corruptions
+of each destination stat now time out after one purchase attempt with no later
+action. These replays verify controller behavior, not OCR or combat strength.
+
+Full suite: 1,128 passed, one Windows symlink-permission skip. A bounded offline
+controller soak after the fix passed 10,000 seeded cases across eight simulated
+shop rounds per healthy case, with zero failures. The fresh uninterrupted
+desktop arena remains unverified. Next live work, only after renewed user
+authorization, is to observe the current game state and continue the new-theme
+validation through naming, battle transitions and terminal results.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

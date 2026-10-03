@@ -90,7 +90,9 @@ def test_recorded_purchase_removes_middle_offer_and_compacts_duplicate_survivors
     assert action_acknowledged(before, after, action)
 
 
-@pytest.mark.parametrize("missing_evidence", ["price", "target", "removal", "survivor_stats"])
+@pytest.mark.parametrize("missing_evidence", [
+    "price", "target", "removal", "survivor_stats", "target_attack", "target_health",
+])
 def test_recorded_purchase_corruption_times_out_without_another_click(recording, missing_evidence):
     data, frames = recording
     before, after = frames[15], frames[17]
@@ -101,6 +103,13 @@ def test_recorded_purchase_corruption_times_out_without_another_click(recording,
     elif missing_evidence == "removal":
         # Drop the first offer instead of the purchased second one.
         after = replace(after, shop=(*before.shop[1:], after.shop[3]))
+    elif missing_evidence in {"target_attack", "target_health"}:
+        # The purchased 3/6 offer cannot be confirmed as an observed 1/6 or 3/1
+        # teammate, even when gold and the selected shop removal are correct.
+        field = missing_evidence.removeprefix("target_")
+        team = list(after.team)
+        team[3] = replace(team[3], **{field: 1})
+        after = replace(after, team=tuple(team))
     else:
         after = replace(after, shop=(replace(after.shop[0], attack=None), *after.shop[1:]))
     assert not action_acknowledged(before, after, Action("buy", 1, 3))

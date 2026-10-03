@@ -157,7 +157,9 @@ def action_acknowledged(before: Board, after: Board, action: Action,
             or not _credible_target(source, target_after)):
         return False
     if action.kind == "buy":
-        return target_before.occupied is False
+        return (target_before.occupied is False
+                and source.attack is not None and source.health is not None
+                and target_after.attack >= source.attack and target_after.health >= source.health)
     if target_before.occupied is not True:
         return False
     return any(

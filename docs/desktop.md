@@ -159,6 +159,11 @@ Purchase acknowledgment checks gold, the destination pet, and removal of the
 selected shop offer. Remaining offers may stay in place or shift left, but
 their order and observed stats must match. Known species and levels must also
 agree; equal stats alone cannot identify an unrecognized species.
+For a fresh purchase, both source stats must be known and neither destination
+stat may be lower than its observed source. Higher stats remain compatible
+with a buff, but do not prove one occurred. Missing or lower readings leave
+the action pending until valid stable evidence arrives or the session stops;
+the program does not retry the purchase or send another action while pending.
 
 Each Tesseract call has a three-second subprocess timeout. If a numeric crop
 times out, observation stops immediately and the session reports an error

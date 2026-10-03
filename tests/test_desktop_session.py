@@ -84,6 +84,40 @@ def test_buy_requires_gold_source_and_target_evidence():
     assert not action_acknowledged(before, replace(correct, turn=2), action)
 
 
+@pytest.mark.parametrize("missing", ["attack", "health"])
+def test_buy_requires_complete_observed_source_stats(missing):
+    source = replace(FISH, **{missing: None})
+    before = shop(shop=(source, ANT, ANT))
+    after = replace(before, gold=7, shop=(EMPTY, ANT, ANT),
+                    team=(FISH, EMPTY, EMPTY, EMPTY, EMPTY))
+    assert not action_acknowledged(before, after, Action("buy", 0, 0))
+
+
+@pytest.mark.parametrize("attack,health", [(1, 3), (2, 2), (1, 1), (0, 3)])
+@pytest.mark.parametrize("species", [None, "fish"])
+def test_buy_rejects_destination_stats_below_observed_source(attack, health, species):
+    source = replace(FISH, species=species)
+    before = shop(shop=(source, ANT, ANT))
+    target = replace(source, attack=attack, health=health)
+    after = replace(before, gold=7, shop=(EMPTY, ANT, ANT),
+                    team=(target, EMPTY, EMPTY, EMPTY, EMPTY))
+    assert not action_acknowledged(before, after, Action("buy", 0, 0))
+
+
+@pytest.mark.parametrize("source_stats,target_stats", [
+    ((2, 3), (2, 3)), ((2, 3), (3, 3)), ((2, 3), (2, 4)), ((2, 3), (4, 5)),
+    ((0, 3), (0, 3)), ((0, 3), (1, 4)),
+])
+@pytest.mark.parametrize("species", [None, "fish"])
+def test_buy_accepts_equal_or_buffed_stats_including_zero_attack(source_stats, target_stats, species):
+    source = replace(FISH, species=species, attack=source_stats[0], health=source_stats[1])
+    before = shop(shop=(source, ANT, ANT))
+    target = replace(source, attack=target_stats[0], health=target_stats[1])
+    after = replace(before, gold=7, shop=(EMPTY, ANT, ANT),
+                    team=(target, EMPTY, EMPTY, EMPTY, EMPTY))
+    assert action_acknowledged(before, after, Action("buy", 0, 0))
+
+
 def test_live_purchase_replay_acknowledges_left_compaction():
     before = shop(shop=(FISH, DUCK, FISH))
     after = shop(gold=7, shop=(DUCK, FISH, EMPTY), team=(FISH, EMPTY, EMPTY, EMPTY, EMPTY))
