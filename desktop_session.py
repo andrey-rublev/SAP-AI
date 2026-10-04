@@ -361,7 +361,7 @@ class DesktopSession:
                     completed_transitions.add(board.phase)
                 try:
                     self.act(pending)
-                except BoardChangedBeforeInput:
+                except BoardChangedBeforeInput as exc:
                     # This specific executor contract guarantees no input. Replan
                     # from fresh stable observations, without spending an action.
                     actions -= 1
@@ -369,7 +369,10 @@ class DesktopSession:
                     (last_acted, waiting_turn, transition_active,
                      completed_transitions, before) = dispatch_state
                     stable, last_fingerprint = 0, None
-                    emit("deferred", action=asdict(proposal), reason="board_changed_before_input")
+                    evidence = ({"preflight_board": exc.preflight_board.to_dict()}
+                                if exc.preflight_board is not None else {})
+                    emit("deferred", action=asdict(proposal), reason="board_changed_before_input",
+                         **evidence)
                     proposal = None
                     continue
                 # The runtime may recheck the entire board before clicking.

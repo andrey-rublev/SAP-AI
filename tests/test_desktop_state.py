@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action, observed_sale_income
+from desktop_state import (Action, Board, BoardChangedBeforeInput, DesktopPolicy,
+                           PetSlot, Phase, legal_action, observed_sale_income)
 
 
 EMPTY = PetSlot(False)
@@ -31,6 +32,20 @@ def test_roundtrip_preserves_unknowns_and_normalizes_collections():
     assert replace(value, gold=2).fingerprint() != value.fingerprint()
     action = Action("buy", 0, 4)
     assert Action.from_dict(json.loads(json.dumps(action.to_dict()))) == action
+
+
+def test_preinput_exception_preserves_optional_typed_evidence_and_legacy_message():
+    legacy = BoardChangedBeforeInput("board changed")
+    assert str(legacy) == "board changed" and legacy.preflight_board is None
+    current = board(gold=9)
+    evidence = BoardChangedBeforeInput("board changed", preflight_board=current)
+    assert isinstance(evidence, RuntimeError) and evidence.preflight_board is current
+
+
+@pytest.mark.parametrize("value", [{"phase": "shop"}, 0, "board", object()])
+def test_preinput_exception_rejects_untyped_preflight_evidence(value):
+    with pytest.raises(TypeError, match="preflight_board must be a Board"):
+        BoardChangedBeforeInput("board changed", preflight_board=value)
 
 
 def test_frozen_state_and_pet_identity():

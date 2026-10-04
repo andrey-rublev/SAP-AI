@@ -173,6 +173,11 @@ does not activate or navigate other applications.
 
 If pre-input revalidation detects a changed board, it sends no input, records
 a deferral and waits for two fresh stable observations before choosing again.
+Native deferrals also retain the typed pre-input board separately from the
+observation timeline. This diagnostic can explain which reading changed; it
+does not count as a stable observation or supply a policy decision. Sanitized
+replay exports preserve this optional board without screenshots or exception
+text, and reject malformed or unchanged pre-input evidence.
 Deferrals do not spend the action budget; poll/deadline bounds still apply.
 Every other execution failure stops with its tentative action unresolved,
 including failures after selecting a shop pet. It never retries partial input.

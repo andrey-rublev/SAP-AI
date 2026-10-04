@@ -102,7 +102,13 @@ def export_session(text, *, session=-1):
             if (row.get("reason") != "board_changed_before_input" or proposal != action
                     or pending is not None or proposal_poll != poll):
                 raise ValueError("deferral needs its same-poll proposal, no pending action and supported reason")
-            deferrals.append({"poll": poll, "action": action.to_dict()})
+            deferred = {"poll": poll, "action": action.to_dict()}
+            if "preflight_board" in row:
+                preflight = Board.from_dict(row["preflight_board"])
+                if preflight.fingerprint() == last_board.fingerprint():
+                    raise ValueError("preflight board must differ from the latest observed board")
+                deferred["preflight_board"] = preflight.to_dict()
+            deferrals.append(deferred)
             last_deferral_poll = poll
             proposal = proposal_poll = None
         else:

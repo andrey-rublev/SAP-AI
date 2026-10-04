@@ -98,6 +98,50 @@ def test_export_preserves_actual_typed_deferral_without_counting_a_dispatch():
     assert "deferrals" not in export_session(encode(recording()))
 
 
+def test_export_preserves_optional_typed_preflight_without_promoting_it_to_observations():
+    events = recording(deferred=True)
+    deferred = next(row for row in events if row["event"] == "deferred")
+    before = Board.from_dict(next(row["board"] for row in events if row["event"] == "proposed"))
+    preflight = replace(before, gold=9)
+    deferred.update(preflight_board=preflight.to_dict(), frame_path="private-capture.png",
+                    account="private-user", error="private exception detail", elapsed=123.)
+    replay = export_session(encode(events))
+    assert replay["deferrals"] == [{"poll": 2, "action": Action("buy", 0, 0).to_dict(),
+                                    "preflight_board": preflight.to_dict()}]
+    assert preflight.to_dict() not in replay["boards"]
+    assert replay["observation_runs"] == [[0, 4], [1, 3]]
+    assert all(value not in json.dumps(replay) for value in
+               ("private-capture", "private-user", "private exception detail", "frame_path", "elapsed"))
+
+
+@pytest.mark.parametrize("corruption", [
+    "null", "array", "invalid_counter", "board_metadata", "pet_metadata", "same_board", "normalized_same_board",
+])
+def test_export_rejects_malformed_or_unchanged_preflight_evidence(corruption):
+    events = recording(deferred=True)
+    deferred = next(row for row in events if row["event"] == "deferred")
+    before = Board.from_dict(next(row["board"] for row in events if row["event"] == "proposed"))
+    preflight = replace(before, gold=9).to_dict()
+    if corruption == "null":
+        preflight = None
+    elif corruption == "array":
+        preflight = []
+    elif corruption == "invalid_counter":
+        preflight["gold"] = True
+    elif corruption == "board_metadata":
+        preflight["account"] = "private-user"
+    elif corruption == "pet_metadata":
+        preflight["shop"][0]["frame_path"] = "private-capture.png"
+    elif corruption == "same_board":
+        preflight = before.to_dict()
+    else:
+        preflight = before.to_dict()
+        preflight["shop"][0]["species"] = "  FISH  "
+    deferred["preflight_board"] = preflight
+    with pytest.raises((ValueError, TypeError, KeyError)):
+        export_session(encode(events))
+
+
 def test_export_sanitizes_deferral_metadata_and_preserves_an_explicit_replay_failure():
     events = recording(deferred=True)
     deferred = next(row for row in events if row["event"] == "deferred")

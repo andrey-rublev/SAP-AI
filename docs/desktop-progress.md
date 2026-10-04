@@ -1006,6 +1006,37 @@ replay tests pass. The full suite passes 1,404 tests in 14.42 seconds with one
 Windows symlink-permission skip. Independent review confirmed exact source
 timeline agreement, terminal stopping and the sanitized fixture's privacy.
 
+## Typed pre-input diagnostics, 2026-10-04
+
+The no-input mismatch exception now optionally carries the typed preflight
+Board. Native runtime deferrals retain that board in the event instead of
+losing the transient reading after recovery. It remains diagnostic evidence:
+the session still restores its action state and requires two fresh stable
+observations for policy. The exporter keeps only validated typed evidence,
+rejects unchanged fingerprints and malformed/nested metadata, and excludes
+capture paths and exception text. Message-only executors and old fixtures keep
+their original schema. Independent review found no concrete defects.
+
+Repeating the actual recorded-image splice through the updated production
+perceptor/runtime/session took 4.17 seconds, retained the transient unknown
+teammate in its preflight diagnostic and preserved the original seven-poll
+timeline. All three comparisons against recorded stable Boards matched;
+there were still nine fake captures, two fake clicks, one action and one
+acknowledgment, with the private profile unchanged. This remains a synthetic
+offline splice with mocked input. The typed fixture now carries the diagnostic
+without turning it into an observation.
+The full suite passes 1,417 tests in 14.37 seconds with one Windows
+symlink-permission skip; legacy replay timelines remain unchanged.
+
+The later settled Horse/Beaver study also remains private and unpromoted.
+Across 26 production observations, readings improved from 200 correct/36
+unknown to 210 correct/26 unknown, with no wrong labels, false empties or
+regressions. Three gains were on training and seven on later holds; five held
+portrait crops were byte-identical to training and two were nearly identical.
+A separate fresh-arena Horse still abstained at .155770 against .04. Disjoint
+full images did not establish independent pose coverage. Collect materially
+different, settled and independently labeled portraits before promotion.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

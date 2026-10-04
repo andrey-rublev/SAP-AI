@@ -19,6 +19,12 @@ class BoardChangedBeforeInput(RuntimeError):
     after any input must use an ordinary exception, leaving the action pending.
     """
 
+    def __init__(self, message="", *, preflight_board: Board | None = None):
+        if preflight_board is not None and not isinstance(preflight_board, Board):
+            raise TypeError("preflight_board must be a Board or None")
+        super().__init__(message)
+        self.preflight_board = preflight_board
+
 
 class Phase(str, Enum):
     UNKNOWN = "unknown"

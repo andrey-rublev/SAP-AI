@@ -242,6 +242,73 @@
         "kind": "buy",
         "slot": 0,
         "target": 4
+      },
+      "preflight_board": {
+        "phase": "shop",
+        "gold": 7,
+        "turn": 2,
+        "wins": 0,
+        "lives": 5,
+        "shop": [
+          {
+            "occupied": true,
+            "species": null,
+            "attack": 1,
+            "health": 3,
+            "level": null
+          },
+          {
+            "occupied": true,
+            "species": null,
+            "attack": 2,
+            "health": 2,
+            "level": null
+          },
+          {
+            "occupied": false,
+            "species": null,
+            "attack": null,
+            "health": null,
+            "level": null
+          }
+        ],
+        "team": [
+          {
+            "occupied": true,
+            "species": "pig",
+            "attack": 4,
+            "health": 1,
+            "level": 1
+          },
+          {
+            "occupied": true,
+            "species": null,
+            "attack": 2,
+            "health": 1,
+            "level": 1
+          },
+          {
+            "occupied": true,
+            "species": null,
+            "attack": 2,
+            "health": 1,
+            "level": 1
+          },
+          {
+            "occupied": null,
+            "species": null,
+            "attack": null,
+            "health": null,
+            "level": null
+          },
+          {
+            "occupied": false,
+            "species": null,
+            "attack": null,
+            "health": null,
+            "level": null
+          }
+        ]
       }
     }
   ]

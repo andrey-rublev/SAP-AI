@@ -167,9 +167,12 @@ def test_preview_cannot_click():
 
 
 def test_changed_board_rejected_before_mouse_input():
-    driver, window = runtime(current=board(9))
-    with pytest.raises(BoardChangedBeforeInput, match="changed"):
+    current = board(9)
+    driver, window = runtime(current=current)
+    with pytest.raises(BoardChangedBeforeInput, match="changed") as caught:
         driver.act(Action("buy", 0, 0))
+    assert caught.value.preflight_board is current
+    assert driver.last_board == board()
     window.drag.assert_not_called()
     window.click.assert_not_called()
 
@@ -196,6 +199,7 @@ def test_changed_board_runtime_session_reobserves_and_replans_before_any_click()
     assert [(row["poll"], row["action"]["target"]) for row in events
             if row["event"] == "proposed"] == [(2, 0), (4, 1)]
     assert [row["poll"] for row in events if row["event"] == "deferred"] == [2]
+    assert [row["preflight_board"] for row in events if row["event"] == "deferred"] == [fresh.to_dict()]
     assert [row["poll"] for row in events if row["event"] == "acted"] == [4]
     assert window.click.call_args_list == [
         call((15, 65), (100, 100)), call((30, 25), (100, 100)),

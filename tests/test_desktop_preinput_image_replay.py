@@ -30,8 +30,11 @@ def replay(data, frames, *, max_polls=None):
         nonlocal next_deferral
         if next_deferral is not None and current_poll == next_deferral["poll"]:
             assert action == Action.from_dict(next_deferral["action"])
+            evidence = ({"preflight_board": Board.from_dict(next_deferral["preflight_board"])}
+                        if "preflight_board" in next_deferral else {})
+            assert not clicks
             next_deferral = next(deferrals, None)
-            raise BoardChangedBeforeInput("recorded offline preflight rejected without input")
+            raise BoardChangedBeforeInput("recorded offline preflight rejected without input", **evidence)
         clicks.append(action)
 
     result = DesktopSession(
@@ -56,10 +59,19 @@ def test_recorded_image_splice_replans_only_after_fresh_stability_and_preserves_
     action = Action("buy", 0, 4)
     assert result.pending_action is None and result.error is None
     assert clicks == [action]
-    assert data["deferrals"] == [{"poll": 2, "action": action.to_dict()}]
+    preflight = Board.from_dict(data["deferrals"][0]["preflight_board"])
+    assert data["deferrals"] == [{"poll": 2, "action": action.to_dict(),
+                                 "preflight_board": preflight.to_dict()}]
     assert [(row["poll"], row["action"]) for row in events if row["event"] == "deferred"] == [
         (2, action.to_dict())
     ]
+    assert [row["preflight_board"] for row in events if row["event"] == "deferred"] == [preflight.to_dict()]
+    assert preflight not in frames and DesktopPolicy().choose_action(preflight) is None
+    assert not any(row.get("board") == preflight.to_dict() for row in events)
+    # The recorded mid-buff slot is unreadable, not empty or zero-valued. Its
+    # diagnostic evidence never replaces the two fresh complete observations.
+    assert preflight.team[3].occupied is None and preflight.team[4].occupied is False
+    assert (preflight.team[3].attack, preflight.team[3].health, preflight.team[3].level) == (None, None, None)
     assert [row["poll"] for row in events if row["event"] == "proposed"] == [2, 4]
     assert [(row["poll"], row["action"]) for row in events if row["event"] == "acted"] == [
         (row["poll"], row["action"]) for row in data["actions"]
@@ -83,6 +95,7 @@ def test_recorded_image_splice_poll_bound_stops_before_fresh_stable_proposal():
     assert result.pending_action is None and result.proposed_action is None and result.error is None
     assert result.last_board == frames[2] and result.last_board.team[3].attack == 5
     assert not clicks
+    assert Board.from_dict(data["deferrals"][0]["preflight_board"]).team[3].occupied is None
     assert [row["poll"] for row in events if row["event"] == "proposed"] == [2]
     assert [row["poll"] for row in events if row["event"] == "deferred"] == [2]
     assert not any(row["event"] in {"acted", "acknowledged"} for row in events)
@@ -93,14 +106,17 @@ def test_recorded_image_splice_fixture_contains_only_typed_evidence_and_deferral
     assert data["description"] == "Synthetic splice of stored native images re-evaluated offline; mouse IO mocked."
     assert set(data) == {"description", "boards", "observation_runs", "actions", "deferrals", "expected"}
     assert len(frames) == data["expected"]["polls"] == 7
-    assert all(Board.from_dict(row).to_dict() == row for row in data["boards"])
+    typed_boards = [*data["boards"], *[row["preflight_board"] for row in data["deferrals"]
+                                     if "preflight_board" in row]]
+    assert all(Board.from_dict(row).to_dict() == row for row in typed_boards)
     assert all(set(row) == {"phase", "gold", "turn", "wins", "lives", "shop", "team"}
-               for row in data["boards"])
+               for row in typed_boards)
     assert all(set(pet) == {"occupied", "species", "attack", "health", "level"}
                and pet["species"] in {None, "pig"}
-               for row in data["boards"] for name in ("shop", "team") for pet in row[name])
+               for row in typed_boards for name in ("shop", "team") for pet in row[name])
     assert all(set(row) == {"poll", "action", "acknowledged_poll"} for row in data["actions"])
-    assert all(set(row) == {"poll", "action"} for row in data["deferrals"])
+    assert all(set(row) in ({"poll", "action"}, {"poll", "action", "preflight_board"})
+               for row in data["deferrals"])
     assert all(set(row["action"]) == {"kind", "slot", "target"}
                and Action.from_dict(row["action"]).to_dict() == row["action"]
                for row in (*data["actions"], *data["deferrals"]))

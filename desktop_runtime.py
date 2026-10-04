@@ -380,7 +380,8 @@ class DesktopRuntime:
         if current.fingerprint() != before.fingerprint():
             # This exception is reserved for a proven no-input rejection.
             # Capture/OCR, focus and partial-click failures still fail closed.
-            raise BoardChangedBeforeInput("board changed before input; observe again")
+            raise BoardChangedBeforeInput("board changed before input; observe again",
+                                          preflight_board=current)
         size = self.profile.image_size
         def click(point):
             _require_running(self.should_stop)

@@ -428,6 +428,7 @@ def test_changed_board_before_input_replans_different_legal_action_after_two_fre
     strong, offer = PetSlot(True, "fish", 20, 20, 1), PetSlot(True, None, 4, 6, 1)
     before = shop(gold=3, shop=(offer, EMPTY, EMPTY), team=(beaver, duck, strong, strong, strong))
     changed = replace(before, team=(replace(beaver, attack=5), *before.team[1:]))
+    preflight = replace(changed, team=(PetSlot(None), *changed.team[1:]))
     sold = replace(changed, gold=4, team=(changed.team[0], EMPTY, *changed.team[2:]))
     runner, clicks, events = session([before, before, changed, changed, sold, sold, sold],
                                     max_actions=1)
@@ -437,7 +438,8 @@ def test_changed_board_before_input_replans_different_legal_action_after_two_fre
     def act(action):
         proposals.append(action)
         if len(proposals) == 1:
-            raise BoardChangedBeforeInput("summon buffs changed the weakest teammate")
+            raise BoardChangedBeforeInput("summon buffs changed the weakest teammate",
+                                          preflight_board=preflight)
         clicks.append(action)
 
     runner.act = act
@@ -452,6 +454,10 @@ def test_changed_board_before_input_replans_different_legal_action_after_two_fre
         (2, Action("sell", 0).to_dict())
     ]
     assert [e["reason"] for e in events if e["event"] == "deferred"] == ["board_changed_before_input"]
+    assert [e["preflight_board"] for e in events if e["event"] == "deferred"] == [preflight.to_dict()]
+    # Diagnostic preflight evidence is neither an observation nor a policy
+    # input. The actual fresh complete board determines the new seller.
+    assert not any(e.get("board") == preflight.to_dict() for e in events)
     assert [e["poll"] for e in events if e["event"] == "proposed"] == [2, 4]
     assert [e["poll"] for e in events if e["event"] == "acted"] == [4]
 
@@ -479,6 +485,7 @@ def test_repeated_preinput_deferrals_keep_poll_budget_and_require_fresh_stabilit
         1 + (index % 2) for index in range(max_polls)
     ]
     assert not any(e["event"] in {"acted", "acknowledged"} for e in events)
+    assert all("preflight_board" not in e for e in events if e["event"] == "deferred")
 
 
 def test_external_stop_after_preinput_deferral_leaves_no_pending_action():
