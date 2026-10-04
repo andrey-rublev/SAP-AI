@@ -795,6 +795,43 @@ text, images, accounts and calibration remain private. All 287 session/startup/
 naming replay tests pass. The night shop is the next live calibration blocker;
 this calibration-paused sequence is not an uninterrupted fresh arena run.
 
+## Native night shop and tier-overlay calibration, 2026-10-04
+
+The new night shop exceeded every existing SHOP RGB distance limit. A private
+reference for the tight Shop word uses the existing mask matcher with a
+low-spread ink selector; the .045 distance/.015 margin and input points remain
+unchanged. All four individual letter removals and full-word/solid replacements
+abstain. A 467-frame phase-only regression completed in 39.98 seconds with only
+the new source changing UNKNOWN to SHOP. All seven preceding naming-run frames
+were separately checked and preserved. This is source calibration and regression
+evidence, not held-out theme accuracy. The profile was backed up before local
+promotion; images and calibration remain private.
+
+The standalone program then bought two pets, rolled, ended turn and confirmed
+using its own input. These five actions were acknowledged at polls 7/10/14/17/42.
+It observed battle/result and sent Continue at poll 71, then stopped at an unseen
+tier-two overlay: six attempts, five acknowledgments, 96 polls, UNKNOWN timeout
+with Continue unresolved. No agent gameplay clicks were used. The sanitized
+night-shop fixture preserves this actual failure. Real-policy replay with a
+five-action bound preserves native action/acknowledgment timing and stops in
+BATTLE at poll 43. A purchase destination with contradictory health, despite
+matching gold/source removal/occupancy, blocks acknowledgment and all follow-up
+input. All 42 night/naming/startup/export replay tests pass.
+
+A private tier reference now matches only the constant "pets unlocked!" footer
+suffix, excluding the tier digit and animated die. Its inherited .015 distance
+and .01 margin remain unchanged. A 483-frame regression, including all fifteen
+night-run frames, completed in 42.76 seconds: only the final source changed
+UNKNOWN to TIER_UNLOCK. Removing either word, all glyphs or the exclamation mark,
+or replacing the suffix with solid colors, yields UNKNOWN. Header-only and
+tier-prefix erasure deliberately still match; this phase cue does not read tier
+or turn. The original profile was backed up before adding exactly one reference,
+and recorded-image inspection recognizes TIER_UNLOCK without inferred counters.
+The subsequent standalone continuation dispatched Dismiss Tier at poll two and
+acknowledged the turn-three shop at poll five, then acknowledged a roll at poll
+eight. This verifies one native tier dismissal; the bounded continuation is
+still running and does not yet establish a finished uninterrupted arena run.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
