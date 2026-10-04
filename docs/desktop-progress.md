@@ -708,6 +708,25 @@ blocking defect. Live inspection found SAP at its main menu. A fresh private
 native capture is recognized as main_menu by the existing 2560x1440 profile.
 This establishes current startup recognition only, not a complete arena run.
 
+## One-command PowerShell entry point, 2026-10-04
+
+`cd C:\Users\nikhi\Downloads\SAP-AI` then `.\play.cmd` now starts the
+standalone desktop controller with the project's virtual environment. The new
+`play` command defaults to the private native profile, enables execution and
+arena transitions, and uses finite 600-action/12,000-poll/one-hour limits. It
+checks STOP before loading the profile, loads all calibrated reference images,
+checks dependencies, opens its local log and requests game focus once. An
+existing STOP file is preserved and produces a typed zero-action stopped
+receipt. Missing calibration/dependencies and disabled required transitions
+fail clearly; `run` remains preview-first. The launcher forwards arguments and
+preserves exit status, including from a folder with spaces, without changing
+PowerShell execution policy.
+
+All 35 CLI tests pass, and the full suite passes 1,285 with one Windows
+symlink-permission skip. Independent review found no actionable defect.
+`play.cmd --help` works with the local environment. A bounded native run is the
+next check; the command's existence does not establish end-to-end arena play.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

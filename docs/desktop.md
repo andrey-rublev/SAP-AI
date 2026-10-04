@@ -128,6 +128,27 @@ Team slots are always present. Validate the schedule against the actual client.
 
 ## Preview and controlled execution
 
+For the native profile on this Windows checkout, open and restore the game,
+change to the repository in PowerShell, and run:
+
+```powershell
+.\play.cmd
+```
+
+This invokes the project's `.venv` Python with `desktop.py play`, using
+`.local/desktop/calibration-native.json` by default. It enables execution and
+arena menu transitions, checks all reference images and OCR dependencies before
+desktop access, and requests foreground ownership once. A missing environment,
+missing profile/reference, wrong client size or denied focus request fails with
+a diagnostic. It does not launch the game, restore a minimized client, or handle
+authentication. Profiles remain private and must match the running client.
+
+`play` defaults to 600 actions, 12,000 observations and one hour. Override these
+with, for example, `.\play.cmd --max-actions 40 --max-seconds 600`. Stop-file,
+logging, recording, receipt and focus guards are shared with `run`; the launcher
+does not remove an existing STOP file or regain focus after the session starts.
+The `.cmd` entry point works from PowerShell without changing script policies.
+
 After setting `calibrated` to true and keeping the game foreground:
 
 ```powershell

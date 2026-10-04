@@ -140,7 +140,25 @@ calibrated phases, chooses actions, physically clicks, and checks their effects.
 It controls only the foreground game window and stops on ambiguous observations,
 unacknowledged actions, loss of focus, a stop file, or its runtime limit.
 
-With an already verified profile for your client geometry:
+On this Windows checkout, open Super Auto Pets and restore its window, then run
+these commands in PowerShell:
+
+```powershell
+cd C:\Users\nikhi\Downloads\SAP-AI
+.\play.cmd
+```
+
+The launcher uses the project's `.venv`, checks the private native calibration
+and OCR dependencies, brings the game forward once, and enables the bot's own
+actions and arena transitions. It stops after a terminal result or a configured
+bound (one hour, 600 actions, 12,000 observations by default). Changing apps later
+stops control. Move the pointer to a screen corner or create
+`.local/desktop/STOP` to stop; the launcher never removes a stop file. It requires
+the local verified profile, which is not included in Git. This convenient entry
+point does not establish that an entire fresh arena has been validated.
+
+For a shorter run, use `.\play.cmd --max-actions 40 --max-seconds 600`.
+With an already verified profile, the separate preview interface remains:
 
 ```bash
 python desktop.py run --profile .local/desktop/calibration-native.json
