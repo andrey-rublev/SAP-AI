@@ -7,11 +7,11 @@ from pathlib import Path
 import pytest
 
 from desktop_session import DesktopSession
-from desktop_state import Action, Board, PetSlot, Phase
+from desktop_state import Action, Board, BoardChangedBeforeInput, PetSlot, Phase
 from tools.export_desktop_replay import export_session, main
 
 
-def recording(*, pending=False):
+def recording(*, pending=False, deferred=False):
     source = PetSlot(True, "fish", 2, 3, 1)
     empty = PetSlot(False)
     before = Board(Phase.SHOP, gold=10, turn=1, shop=(source,), team=(empty,) * 5)
@@ -23,10 +23,19 @@ def recording(*, pending=False):
         def choose_action(self, board):
             return action
 
-    frames = iter([before, before, after, after, after] if not pending else [before] * 5)
-    runner = DesktopSession(lambda: next(frames), lambda _: None, Policy(),
+    frames = iter(([before] * 4 + [after] * 3) if deferred else
+                  ([before, before, after, after, after] if not pending else [before] * 5))
+    attempted = 0
+
+    def act(_):
+        nonlocal attempted
+        attempted += 1
+        if deferred and attempted == 1:
+            raise BoardChangedBeforeInput("the rechecked board changed before any input")
+
+    runner = DesktopSession(lambda: next(frames), act, Policy(),
                             event_callback=events.append, clock=lambda: 0., sleep=lambda _: None,
-                            max_actions=1, max_polls=5, action_max_polls=3)
+                            max_actions=1, max_polls=7 if deferred else 5, action_max_polls=3)
     runner.run()
     return events
 
@@ -75,6 +84,119 @@ def test_export_drops_paths_images_timestamps_and_extra_account_fields():
     events[-1]["result"]["account"] = "private-user"
     exported = json.dumps(export_session(encode(events)))
     assert all(text not in exported for text in ("private-capture", "private-user", "elapsed", "frame_path"))
+
+
+def test_export_preserves_actual_typed_deferral_without_counting_a_dispatch():
+    events = recording(deferred=True)
+    replay = export_session(encode(events))
+    action = Action("buy", 0, 0).to_dict()
+    assert replay["deferrals"] == [{"poll": 2, "action": action}]
+    assert replay["actions"] == [{"poll": 4, "action": action, "acknowledged_poll": 6}]
+    assert replay["observation_runs"] == [[0, 4], [1, 3]]
+    assert replay["expected"] == {"actions": 1, "acknowledgments": 1, "polls": 7,
+                                  "reason": "max_actions", "pending_action": None}
+    assert "deferrals" not in export_session(encode(recording()))
+
+
+def test_export_sanitizes_deferral_metadata_and_preserves_an_explicit_replay_failure():
+    events = recording(deferred=True)
+    deferred = next(row for row in events if row["event"] == "deferred")
+    deferred.update(frame_path="private-capture.png", account="private-user",
+                    error="private runtime detail", elapsed=321.)
+    replay = export_session(encode(events))
+    assert replay["deferrals"] == [{"poll": 2, "action": Action("buy", 0, 0).to_dict()}]
+    assert all(value not in json.dumps(replay) for value in
+               ("private-capture", "private-user", "private runtime detail", "frame_path", "elapsed"))
+
+    boards = [Board.from_dict(board) for board in replay["boards"]]
+    frames = iter(boards[index] for index, count in replay["observation_runs"] for _ in range(count))
+    deferrals = iter(replay["deferrals"])
+    deferred_attempt = next(deferrals, None)
+    poll = 0
+    dispatched = []
+
+    def observe():
+        nonlocal poll
+        poll += 1
+        return next(frames)
+
+    def act(action):
+        nonlocal deferred_attempt
+        if deferred_attempt is not None and poll == deferred_attempt["poll"]:
+            assert action == Action.from_dict(deferred_attempt["action"])
+            deferred_attempt = next(deferrals, None)
+            raise BoardChangedBeforeInput("typed replay preserves the recorded deferral")
+        dispatched.append({"poll": poll, "action": action.to_dict()})
+
+    class Policy:
+        def choose_action(self, board):
+            return Action("buy", 0, 0)
+
+    reproduced = DesktopSession(observe, act, Policy(), clock=lambda: 0., sleep=lambda _: None,
+                                max_actions=1, max_polls=7).run()
+    assert deferred_attempt is None
+    assert dispatched == [{"poll": 4, "action": Action("buy", 0, 0).to_dict()}]
+    assert {key: reproduced.to_dict()[key] for key in replay["expected"]} == replay["expected"]
+
+
+@pytest.mark.parametrize("corruption", [
+    "unsupported_reason", "missing_reason", "wrong_action", "action_metadata", "boolean_poll",
+    "orphan_deferral", "duplicate_deferral", "stale_deferral", "pending_action_deferral",
+    "acted_after_deferral", "forged_dispatch_count", "forged_acknowledgment_count",
+])
+def test_invalid_deferral_evidence_is_rejected(corruption):
+    events = deepcopy(recording(deferred=True))
+    deferred = next(row for row in events if row["event"] == "deferred")
+    proposal = next(row for row in events if row["event"] == "proposed")
+    result = events[-1]["result"]
+    if corruption == "unsupported_reason":
+        deferred["reason"] = "input_might_have_happened"
+    elif corruption == "missing_reason":
+        deferred.pop("reason")
+    elif corruption == "wrong_action":
+        deferred["action"] = Action("roll").to_dict()
+    elif corruption == "action_metadata":
+        deferred["action"]["account"] = "private-user"
+    elif corruption == "boolean_poll":
+        deferred["poll"] = True
+    elif corruption == "orphan_deferral":
+        events.remove(proposal)
+    elif corruption == "duplicate_deferral":
+        events.insert(events.index(deferred) + 1, deepcopy(deferred))
+    elif corruption == "stale_deferral":
+        events.remove(deferred)
+        deferred["poll"] = 3
+        observation = next(row for row in events if row["event"] == "observed" and row["poll"] == 3)
+        events.insert(events.index(observation) + 1, deferred)
+    elif corruption == "pending_action_deferral":
+        events.insert(events.index(deferred), {"event": "acted", "poll": deferred["poll"],
+                                             "action": deepcopy(deferred["action"])})
+    elif corruption == "acted_after_deferral":
+        events.insert(events.index(deferred) + 1, {"event": "acted", "poll": deferred["poll"],
+                                                 "action": deepcopy(deferred["action"])})
+    elif corruption == "forged_dispatch_count":
+        result["actions"] = 2
+    else:
+        result["acknowledgments"] = 2
+    with pytest.raises((ValueError, TypeError, KeyError)):
+        export_session(encode(events))
+
+
+@pytest.mark.parametrize("fresh_observations", [0, 1])
+def test_deferral_requires_two_fresh_observations_before_a_new_proposal(fresh_observations):
+    events = recording(deferred=True)
+    deferred = next(row for row in events if row["event"] == "deferred")
+    proposal = next(row for row in events if row["event"] == "proposed" and row["poll"] == 4)
+    acted = next(row for row in events if row["event"] == "acted")
+    events.remove(proposal)
+    events.remove(acted)
+    poll = deferred["poll"] + fresh_observations
+    anchor = (deferred if not fresh_observations else
+              next(row for row in events if row["event"] == "observed" and row["poll"] == poll))
+    proposal["poll"] = acted["poll"] = poll
+    events[events.index(anchor) + 1:events.index(anchor) + 1] = [proposal, acted]
+    with pytest.raises(ValueError, match="proposal contradicts"):
+        export_session(encode(events))
 
 
 def test_multiple_runs_select_newest_or_explicit_one_based_session():

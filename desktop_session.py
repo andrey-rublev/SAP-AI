@@ -11,7 +11,8 @@ from math import isfinite
 from dataclasses import asdict, dataclass
 from typing import Callable
 
-from desktop_state import Action, Board, Phase, legal_action, observed_sale_income
+from desktop_state import (Action, Board, BoardChangedBeforeInput, Phase,
+                           legal_action, observed_sale_income)
 
 
 PHASE_ACTION_KINDS = {
@@ -347,6 +348,8 @@ class DesktopSession:
                     break
                 stage = "action"
                 # Record the attempt before IO: a failing callback may have clicked.
+                dispatch_state = (last_acted, waiting_turn, transition_active,
+                                  completed_transitions.copy(), before)
                 actions += 1
                 pending, before = proposal, board
                 pending_polls = 0
@@ -356,7 +359,19 @@ class DesktopSession:
                     transition_active = True
                 elif board.phase in PHASE_ACTION_KINDS:
                     completed_transitions.add(board.phase)
-                self.act(pending)
+                try:
+                    self.act(pending)
+                except BoardChangedBeforeInput:
+                    # This specific executor contract guarantees no input. Replan
+                    # from fresh stable observations, without spending an action.
+                    actions -= 1
+                    pending = None
+                    (last_acted, waiting_turn, transition_active,
+                     completed_transitions, before) = dispatch_state
+                    stable, last_fingerprint = 0, None
+                    emit("deferred", action=asdict(proposal), reason="board_changed_before_input")
+                    proposal = None
+                    continue
                 # The runtime may recheck the entire board before clicking.
                 # Give the resulting change its full observation budget.
                 pending_at = self.clock()

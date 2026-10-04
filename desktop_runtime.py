@@ -12,7 +12,7 @@ import subprocess
 
 import numpy as np
 
-from desktop_state import Action, Phase, legal_action
+from desktop_state import Action, BoardChangedBeforeInput, Phase, legal_action
 
 
 OCR_TIMEOUT_SECONDS = 3.0
@@ -378,7 +378,9 @@ class DesktopRuntime:
         current = self.perceptor.observe(self.last_frame)
         _require_running(self.should_stop)
         if current.fingerprint() != before.fingerprint():
-            raise DesktopUnavailable("board changed before input; observe again")
+            # This exception is reserved for a proven no-input rejection.
+            # Capture/OCR, focus and partial-click failures still fail closed.
+            raise BoardChangedBeforeInput("board changed before input; observe again")
         size = self.profile.image_size
         def click(point):
             _require_running(self.should_stop)

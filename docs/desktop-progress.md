@@ -885,6 +885,40 @@ night/terminal/export replay tests pass. Images, names and calibration remain
 private. For the next fresh-start test, the agent used only post-game menu
 navigation to restore MAIN_MENU; that setup is outside the recorded bot run.
 
+## Replan after a proven no-input board change, 2026-10-04
+
+A fresh startup test dispatched its own Open Play/Open Arena/Start Arena,
+opening purchases, naming and battle transitions. On turn two it stopped after
+13 tentative attempts/12 acknowledgments/88 polls: the pre-input capture changed
+one teammate from readable 3/2 stats to unknown during an animation. Later
+inspection showed 5/2. No input was sent for the rejected thirteenth attempt;
+the original failed log remains private. This still does not establish an
+uninterrupted fresh game.
+
+The runtime now signals only that exact pre-input board mismatch with
+`BoardChangedBeforeInput`, whose contract guarantees no pointer or click input.
+The session removes the tentative attempt/pending marker, restores its previous
+transition and duplicate-action state, requires two fresh stable observations
+and asks policy again. It does not reuse the stale proposal. Poll, transition,
+deadline and stop budgets remain in force. Other exceptions, including failures
+after a first click, retain the pending attempt and stop without retries.
+
+Typed logs record the deferral separately. The exporter validates its matching
+proposal, poll and fixed reason, preserves sanitized optional deferrals, and
+rejects a forged new proposal before two fresh observations. Legacy fixtures
+keep their original schema. Mocked runtime/session checks verify that a changed
+destination receives no stale click and policy selects a newly legal destination.
+The full suite passes 1,399 tests with one Windows symlink-permission skip.
+Independent review found the exporter freshness gap, which was repaired and
+covered by forged same-poll/one-observation follow-up cases; no runtime/session
+defect was found. Ordinary five-hour usage reached 98%, with the paid/reset
+credits untouched during this continuation, so further native testing is
+deferred to the requested one-time 7:30 AM run. No local job remains running;
+SAP is open at the turn-two shop of the fresh attempt. First validate the
+no-input deferral recovery there, then prepare MAIN_MENU after terminal and
+attempt an uninterrupted fresh-start-to-result run. Do not treat the previous
+calibration/resumption sequence as that evidence.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

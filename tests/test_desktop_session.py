@@ -5,7 +5,8 @@ import json
 
 import pytest
 
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
+from desktop_state import (Action, Board, BoardChangedBeforeInput, DesktopPolicy,
+                           PetSlot, Phase, legal_action)
 from desktop_session import DesktopSession, action_acknowledged
 
 
@@ -420,6 +421,175 @@ def test_dependency_errors_stop_without_retries(stage):
     if stage == "action":
         assert result.pending_action == Action("buy", 0, 0)
     assert not clicks
+
+
+def test_changed_board_before_input_replans_different_legal_action_after_two_fresh_frames():
+    beaver, duck = PetSlot(True, "beaver", 3, 2, 1), PetSlot(True, "duck", 2, 4, 1)
+    strong, offer = PetSlot(True, "fish", 20, 20, 1), PetSlot(True, None, 4, 6, 1)
+    before = shop(gold=3, shop=(offer, EMPTY, EMPTY), team=(beaver, duck, strong, strong, strong))
+    changed = replace(before, team=(replace(beaver, attack=5), *before.team[1:]))
+    sold = replace(changed, gold=4, team=(changed.team[0], EMPTY, *changed.team[2:]))
+    runner, clicks, events = session([before, before, changed, changed, sold, sold, sold],
+                                    max_actions=1)
+    runner.policy = DesktopPolicy()
+    proposals = []
+
+    def act(action):
+        proposals.append(action)
+        if len(proposals) == 1:
+            raise BoardChangedBeforeInput("summon buffs changed the weakest teammate")
+        clicks.append(action)
+
+    runner.act = act
+    result = runner.run()
+    assert proposals == [Action("sell", 0), Action("sell", 1)]
+    assert clicks == [Action("sell", 1)]
+    assert (result.reason, result.polls, result.actions, result.acknowledgments) == (
+        "max_actions", 7, 1, 1,
+    )
+    assert result.pending_action is None and result.error is None
+    assert [(e["poll"], e["action"]) for e in events if e["event"] == "deferred"] == [
+        (2, Action("sell", 0).to_dict())
+    ]
+    assert [e["reason"] for e in events if e["event"] == "deferred"] == ["board_changed_before_input"]
+    assert [e["poll"] for e in events if e["event"] == "proposed"] == [2, 4]
+    assert [e["poll"] for e in events if e["event"] == "acted"] == [4]
+
+
+@pytest.mark.parametrize("max_polls", [3, 4, 10])
+def test_repeated_preinput_deferrals_keep_poll_budget_and_require_fresh_stability(max_polls):
+    runner, clicks, events = session([shop()], max_polls=max_polls)
+    runner.policy = DesktopPolicy()
+    rejected = []
+
+    def reject(action):
+        rejected.append(action)
+        raise BoardChangedBeforeInput("board changed")
+
+    runner.act = reject
+    result = runner.run()
+    assert (result.reason, result.polls, result.actions, result.acknowledgments) == (
+        "max_polls", max_polls, 0, 0,
+    )
+    assert len(rejected) == max_polls // 2
+    assert result.pending_action is None and result.proposed_action is None and result.error is None
+    assert not clicks
+    assert [e["poll"] for e in events if e["event"] == "deferred"] == list(range(2, max_polls + 1, 2))
+    assert [e["stable_frames"] for e in events if e["event"] == "observed"] == [
+        1 + (index % 2) for index in range(max_polls)
+    ]
+    assert not any(e["event"] in {"acted", "acknowledged"} for e in events)
+
+
+def test_external_stop_after_preinput_deferral_leaves_no_pending_action():
+    runner, clicks, events = session([shop()], Action("roll"))
+    rejected = []
+
+    def reject(action):
+        rejected.append(action)
+        raise BoardChangedBeforeInput("board changed")
+
+    runner.act = reject
+    runner.should_stop = lambda: bool(rejected)
+    result = runner.run()
+    assert (result.reason, result.polls, result.actions, result.acknowledgments) == ("stopped", 2, 0, 0)
+    assert result.pending_action is None and result.error is None and not clicks
+    assert len([e for e in events if e["event"] == "deferred"]) == 1
+
+
+def test_preinput_menu_deferral_rolls_back_completed_transition_and_last_dispatch():
+    menu, play = Board(Phase.MAIN_MENU), Board(Phase.PLAY_MENU)
+    runner, clicks, events = session([menu, menu, menu, menu, play, play, play],
+                                    phase_actions=arena_phase_actions(), max_actions=1)
+    proposals = []
+
+    def act(action):
+        proposals.append(action)
+        if len(proposals) == 1:
+            raise BoardChangedBeforeInput("menu changed")
+        clicks.append(action)
+
+    runner.act = act
+    result = runner.run()
+    assert proposals == [Action("open_play"), Action("open_play")]
+    assert clicks == [Action("open_play")]
+    assert (result.reason, result.polls, result.actions, result.acknowledgments) == ("max_actions", 7, 1, 1)
+    assert [e["poll"] for e in events if e["event"] == "acted"] == [4]
+    assert result.pending_action is None and result.error is None
+
+
+def test_preinput_end_turn_deferral_restores_waiting_turn_and_transition_state():
+    before = shop(gold=0, shop=(EMPTY,) * 3)
+    changed, rolled = replace(before, gold=10), replace(before, gold=9)
+    runner, clicks, _ = session([before, before, changed, changed, rolled, rolled, rolled], max_actions=1)
+    runner.policy = DesktopPolicy()
+    proposals = []
+
+    def act(action):
+        proposals.append(action)
+        if len(proposals) == 1:
+            raise BoardChangedBeforeInput("gold changed before end turn")
+        clicks.append(action)
+
+    runner.act = act
+    result = runner.run()
+    assert proposals == [Action("end_turn"), Action("roll")]
+    assert clicks == [Action("roll")]
+    assert (result.reason, result.actions, result.acknowledgments) == ("max_actions", 1, 1)
+    assert result.pending_action is None and result.error is None
+
+
+def test_preinput_menu_deferrals_do_not_reset_transition_budget():
+    runner, clicks, _ = session([Board(Phase.MAIN_MENU)], phase_actions=arena_phase_actions(),
+                                max_transition_polls=5)
+
+    def reject(action):
+        raise BoardChangedBeforeInput("menu changed")
+
+    runner.act = reject
+    result = runner.run()
+    assert (result.reason, result.polls, result.actions, result.acknowledgments) == (
+        "transition_timeout", 5, 0, 0,
+    )
+    assert result.pending_action is None and result.error is None and not clicks
+
+
+@pytest.mark.parametrize("sent_input", [False, True])
+def test_ordinary_action_failures_remain_counted_and_pending_without_retries(sent_input):
+    runner, clicks, events = session([shop()], Action("roll"))
+    calls = []
+
+    def broken(action):
+        calls.append(action)
+        if sent_input:
+            clicks.append(action)
+        raise RuntimeError("input state cannot be guaranteed")
+
+    runner.act = broken
+    result = runner.run()
+    assert (result.reason, result.actions, result.acknowledgments, result.polls) == ("action_error", 1, 0, 2)
+    assert result.pending_action == Action("roll")
+    assert result.error == "RuntimeError: input state cannot be guaranteed"
+    assert calls == [Action("roll")]
+    assert clicks == ([Action("roll")] if sent_input else [])
+    assert not any(e["event"] == "deferred" for e in events)
+
+
+@pytest.mark.parametrize("stage", ["observation", "policy"])
+def test_no_input_exception_is_recoverable_only_from_the_executor(stage):
+    runner, clicks, events = session([shop()], Action("roll"))
+
+    def broken(*args):
+        raise BoardChangedBeforeInput("outside executor")
+
+    if stage == "observation":
+        runner.observe = broken
+    else:
+        runner.policy.choose_action = broken
+    result = runner.run()
+    assert result.reason == stage + "_error" and result.actions == 0
+    assert result.error == "BoardChangedBeforeInput: outside executor"
+    assert not clicks and not any(e["event"] == "deferred" for e in events)
 
 
 def test_external_stop_leaves_pending_action_unretried():

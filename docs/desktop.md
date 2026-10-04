@@ -171,6 +171,12 @@ to 30 seconds and can be increased for slower OCR. Ctrl+C or moving the mouse to
 a screen corner stops control. Losing window focus stops control. The program
 does not activate or navigate other applications.
 
+If pre-input revalidation detects a changed board, it sends no input, records
+a deferral and waits for two fresh stable observations before choosing again.
+Deferrals do not spend the action budget; poll/deadline bounds still apply.
+Every other execution failure stops with its tentative action unresolved,
+including failures after selecting a shop pet. It never retries partial input.
+
 `--max-seconds` defaults to 1800; the deadline is checked before observations
 and action dispatch, without interrupting an in-flight OCR call. Creating the
 `--stop-file` (default `.local/desktop/STOP`) stops further dispatch at the same
@@ -267,7 +273,10 @@ The default selects the newest run; `--session 1` selects the first and negative
 indices count from the end. An incomplete newest run fails instead of selecting
 older evidence. The exporter checks consecutive polls, proposals, dispatches,
 acknowledgments and final counts/state, then copies only Boards, actions and
-relative polls. It refuses existing outputs and failed IO that saved Boards
+relative polls. Proven no-input deferrals are retained in an optional
+`deferrals` list; replay executors must raise `BoardChangedBeforeInput` at those
+recorded polls. Logs without deferrals retain the original schema. It refuses
+existing outputs and failed IO that saved Boards
 cannot reproduce. Review the resulting JSON before adding it to tests. Tests
 must configure session bounds and scripted choices deliberately: the fixture
 does not recreate capture latency, OCR, input errors or the strength of play.

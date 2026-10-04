@@ -61,9 +61,9 @@ def export_session(text, *, session=-1):
     if rows[-1].get("event") != "finished":
         raise ValueError("selected session is incomplete")
 
-    boards, indices, observation_runs, actions = [], {}, [], []
+    boards, indices, observation_runs, actions, deferrals = [], {}, [], [], []
     poll = acknowledgments = 0
-    last_board = proposal = pending = proposal_poll = last_ack_poll = None
+    last_board = proposal = pending = proposal_poll = last_ack_poll = last_deferral_poll = None
     for row in rows[1:-1]:
         event = row.get("event")
         if event == "observed":
@@ -81,13 +81,14 @@ def export_session(text, *, session=-1):
             else:
                 observation_runs.append([index, 1])
             continue
-        if event not in {"proposed", "acted", "acknowledged"}:
+        if event not in {"proposed", "acted", "acknowledged", "deferred"}:
             raise ValueError("unsupported event in selected session")
         if type(row.get("poll")) is not int or row["poll"] != poll or last_board is None:
             raise ValueError("action events must match the latest observation poll")
         action = Action.from_dict(row["action"])
         if event == "proposed":
             if (pending is not None or proposal is not None or poll == last_ack_poll
+                    or (last_deferral_poll is not None and poll < last_deferral_poll + 2)
                     or Board.from_dict(row["board"]) != last_board
                     or not legal_action(last_board, action)):
                 raise ValueError("proposal contradicts the observed timeline")
@@ -97,6 +98,13 @@ def export_session(text, *, session=-1):
                 raise ValueError("dispatch needs a matching proposal and no pending action")
             actions.append({"poll": poll, "action": action.to_dict(), "acknowledged_poll": None})
             pending, proposal = action, None
+        elif event == "deferred":
+            if (row.get("reason") != "board_changed_before_input" or proposal != action
+                    or pending is not None or proposal_poll != poll):
+                raise ValueError("deferral needs its same-poll proposal, no pending action and supported reason")
+            deferrals.append({"poll": poll, "action": action.to_dict()})
+            last_deferral_poll = poll
+            proposal = proposal_poll = None
         else:
             if (pending != action or poll <= actions[-1]["poll"]
                     or Board.from_dict(row["board"]) != last_board):
@@ -126,8 +134,11 @@ def export_session(text, *, session=-1):
     if recorded_pending != pending or Board.from_dict(result["last_board"]) != last_board:
         raise ValueError("finished state contradicts the recorded timeline")
     expected["pending_action"] = pending.to_dict() if pending is not None else None
-    return {"description": DESCRIPTION, "boards": boards, "observation_runs": observation_runs,
-            "actions": actions, "expected": expected}
+    replay = {"description": DESCRIPTION, "boards": boards, "observation_runs": observation_runs,
+              "actions": actions, "expected": expected}
+    if deferrals:
+        replay["deferrals"] = deferrals
+    return replay
 
 
 def main(argv=None):

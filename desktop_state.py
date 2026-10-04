@@ -12,6 +12,14 @@ from enum import Enum
 from typing import Any, Mapping
 
 
+class BoardChangedBeforeInput(RuntimeError):
+    """The observed board changed during revalidation; no input was sent.
+
+    Executors may raise this only before their first physical input. Failures
+    after any input must use an ordinary exception, leaving the action pending.
+    """
+
+
 class Phase(str, Enum):
     UNKNOWN = "unknown"
     MAIN_MENU = "main_menu"

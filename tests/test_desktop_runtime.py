@@ -12,7 +12,7 @@ from desktop import main
 import desktop_runtime
 from desktop_runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow, prepare_numeric_crop, tesseract_ocr, validate_live_dependencies
 from desktop_session import DesktopSession
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase
+from desktop_state import Action, Board, BoardChangedBeforeInput, DesktopPolicy, PetSlot, Phase
 from desktop_vision import Perceptor, Rect, VisionProfile
 
 
@@ -168,10 +168,39 @@ def test_preview_cannot_click():
 
 def test_changed_board_rejected_before_mouse_input():
     driver, window = runtime(current=board(9))
-    with pytest.raises(DesktopUnavailable, match="changed"):
+    with pytest.raises(BoardChangedBeforeInput, match="changed"):
         driver.act(Action("buy", 0, 0))
     window.drag.assert_not_called()
     window.click.assert_not_called()
+
+
+def test_changed_board_runtime_session_reobserves_and_replans_before_any_click():
+    driver, window = runtime()
+    previous = board()
+    fresh = Board(Phase.SHOP, gold=10, turn=1, shop=previous.shop,
+                  team=(PetSlot(True, attack=4, health=1, level=1), *previous.team[1:]))
+    bought = Board(Phase.SHOP, gold=7, turn=1, shop=(PetSlot(False),),
+                   team=(fresh.team[0], PetSlot(True, attack=2, health=3), *fresh.team[2:]))
+    # A changed pre-input capture rejects target zero. Two new observations
+    # must establish the changed board before policy chooses target one.
+    driver.perceptor.observe.side_effect = [previous, previous, fresh,
+                                            fresh, fresh, fresh, bought, bought, bought]
+    events = []
+    result = DesktopSession(driver.observe, driver.act, DesktopPolicy(),
+                            max_actions=1, max_polls=10, clock=lambda: 0.,
+                            sleep=lambda _: None, event_callback=events.append).run()
+    assert (result.reason, result.actions, result.acknowledgments, result.polls) == (
+        "max_actions", 1, 1, 7,
+    )
+    assert result.pending_action is None and result.error is None
+    assert [(row["poll"], row["action"]["target"]) for row in events
+            if row["event"] == "proposed"] == [(2, 0), (4, 1)]
+    assert [row["poll"] for row in events if row["event"] == "deferred"] == [2]
+    assert [row["poll"] for row in events if row["event"] == "acted"] == [4]
+    assert window.click.call_args_list == [
+        call((15, 65), (100, 100)), call((30, 25), (100, 100)),
+    ]
+    window.drag.assert_not_called()
 
 
 def test_missing_button_fails_without_input():
@@ -383,7 +412,7 @@ def test_transition_wrong_phase_is_rejected_before_capture_or_input(phase, kind,
 def test_transition_preflight_phase_change_prevents_input(phase, kind, points):
     driver, window = phase_runtime(phase)
     driver.perceptor.observe.return_value = Board(Phase.UNKNOWN)
-    with pytest.raises(DesktopUnavailable, match="changed"):
+    with pytest.raises(BoardChangedBeforeInput, match="changed"):
         driver.act(Action(kind))
     window.click.assert_not_called()
     window.drag.assert_not_called()
@@ -427,7 +456,7 @@ def test_missing_single_transition_button_cannot_send_input(phase, kind, points)
 def test_menu_preflight_phase_change_prevents_input(phase, kind, points):
     driver, window = phase_runtime(phase)
     driver.perceptor.observe.return_value = Board(Phase.UNKNOWN)
-    with pytest.raises(DesktopUnavailable, match="changed"):
+    with pytest.raises(BoardChangedBeforeInput, match="changed"):
         driver.act(Action(kind))
     window.click.assert_not_called()
     window.drag.assert_not_called()
