@@ -4,9 +4,11 @@ from __future__ import annotations
 import ctypes
 from collections import OrderedDict
 from ctypes import wintypes
+import importlib.util
 import os
 from pathlib import Path
 import shutil
+import subprocess
 
 import numpy as np
 
@@ -14,6 +16,7 @@ from desktop_state import Action, Phase, legal_action
 
 
 OCR_TIMEOUT_SECONDS = 3.0
+DEPENDENCY_TIMEOUT_SECONDS = 5.0
 
 
 class CachedOCR:
@@ -52,6 +55,52 @@ class DesktopUnavailable(RuntimeError):
     pass
 
 
+def _tesseract_executable():
+    executable = shutil.which("tesseract")
+    if executable:
+        return executable
+    installed = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+    return str(installed) if installed.is_file() else None
+
+
+def validate_live_dependencies():
+    """Check optional packages and the OCR executable without desktop IO.
+
+    Finding package specifications deliberately avoids importing pyautogui,
+    whose import can initialize native desktop access. The only child process
+    is a bounded, hidden Tesseract version query.
+    """
+    missing = []
+    for module, package in (("PIL", "Pillow"), ("pyautogui", "pyautogui"), ("pytesseract", "pytesseract")):
+        try:
+            available = importlib.util.find_spec(module) is not None
+        except (ImportError, ValueError):
+            available = False
+        if not available:
+            missing.append(package)
+    if missing:
+        raise DesktopUnavailable(
+            f"missing live Python dependencies: {', '.join(missing)}; "
+            'use .\\.venv\\Scripts\\python.exe -m pip install -e ".[live]" from the project folder'
+        )
+    executable = _tesseract_executable()
+    if executable is None:
+        raise DesktopUnavailable("install Tesseract OCR and add it to PATH or use C:\\Program Files\\Tesseract-OCR")
+    try:
+        result = subprocess.run(
+            [executable, "--version"], capture_output=True, text=True,
+            timeout=DEPENDENCY_TIMEOUT_SECONDS, check=False,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise DesktopUnavailable(f"Tesseract dependency check exceeded {DEPENDENCY_TIMEOUT_SECONDS:g}s") from exc
+    except OSError as exc:
+        raise DesktopUnavailable("cannot run Tesseract OCR; check its installation and executable") from exc
+    if result.returncode != 0 or not result.stdout.lstrip().lower().startswith("tesseract "):
+        raise DesktopUnavailable("Tesseract OCR version check failed; check its installation and executable")
+    return executable
+
+
 def _require_running(should_stop):
     if should_stop is not None and should_stop():
         raise DesktopUnavailable("stop requested or runtime deadline reached; no further input sent")
@@ -60,7 +109,8 @@ def _require_running(should_stop):
 class WindowsGameWindow:
     """Capture/control one foreground game client in physical screen pixels.
 
-    Never activates a window or clicks through another foreground application.
+    Startup activation is explicit; capture/input never reactivate the client
+    or click through another foreground application.
     All stored profile coordinates are relative to the client, not the monitor.
     """
 
@@ -78,6 +128,8 @@ class WindowsGameWindow:
         self.user32.FindWindowW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
         self.user32.FindWindowW.restype = wintypes.HWND
         self.user32.GetForegroundWindow.restype = wintypes.HWND
+        self.user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+        self.user32.SetForegroundWindow.restype = wintypes.BOOL
         self.user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
         self.user32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
         self.user32.IsWindow.argtypes = [wintypes.HWND]
@@ -90,6 +142,34 @@ class WindowsGameWindow:
         pyautogui.FAILSAFE = True
         pyautogui.PAUSE = 0.1
         self.mouse = pyautogui
+
+    def activate(self, expected_size):
+        """Request foreground ownership once, before the session starts.
+
+        A minimized client must be restored by the user first. Its restored
+        dimensions cannot be checked before changing the desktop, so startup
+        only accepts a visible client with the calibrated size. Windows may
+        deny the focus request; actual foreground ownership is always checked.
+        """
+        _require_running(self.should_stop)
+        if not self.user32.IsWindow(self.handle):
+            raise DesktopUnavailable("game window was closed before startup")
+        if self.user32.IsIconic(self.handle):
+            raise DesktopUnavailable("restore the minimized game window before startup")
+        rect = wintypes.RECT()
+        if not self.user32.GetClientRect(self.handle, ctypes.byref(rect)):
+            raise DesktopUnavailable("cannot read game client bounds")
+        expected_size = tuple(expected_size)
+        if (rect.right, rect.bottom) != expected_size:
+            raise DesktopUnavailable("game size differs from the calibrated profile")
+        if self.user32.GetForegroundWindow() != self.handle:
+            _require_running(self.should_stop)
+            self.user32.SetForegroundWindow(self.handle)
+        _require_running(self.should_stop)
+        geometry = self.geometry()
+        if geometry[2:] != expected_size:
+            raise DesktopUnavailable("game size changed during startup activation")
+        return geometry
 
     def geometry(self):
         if not self.user32.IsWindow(self.handle) or self.user32.IsIconic(self.handle):
@@ -216,10 +296,10 @@ def tesseract_ocr(image):
     except ImportError as exc:
         raise DesktopUnavailable("Tesseract OCR requires pytesseract in the current Python environment") from exc
 
-    if not shutil.which("tesseract"):
-        executable = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
-        if executable.is_file():
-            pytesseract.pytesseract.tesseract_cmd = str(executable)
+    executable = _tesseract_executable()
+    if executable is None:
+        raise DesktopUnavailable("install Tesseract OCR and add it to PATH or use C:\\Program Files\\Tesseract-OCR")
+    pytesseract.pytesseract.tesseract_cmd = executable
     try:
         return pytesseract.image_to_string(
             crop, config="--psm 13 -c tessedit_char_whitelist=0123456789",

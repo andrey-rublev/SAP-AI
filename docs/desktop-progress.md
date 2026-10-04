@@ -2,11 +2,14 @@
 
 ## Working agreement
 
-**Latest user instruction, 2026-09-27:** the user explicitly authorized screen
-control again for this task and asked to remove the scheduled task. The
-`advance-sap-desktop-ai` heartbeat was deleted through the app. Game calibration
-and controlled live validation may resume; the earlier background-only
-restriction has been superseded. Keep captures and calibration private.
+**Latest user instruction, 2026-10-04:** the user renewed full laptop control,
+requested work now and a one-time continuation at 7:30 a.m. Indianapolis time,
+and specified a PowerShell workflow: change to this folder and run one command
+so the standalone bot takes over and plays. Controlled live validation may
+resume; the October 3 background-only restriction is superseded. Check ordinary
+Plus usage and stop before paid credits; do not use reset credits. Keep captures
+and calibration private. The previous recurring development schedule was
+removed through the app.
 
 **Next-demo requirement, explicitly clarified by the user:** SAP-AI itself
 must both decide and physically execute game actions. The running program must
@@ -23,9 +26,10 @@ meaningful commits per day. Work on `main`, pushing to `origin/main`; never
 force-push. Preserve unrelated edits. Test each coherent change before its
 commit, then push immediately. Do not manufacture commits to fill a quota.
 
-There is no recurring development schedule. Continue work from this chat and
-keep these notes current. Stop routine development once the requested live
-objective is verified complete.
+There is no recurring development schedule. The October 4, 7:30 a.m.
+continuation is a single run in this chat. Continue work here and keep these
+notes current. Stop routine development once the requested live objective is
+verified complete.
 
 ## Implemented, 2026-09-26
 
@@ -685,6 +689,24 @@ and is not a complete paired result. These source scenes are calibration data,
 not held-out evidence. The live profile, thresholds and model selection remain
 unchanged; candidate references, images and reports stay private. No desktop
 apps were launched, captured or controlled during this continuation.
+
+## Explicit startup handoff and preflight, 2026-10-04
+
+Launching a controller from PowerShell previously left the terminal foreground,
+so capture correctly stopped with game-lost-focus. The native adapter now has
+an explicit one-time startup activation API. It verifies a visible client and
+matching calibrated dimensions before requesting focus, checks stop conditions
+before the handoff, and verifies actual foreground ownership and geometry after
+it. A denied request, minimized/closed window or changed size fails without mouse
+input. Capture and actions still stop after later focus loss; they do not steal
+focus back. The separate preflight checks optional package availability without
+importing desktop IO and runs a hidden, five-second Tesseract version query.
+Preflight and actual OCR share executable selection.
+
+All 142 runtime tests pass with mocked native IO; independent review found no
+blocking defect. Live inspection found SAP at its main menu. A fresh private
+native capture is recognized as main_menu by the existing 2560x1440 profile.
+This establishes current startup recognition only, not a complete arena run.
 
 ## Remaining milestones
 

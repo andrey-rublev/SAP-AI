@@ -1,13 +1,16 @@
 """Window IO contracts with fake frames/mouse; never touches a real desktop."""
+import ctypes
 from types import SimpleNamespace
 from unittest.mock import Mock, call
+import subprocess
 import sys
 
 import numpy as np
 import pytest
 
 from desktop import main
-from desktop_runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow, prepare_numeric_crop, tesseract_ocr
+import desktop_runtime
+from desktop_runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow, prepare_numeric_crop, tesseract_ocr, validate_live_dependencies
 from desktop_session import DesktopSession
 from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase
 from desktop_vision import Perceptor, Rect, VisionProfile
@@ -496,6 +499,149 @@ def test_wrong_foreground_window_fails_closed():
         window.geometry()
 
 
+def activation_window(*, foreground=3, size=(100, 100)):
+    """Native window facade with real ctypes structs and mocked Win32 calls."""
+    window = WindowsGameWindow.__new__(WindowsGameWindow)
+    window.handle, window.mouse = 2, Mock()
+    native = Mock()
+    native.IsWindow.return_value = True
+    native.IsIconic.return_value = False
+    focused = [foreground]
+    native.GetForegroundWindow.side_effect = lambda: focused[0]
+    def client_rect(handle, pointer):
+        rect = ctypes.cast(pointer, ctypes.POINTER(ctypes.wintypes.RECT)).contents
+        rect.right, rect.bottom = size
+        return True
+    def client_origin(handle, pointer):
+        point = ctypes.cast(pointer, ctypes.POINTER(ctypes.wintypes.POINT)).contents
+        point.x, point.y = 500, 200
+        return True
+    def foreground_request(handle):
+        focused[0] = handle
+        return True
+    native.GetClientRect.side_effect = client_rect
+    native.ClientToScreen.side_effect = client_origin
+    native.SetForegroundWindow.side_effect = foreground_request
+    window.user32 = native
+    return window
+
+
+def test_missing_window_fails_construction_before_mouse_import(monkeypatch):
+    native = Mock()
+    native.FindWindowW.return_value = 0
+    monkeypatch.setattr(desktop_runtime, "os", SimpleNamespace(name="nt"))
+    loader = Mock(return_value=native)
+    monkeypatch.setattr(desktop_runtime.ctypes, "WinDLL", loader, raising=False)
+    monkeypatch.setitem(sys.modules, "pyautogui", None)
+    with pytest.raises(DesktopUnavailable, match="open the 'Super Auto Pets' game window first"):
+        WindowsGameWindow()
+    native.SetForegroundWindow.assert_not_called()
+
+
+def test_startup_activates_target_once_after_checking_calibrated_size():
+    window = activation_window()
+    assert window.activate((100, 100)) == (500, 200, 100, 100)
+    window.user32.SetForegroundWindow.assert_called_once_with(2)
+    calls = window.user32.mock_calls
+    assert next(i for i, item in enumerate(calls) if item[0] == "GetClientRect") < calls.index(call.SetForegroundWindow(2))
+    assert window.user32.GetClientRect.call_count == 2
+    assert window.user32.GetForegroundWindow.call_count == 2
+    window.mouse.assert_not_called()
+    assert window.mouse.mock_calls == []
+
+
+def test_startup_does_not_change_focus_when_target_is_already_foreground():
+    window = activation_window(foreground=2)
+    assert window.activate((100, 100)) == (500, 200, 100, 100)
+    window.user32.SetForegroundWindow.assert_not_called()
+
+
+@pytest.mark.parametrize("state,diagnostic", [("closed", "closed"), ("minimized", "restore the minimized")])
+def test_startup_rejects_unavailable_client_before_focus_request(state, diagnostic):
+    window = activation_window()
+    if state == "closed":
+        window.user32.IsWindow.return_value = False
+    else:
+        window.user32.IsIconic.return_value = True
+    with pytest.raises(DesktopUnavailable, match=diagnostic):
+        window.activate((100, 100))
+    window.user32.GetClientRect.assert_not_called()
+    window.user32.SetForegroundWindow.assert_not_called()
+    assert window.mouse.mock_calls == []
+
+
+def test_startup_size_mismatch_cannot_change_foreground():
+    window = activation_window(size=(200, 100))
+    with pytest.raises(DesktopUnavailable, match="calibrated profile"):
+        window.activate((100, 100))
+    window.user32.SetForegroundWindow.assert_not_called()
+    window.user32.GetForegroundWindow.assert_not_called()
+
+
+@pytest.mark.parametrize("reported_success", [False, True])
+def test_startup_requires_actual_foreground_ownership_without_retry(reported_success):
+    window = activation_window()
+    window.user32.SetForegroundWindow.side_effect = None
+    window.user32.SetForegroundWindow.return_value = reported_success
+    with pytest.raises(DesktopUnavailable, match="lost focus"):
+        window.activate((100, 100))
+    window.user32.SetForegroundWindow.assert_called_once_with(2)
+    window.user32.ClientToScreen.assert_not_called()
+    assert window.mouse.mock_calls == []
+
+
+@pytest.mark.parametrize("size", [(100, 100), (200, 100)])
+def test_startup_stop_requested_skips_even_native_queries(size):
+    window = activation_window(size=size)
+    window.should_stop = lambda: True
+    with pytest.raises(DesktopUnavailable, match="stop requested"):
+        window.activate((100, 100))
+    assert window.user32.mock_calls == []
+
+
+def test_stop_created_during_startup_size_check_prevents_focus_request():
+    window = activation_window()
+    stopped = [False]
+    window.should_stop = lambda: stopped[0]
+    read_rect = window.user32.GetClientRect.side_effect
+    def stop_after_rect(*args):
+        stopped[0] = True
+        return read_rect(*args)
+    window.user32.GetClientRect.side_effect = stop_after_rect
+    with pytest.raises(DesktopUnavailable, match="stop requested"):
+        window.activate((100, 100))
+    window.user32.SetForegroundWindow.assert_not_called()
+
+
+@pytest.mark.parametrize("changed", ["size", "closed", "minimized"])
+def test_startup_rechecks_client_after_foreground_handoff(changed):
+    window = activation_window()
+    focus = window.user32.SetForegroundWindow.side_effect
+    def change_during_handoff(handle):
+        if changed == "size":
+            window.user32.GetClientRect.side_effect = activation_window(size=(200, 100)).user32.GetClientRect.side_effect
+        elif changed == "closed":
+            window.user32.IsWindow.return_value = False
+        else:
+            window.user32.IsIconic.return_value = True
+        return focus(handle)
+    window.user32.SetForegroundWindow.side_effect = change_during_handoff
+    with pytest.raises(DesktopUnavailable, match="changed during startup" if changed == "size" else "closed or minimized"):
+        window.activate((100, 100))
+    window.user32.SetForegroundWindow.assert_called_once_with(2)
+    assert window.mouse.mock_calls == []
+
+
+def test_later_capture_guard_does_not_reactivate_a_window_that_lost_focus():
+    window = activation_window()
+    window.activate((100, 100))
+    window.user32.GetForegroundWindow.side_effect = None
+    window.user32.GetForegroundWindow.return_value = 3
+    with pytest.raises(DesktopUnavailable, match="lost focus"):
+        window.geometry()
+    window.user32.SetForegroundWindow.assert_called_once_with(2)
+
+
 @pytest.mark.parametrize("failure", [RuntimeError("corner abort"), KeyboardInterrupt()])
 def test_interrupted_drag_always_releases_and_restores_failsafe(failure):
     window = WindowsGameWindow.__new__(WindowsGameWindow)
@@ -536,7 +682,7 @@ def test_template_command_is_offline_and_bounds_checked(tmp_path):
 @pytest.fixture
 def fake_tesseract(monkeypatch):
     """Replace the optional OCR package before import; never launch a process."""
-    ocr = SimpleNamespace(image_to_string=Mock(return_value=" 12\n"))
+    ocr = SimpleNamespace(image_to_string=Mock(return_value=" 12\n"), pytesseract=SimpleNamespace())
     monkeypatch.setitem(sys.modules, "pytesseract", ocr)
     monkeypatch.setattr("desktop_runtime.shutil.which", lambda name: "tesseract")
     return ocr
@@ -648,6 +794,109 @@ def test_missing_pytesseract_reports_the_current_python_environment_requirement(
     with pytest.raises(DesktopUnavailable, match="pytesseract in the current Python environment") as caught:
         tesseract_ocr(numeric_crop())
     assert isinstance(caught.value.__cause__, ImportError)
+
+
+@pytest.fixture
+def live_dependencies(monkeypatch):
+    """All preflight dependencies are fakes; no child process or package import."""
+    specifications = Mock(return_value=object())
+    version = Mock(return_value=SimpleNamespace(returncode=0, stdout="tesseract 5.5.0\n", stderr=""))
+    monkeypatch.setattr(desktop_runtime.importlib.util, "find_spec", specifications)
+    monkeypatch.setattr(desktop_runtime.shutil, "which", lambda name: "mock-tesseract.exe")
+    monkeypatch.setattr(desktop_runtime.subprocess, "run", version)
+    return specifications, version
+
+
+def test_live_dependency_preflight_only_queries_specs_and_bounded_hidden_version(live_dependencies, monkeypatch):
+    specifications, version = live_dependencies
+    import builtins
+    original_import = builtins.__import__
+    def forbid_live_import(name, *args, **kwargs):
+        if name in {"PIL", "pyautogui", "pytesseract"}:
+            raise AssertionError("preflight imported a desktop dependency")
+        return original_import(name, *args, **kwargs)
+    monkeypatch.setattr(builtins, "__import__", forbid_live_import)
+    assert validate_live_dependencies() == "mock-tesseract.exe"
+    assert specifications.call_args_list == [call("PIL"), call("pyautogui"), call("pytesseract")]
+    version.assert_called_once_with(
+        ["mock-tesseract.exe", "--version"], capture_output=True, text=True,
+        timeout=5.0, check=False, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+
+
+@pytest.mark.parametrize("missing,label", [("PIL", "Pillow"), ("pyautogui", "pyautogui"), ("pytesseract", "pytesseract")])
+def test_missing_live_package_is_actionable_and_skips_ocr_process(live_dependencies, missing, label):
+    specifications, version = live_dependencies
+    specifications.side_effect = lambda name: None if name == missing else object()
+    with pytest.raises(DesktopUnavailable, match=f"missing live Python dependencies: {label}") as caught:
+        validate_live_dependencies()
+    assert '.\\.venv\\Scripts\\python.exe -m pip install -e ".[live]"' in str(caught.value)
+    version.assert_not_called()
+
+
+@pytest.mark.parametrize("error", [ImportError("broken package"), ValueError("missing specification")])
+def test_unavailable_live_package_specification_is_reported_as_missing(live_dependencies, error):
+    specifications, version = live_dependencies
+    specifications.side_effect = error
+    with pytest.raises(DesktopUnavailable, match="Pillow, pyautogui, pytesseract"):
+        validate_live_dependencies()
+    version.assert_not_called()
+
+
+def test_live_dependency_lookup_prefers_path_without_testing_default_install(live_dependencies, monkeypatch):
+    probe = Mock(side_effect=AssertionError("PATH executable should be preferred"))
+    monkeypatch.setattr(desktop_runtime.Path, "is_file", probe)
+    assert validate_live_dependencies() == "mock-tesseract.exe"
+    probe.assert_not_called()
+
+
+def test_live_dependency_preflight_and_ocr_share_default_executable(live_dependencies, fake_tesseract, monkeypatch):
+    monkeypatch.setattr(desktop_runtime.shutil, "which", lambda name: None)
+    monkeypatch.setattr(desktop_runtime.Path, "is_file", lambda path: True)
+    executable = validate_live_dependencies()
+    assert executable == r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    assert tesseract_ocr(numeric_crop()) == "12"
+    assert fake_tesseract.pytesseract.tesseract_cmd == executable
+    live_dependencies[1].assert_called_once()
+
+
+def test_missing_tesseract_installation_fails_without_starting_any_process(live_dependencies, monkeypatch):
+    monkeypatch.setattr(desktop_runtime.shutil, "which", lambda name: None)
+    monkeypatch.setattr(desktop_runtime.Path, "is_file", lambda path: False)
+    with pytest.raises(DesktopUnavailable, match="install Tesseract OCR and add it to PATH"):
+        validate_live_dependencies()
+    live_dependencies[1].assert_not_called()
+
+
+def test_missing_tesseract_during_numeric_ocr_is_actionable(fake_tesseract, monkeypatch):
+    monkeypatch.setattr(desktop_runtime.shutil, "which", lambda name: None)
+    monkeypatch.setattr(desktop_runtime.Path, "is_file", lambda path: False)
+    with pytest.raises(DesktopUnavailable, match="install Tesseract OCR"):
+        tesseract_ocr(numeric_crop())
+    fake_tesseract.image_to_string.assert_not_called()
+
+
+@pytest.mark.parametrize("error,diagnostic", [
+    (OSError("permission denied"), "cannot run Tesseract OCR"),
+    (subprocess.TimeoutExpired("mock-tesseract.exe", 5), "dependency check exceeded 5s"),
+])
+def test_live_dependency_version_error_is_bounded_and_actionable(live_dependencies, error, diagnostic):
+    version = live_dependencies[1]
+    version.side_effect = error
+    with pytest.raises(DesktopUnavailable, match=diagnostic) as caught:
+        validate_live_dependencies()
+    assert caught.value.__cause__ is error
+    version.assert_called_once()
+
+
+@pytest.mark.parametrize("returncode,stdout", [(1, "tesseract 5.5.0"), (0, ""), (0, "some other command 1.0")])
+def test_invalid_tesseract_version_result_rejects_preflight(live_dependencies, returncode, stdout):
+    version = live_dependencies[1]
+    version.return_value = SimpleNamespace(returncode=returncode, stdout=stdout, stderr="private process details")
+    with pytest.raises(DesktopUnavailable, match="version check failed") as caught:
+        validate_live_dependencies()
+    assert "private process details" not in str(caught.value)
+    version.assert_called_once()
 
 
 @pytest.mark.parametrize("failure", [RuntimeError("OCR unavailable"), OSError("OCR process failed")])
