@@ -1,0 +1,120 @@
+{
+  "description": "Recorded Boards, actions and relative polls only; images, paths, timings and account metadata are excluded. This preserves controller evidence, not OCR accuracy, policy quality or combat performance.",
+  "boards": [
+    {
+      "phase": "naming",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "naming_ready",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "unknown",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "battle",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "round_result",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    }
+  ],
+  "observation_runs": [
+    [
+      0,
+      2
+    ],
+    [
+      1,
+      3
+    ],
+    [
+      2,
+      23
+    ],
+    [
+      3,
+      8
+    ],
+    [
+      2,
+      8
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      2,
+      25
+    ]
+  ],
+  "actions": [
+    {
+      "poll": 2,
+      "action": {
+        "kind": "choose_name",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 4
+    },
+    {
+      "poll": 5,
+      "action": {
+        "kind": "confirm_name",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 29
+    },
+    {
+      "poll": 46,
+      "action": {
+        "kind": "continue_round",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": null
+    }
+  ],
+  "expected": {
+    "actions": 3,
+    "acknowledgments": 2,
+    "polls": 71,
+    "reason": "unknown_timeout",
+    "pending_action": {
+      "kind": "continue_round",
+      "slot": null,
+      "target": null
+    }
+  }
+}

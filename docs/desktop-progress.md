@@ -767,6 +767,34 @@ pass. The full suite passes 1,342 with one Windows symlink-permission skip.
 Native Escape cancellation itself has not been exercised with injected
 keys; the program never simulates the user's stop input.
 
+## Native naming and battle handoff, 2026-10-04
+
+The dessert naming screen differed from the existing unselected-footer RGB
+reference. A private white-text reference over the existing footer region uses
+the same .02 distance/.015 margin limits and unchanged input points. An exact
+466-frame phase-only regression completed in 37.3 seconds: only the new source
+changed UNKNOWN to NAMING, with no other changes and all four NAMING_READY
+negatives preserved. Removing ellipses, removing "The", removing all glyphs or
+blanking the footer yields UNKNOWN; the old RGB reference stays ineligible on
+these corruptions. The broad RGB candidate was discarded. The robust reference
+was promoted locally after preserving the original private profile.
+
+`play.cmd` then selected both name options and confirmed using its own native
+input. Choose Name was acknowledged at poll four; Confirm Name at poll 29 on
+entering battle. It observed the round result and sent Continue, then stopped
+UNKNOWN at the new night-shop theme: three attempts, two acknowledgments,
+71 polls. Fresh inspection showed the resulting turn-two shop with one win,
+five lives and ten gold. This is one observed battle outcome, not competitive
+performance. There were no agent gameplay clicks.
+
+The sanitized naming replay preserves the actual later UNKNOWN failure while
+checking the first two actions and their recorded acknowledgments under an
+explicit two-action bound. Corrupting name-ready observations blocks Confirm
+and all retries. Only typed phases/actions/polls are public; generated name
+text, images, accounts and calibration remain private. All 287 session/startup/
+naming replay tests pass. The night shop is the next live calibration blocker;
+this calibration-paused sequence is not an uninterrupted fresh arena run.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

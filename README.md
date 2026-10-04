@@ -172,8 +172,10 @@ private and are not included in Git. See the controller guide for calibration.
 A recorded Windows run completed shop turns six through eight, including
 purchases, rolls, battles and round continuation, with 31 verified actions and
 no agent gameplay clicks. It then stopped at an unseen turn-nine overlay.
-This is partial desktop validation: the stat-based policy lost those battles,
-fresh-start naming is unvalidated, and recognition still has gaps.
+This is partial desktop validation: the stat-based policy lost those battles.
+A later native run verified automatic name selection/confirmation and entry
+into battle, then stopped at an unseen night-shop theme. Recognition still has
+gaps, and an uninterrupted fresh-menu-to-terminal arena remains unverified.
 [Desktop progress](docs/desktop-progress.md) records the evidence and limits.
 
 ### Legacy bridge
