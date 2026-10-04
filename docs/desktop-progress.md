@@ -963,15 +963,58 @@ were .040887/.185903 and Beaver .043945 against the unchanged .04 limit. The
 candidate was not promoted and no limits were loosened. Collect separate
 settled training references and independent holdouts before adding species.
 
+## Uninterrupted fresh native arena, 2026-10-04
+
+The separate fresh run began with an independently observed MAIN_MENU and the
+same native profile, with no intervening calibration edits or agent input.
+`play.cmd` dispatched Open Play/Open Arena/Start Arena at polls 2/5/8, then
+made opening purchases and selected/confirmed its own name at polls 30/33.
+It controlled every shop turn from one through nine, including day/night
+backgrounds, four tier dismissals and round continuations. It reached RESULT
+in 466.38 seconds: 94 actions, 94 acknowledgments, 874 observations, zero
+deferrals, no pending action and no error. Fresh independent final inspection
+confirmed Game Over on turn nine with two trophies. Terminal counters in the
+typed Board remain unknown; the trophy count comes from that final inspection.
+Every recorded gameplay input came from the standalone program.
+
+This is the first uninterrupted fresh-menu-to-terminal validation on the local
+2560x1440 setup. It establishes one completed arena, not general unattended
+reliability or competitive strength. The program stops at terminal and does
+not restart another arena. The current stat-based strategy still has incomplete
+species recognition and does not use food, ordering or most abilities.
+
+Open and restore Super Auto Pets at its main menu, then use PowerShell:
+
+```powershell
+cd C:\Users\nikhi\Downloads\SAP-AI
+.\play.cmd
+```
+
+The launcher uses `.venv\Scripts\python.exe` and the private native profile.
+Hold Escape until it reports a stop, move the pointer to a screen corner, or
+create `.local/desktop/STOP` to stop before further input. The launcher preserves
+an existing stop file. Return the completed game to its main menu before a new
+arena. Native validation captures, calibration and trained species models remain
+private.
+
+The sanitized fresh-arena fixture reproduces all native action and receipt
+polls with real DesktopPolicy, including startup and naming. Enabled menu
+observations after RESULT remain unread, preventing a second arena. A
+counterfactual unselected-name receipt stops with Choose Name pending, without
+retrying or confirming it. All 57 focused fresh/edge/deferral/naming/export
+replay tests pass. The full suite passes 1,404 tests in 14.42 seconds with one
+Windows symlink-permission skip. Independent review confirmed exact source
+timeline agreement, terminal stopping and the sanitized fixture's privacy.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
    The older 2048x1152 Computer Use profile cannot drive native Windows input.
 2. Verify OCR, empty slots, species, and proposals across both day and night
    backgrounds. Include naming, battle, victory, and tier-unlock negatives.
-3. Extend the verified multi-turn controller run to a fresh start through a
-   terminal result without calibration pauses. The turn-six-to-eight replay establishes bounded observed control;
-   it does not establish general unattended runs or competitive play.
+3. Repeat fresh-start-through-terminal validation across independent arenas
+   and newly observed layouts. One uninterrupted run is now verified; broader
+   unattended reliability and competitive performance remain unmeasured.
 4. Validate naming and further variations of results and shop layouts. A loss
    terminal, victory/draw/defeat continuation, tier dismissal, and the fifth
    shop slot now have limited native evidence. Broaden this across new runs.

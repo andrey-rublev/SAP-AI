@@ -1,8 +1,9 @@
 # SAP-AI
 
-A small reinforcement-learning laboratory inspired by **Super Auto Pets**.
-Train and compare policies locally, save resumable checkpoints, and inspect
-reproducible episode reports. Python 3.10+.
+A reinforcement-learning laboratory and calibrated Windows desktop controller
+for **Super Auto Pets**. The desktop program observes the game, chooses actions,
+performs its own mouse input and verifies the effects. The separate offline
+laboratory trains policies in a toy arena. Python 3.10+.
 
 **The built-in arena is a toy model.** Pets are scalar strengths; combat compares
 team totals against a growing opponent. It does not model species, health,
@@ -10,6 +11,22 @@ abilities, positioning, food, or the current game's complete rules. Success in
 this arena is not evidence of real-game performance.
 
 ## Start here
+
+For the calibrated desktop setup on this laptop, open Super Auto Pets at its
+main menu and restore its window, then run in PowerShell:
+
+```powershell
+cd C:\Users\nikhi\Downloads\SAP-AI
+.\play.cmd
+```
+
+The command uses the project's Python environment and private native profile.
+Hold Escape until it stops, or move the pointer to a screen corner. A completed
+game stops the program; return to the main menu before starting another arena.
+See [Desktop controller](docs/desktop.md) for dependencies, calibration and
+other stop controls.
+
+For offline training and evaluation:
 
 ```bash
 python -m pip install -e ".[dev,plot]"
@@ -154,8 +171,7 @@ actions and arena transitions. It stops after a terminal result or a configured
 bound (one hour, 600 actions, 12,000 observations by default). Changing apps later
 stops control. Hold Escape until the bot stops, move the pointer to a screen corner, or create
 `.local/desktop/STOP` to stop; the launcher never removes a stop file. It requires
-the local verified profile, which is not included in Git. This convenient entry
-point does not establish that an entire fresh arena has been validated.
+the verified local window size and private profile, which is not included in Git.
 
 For a shorter run, use `.\play.cmd --max-actions 40 --max-seconds 600`.
 With an already verified profile, the separate preview interface remains:
@@ -169,13 +185,14 @@ The first command previews without input; `--execute` enables the program's own
 clicks. Create `.local/desktop/STOP` to request a stop. Profiles and captures are
 private and are not included in Git. See the controller guide for calibration.
 
-A recorded Windows run completed shop turns six through eight, including
-purchases, rolls, battles and round continuation, with 31 verified actions and
-no agent gameplay clicks. It then stopped at an unseen turn-nine overlay.
-This is partial desktop validation: the stat-based policy lost those battles.
-A later native run verified automatic name selection/confirmation and entry
-into battle, then stopped at an unseen night-shop theme. Recognition still has
-gaps, and an uninterrupted fresh-menu-to-terminal arena remains unverified.
+An uninterrupted native Windows run on October 4, 2026 started at the main menu,
+opened Arena, selected and confirmed its name, controlled nine shop turns and
+stopped at Game Over. The standalone program executed and acknowledged all 94
+actions across 874 observations, without agent gameplay input or calibration
+pauses. Independent final inspection showed turn nine and two trophies. This
+establishes one complete run on the local setup. Recognition still has gaps,
+and the stat-based strategy does not yet use food, ordering or most abilities;
+general unattended reliability and competitive performance remain unverified.
 [Desktop progress](docs/desktop-progress.md) records the evidence and limits.
 
 ### Legacy bridge
