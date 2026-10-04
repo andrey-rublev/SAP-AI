@@ -829,8 +829,41 @@ or turn. The original profile was backed up before adding exactly one reference,
 and recorded-image inspection recognizes TIER_UNLOCK without inferred counters.
 The subsequent standalone continuation dispatched Dismiss Tier at poll two and
 acknowledged the turn-three shop at poll five, then acknowledged a roll at poll
-eight. This verifies one native tier dismissal; the bounded continuation is
-still running and does not yet establish a finished uninterrupted arena run.
+eight. That native continuation finished with 21 attempts, 20 acknowledgments
+and 202 polls across turn-three/four shops. Each shop included a supported
+sale-funded replacement with observed +1 sale/-3 purchase receipts and a visible
+four-to-nine stat gain. It stopped UNKNOWN on the tier-three overlay after
+Continue at poll 177. The typed replay preserves the original failure and all
+twenty acknowledged action timings; a separately labeled synthetic splice of
+recorded sequences provides prior-turn context and rejects a stale shop after
+tier dismissal without retries. This is bounded observed control, not a finished
+uninterrupted fresh arena run.
+
+## Optional tolerance for rasterized text edges, 2026-10-04
+
+The tier-two and tier-three footer suffixes have identical glyph identities and
+bounds, but their thresholded masks differ by .050235, above the .015 limit.
+Whole-pixel translations through three pixels and brightness-threshold probes
+do not solve it. Inspection shows thin opposing edges from fractional text
+rasterization. White-text references can now opt into `edge_tolerance: 1`,
+counting unmatched ink farther than one pixel from the opposing mask in both
+directions and dividing by the original ink union. This does not wrap at crop
+edges or dilute the denominator with expanded background. Blank/sparse/filled
+ink gates, reference limits, cross-mode conflicts and competitor margins remain
+unchanged. The default is strict zero; only integer zero/one is accepted.
+
+All 530 focused vision/session/night/tier replay tests pass. Coverage includes
+one-pixel variations, missing letters, unrelated strokes, larger shifts, ink
+limits, symmetry, no wrapping and round-trip validation. Independent review
+found no concrete defect. The full suite passes 1,368 tests with one Windows
+symlink-permission skip. Production phase/scorer verification covered 538 stored
+native images in 46.47 seconds, including all 69 recorded frames from five new
+logs. Only the new tier-three source changed UNKNOWN to TIER_UNLOCK; the
+remaining classifications were preserved. All 758 source-mask differences are
+boundary pixels within one pixel of opposing ink; the tolerant score is zero.
+All twelve damaged-footer controls across tier-two/three still abstain. The
+private profile was backed up before changing only this reference's tolerance
+to one. Native continuation using the new option remains to be verified.
 
 ## Remaining milestones
 

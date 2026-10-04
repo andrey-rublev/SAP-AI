@@ -79,8 +79,12 @@ labels over moving backgrounds. This compares bright, nearly neutral pixel
 masks using symmetric mismatch divided by their union. Blank, sparse and
 mostly filled crops cannot match. Optional `white_text` settings calibrate
 `min_channel`, `max_channel_spread`, `min_ink_pixels`, `min_ink_fraction` and
-`max_ink_fraction`. Keep the crop narrow and validate changed/missing text and
-other screens. RGB remains the default for existing profiles.
+`max_ink_fraction`. Optional `edge_tolerance: 1` allows ink within one pixel
+of the other mask in both directions, for small rasterized-edge variations.
+The denominator remains the original ink union, and ink limits still apply
+before comparison. Tolerance defaults to zero; only zero or one is accepted.
+Keep the crop narrow and validate changed/missing text and other screens before
+enabling it for a reference. RGB remains the default for existing profiles.
 
 RGB and white-text distances use separate competitor margins. A mode with no
 eligible evidence abstains; eligible ambiguity or disagreement between modes

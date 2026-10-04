@@ -77,7 +77,7 @@ class PhaseTemplate:
             return None
         options = {"min_channel": 220, "max_channel_spread": 25,
                    "min_ink_pixels": 8, "min_ink_fraction": 0.01,
-                   "max_ink_fraction": 0.6}
+                   "max_ink_fraction": 0.6, "edge_tolerance": 0}
         if self.white_text is not None:
             if not isinstance(self.white_text, dict) or set(self.white_text) - set(options):
                 raise ValueError("white_text must contain only supported matching options")
@@ -88,6 +88,8 @@ class PhaseTemplate:
                 raise ValueError(f"white_text {name} must be an integer between 0 and 255")
         if type(options["min_ink_pixels"]) is not int or options["min_ink_pixels"] < 1:
             raise ValueError("white_text min_ink_pixels must be a positive integer")
+        if type(options["edge_tolerance"]) is not int or options["edge_tolerance"] not in (0, 1):
+            raise ValueError("white_text edge_tolerance must be 0 or 1 pixel")
         for name in ("min_ink_fraction", "max_ink_fraction"):
             value = options[name]
             if type(value) not in (int, float) or not math.isfinite(value) or not 0 < value < 1:
@@ -307,9 +309,23 @@ def _white_text_distance(left, right, options):
                 or fraction > options["max_ink_fraction"]):
             return float("inf")
         masks.append(mask)
-    # Normalizing by the union keeps blank background from diluting missing
-    # strokes, and penalizes extra white strokes as well as absent ones.
-    return float(np.count_nonzero(masks[0] ^ masks[1]) / np.count_nonzero(masks[0] | masks[1]))
+    # Normalizing by the original union keeps blank background from diluting
+    # missing strokes. Optional one-pixel tolerance covers rasterized edges;
+    # both directions still penalize ink with no nearby counterpart.
+    left_mask, right_mask = masks
+    if options.get("edge_tolerance", 0):
+        def expanded(mask):
+            padded = np.pad(mask, 1, constant_values=False)
+            height, width = mask.shape
+            return np.logical_or.reduce([
+                padded[y:y + height, x:x + width]
+                for y in range(3) for x in range(3)
+            ])
+        unmatched = (np.count_nonzero(left_mask & ~expanded(right_mask))
+                     + np.count_nonzero(right_mask & ~expanded(left_mask)))
+    else:
+        unmatched = np.count_nonzero(left_mask ^ right_mask)
+    return float(unmatched / np.count_nonzero(left_mask | right_mask))
 
 
 class Perceptor:

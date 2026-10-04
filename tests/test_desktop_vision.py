@@ -194,6 +194,60 @@ def test_white_text_error_is_symmetric_and_normalized_by_ink_union():
     assert _white_text_distance(left, left, options) == 0
 
 
+@pytest.mark.parametrize("offset", [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1)])
+def test_optional_white_text_edge_tolerance_accepts_one_pixel_raster_variation(white_text_scene, offset):
+    config, frame, mask, _ = white_text_scene
+    crop = frame[3:23, 2:62]
+    crop[:] = 35
+    crop[np.roll(mask, offset, axis=(0, 1))] = 255
+    assert_unknown_without_input(observe_white_text(white_text_scene))
+    config["phase_templates"][0]["white_text"] = {"edge_tolerance": 1}
+    assert observe_white_text(white_text_scene).phase == Phase.BATTLE
+
+
+@pytest.mark.parametrize("change", ["missing_letter", "extra_strokes", "far_shift", "blank", "filled"])
+def test_white_text_edge_tolerance_does_not_authorize_missing_or_unrelated_ink(white_text_scene, change):
+    config, frame, mask, _ = white_text_scene
+    config["phase_templates"][0]["white_text"] = {"edge_tolerance": 1}
+    crop = frame[3:23, 2:62]
+    if change == "missing_letter":
+        crop[:, 8:14] = 35
+    elif change == "extra_strokes":
+        crop[1:4, 53:58] = 255
+    elif change == "far_shift":
+        crop[:] = 35
+        crop[np.roll(mask, 3, axis=1)] = 255
+    else:
+        crop[:] = 35 if change == "blank" else 255
+    assert_unknown_without_input(observe_white_text(white_text_scene))
+
+
+def test_white_text_edge_tolerance_is_symmetric_and_never_wraps_or_dilutes_errors():
+    options = PhaseTemplate(Phase.BATTLE, Rect(0, 0, 8, 8), "text.png",
+                            match_mode="white_text", white_text={
+                                "edge_tolerance": 1, "min_ink_pixels": 1,
+                            }).matching_options()
+    left = np.zeros((8, 8, 3), dtype=np.uint8)
+    right = left.copy()
+    left[0, 0] = right[0, -1] = 255
+    assert _white_text_distance(left, right, options) == 1
+    assert _white_text_distance(right, left, options) == 1
+    left[:] = right[:] = 0
+    left[2:4, 2:4] = right[2:4, 2:4] = 255
+    right[7, 7] = 255
+    assert _white_text_distance(left, right, options) == pytest.approx(1 / 5)
+    assert _white_text_distance(right, left, options) == pytest.approx(1 / 5)
+
+
+def test_white_text_edge_tolerance_roundtrips_and_defaults_to_strict(white_text_scene):
+    config, _, _, directory = white_text_scene
+    profile = VisionProfile.from_dict(config, base_dir=directory)
+    assert profile.phase_templates[0].matching_options()["edge_tolerance"] == 0
+    config["phase_templates"][0]["white_text"] = {"edge_tolerance": 1}
+    profile = VisionProfile.from_dict(config, base_dir=directory)
+    assert VisionProfile.from_dict(profile.to_dict(), base_dir=directory) == profile
+
+
 @pytest.mark.parametrize("same_phase", [False, True])
 def test_white_text_runner_up_margin_and_same_phase_variants(white_text_scene, same_phase):
     from PIL import Image
@@ -285,6 +339,8 @@ def test_same_phase_variants_preserve_mode_eligibility_before_collapse(white_tex
     {"white_text": {"min_channel": True}}, {"white_text": {"min_channel": 256}},
     {"white_text": {"max_channel_spread": -1}}, {"white_text": {"max_channel_spread": 2.5}},
     {"white_text": {"min_ink_pixels": 0}}, {"white_text": {"min_ink_pixels": True}},
+    {"white_text": {"edge_tolerance": -1}}, {"white_text": {"edge_tolerance": 2}},
+    {"white_text": {"edge_tolerance": True}}, {"white_text": {"edge_tolerance": 1.0}},
     {"white_text": {"min_ink_fraction": 0}}, {"white_text": {"min_ink_fraction": float("nan")}},
     {"white_text": {"max_ink_fraction": 1}}, {"white_text": {"max_ink_fraction": float("inf")}},
     {"white_text": {"min_ink_fraction": 0.6, "max_ink_fraction": 0.6}},
