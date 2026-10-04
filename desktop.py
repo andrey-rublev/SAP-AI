@@ -213,8 +213,10 @@ def main(argv=None):
             save_image(annotate(frame, profile), args.overlay)
         return
     deadline = time.monotonic() + args.max_seconds
+    escape_requested = lambda: False
     def should_stop():
-        return Path(args.stop_file).exists() or time.monotonic() >= deadline
+        return (Path(args.stop_file).exists() or time.monotonic() >= deadline
+                or escape_requested())
 
     if args.command == "play":
         validate_profile_assets(perceptor)
@@ -224,6 +226,7 @@ def main(argv=None):
             return
     window = WindowsGameWindow(args.window)
     if args.command == "play":
+        escape_requested = window.stop_requested
         window.should_stop = should_stop
     runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute, should_stop=should_stop)
     recorder = FrameRecorder(args.record_dir, args.record_limit) if args.record_dir else None

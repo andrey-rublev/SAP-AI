@@ -17,6 +17,7 @@ from desktop_state import Action, Phase, legal_action
 
 OCR_TIMEOUT_SECONDS = 3.0
 DEPENDENCY_TIMEOUT_SECONDS = 5.0
+VK_ESCAPE = 0x1B
 
 
 class CachedOCR:
@@ -119,6 +120,7 @@ class WindowsGameWindow:
     def __init__(self, title="Super Auto Pets"):
         if os.name != "nt":
             raise DesktopUnavailable("live window control currently requires Windows")
+        self._escape_stopped = False
         self.user32 = ctypes.WinDLL("user32", use_last_error=True)
         # Make coordinates consistent on high-DPI monitors before capturing.
         try:
@@ -130,6 +132,8 @@ class WindowsGameWindow:
         self.user32.GetForegroundWindow.restype = wintypes.HWND
         self.user32.SetForegroundWindow.argtypes = [wintypes.HWND]
         self.user32.SetForegroundWindow.restype = wintypes.BOOL
+        self.user32.GetAsyncKeyState.argtypes = [wintypes.INT]
+        self.user32.GetAsyncKeyState.restype = wintypes.SHORT
         self.user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
         self.user32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
         self.user32.IsWindow.argtypes = [wintypes.HWND]
@@ -142,6 +146,18 @@ class WindowsGameWindow:
         pyautogui.FAILSAFE = True
         pyautogui.PAUSE = 0.1
         self.mouse = pyautogui
+
+    def stop_requested(self):
+        """Latch a held Escape key without hooks, logging, or sending input.
+
+        The high bit reports the current key state independently of the
+        foreground application's message queue. A brief tap between polls can
+        be missed; hold Escape until the session stops. In-flight OCR finishes
+        before the session can check this predicate again.
+        """
+        if not self._escape_stopped:
+            self._escape_stopped = bool(self.user32.GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+        return self._escape_stopped
 
     def activate(self, expected_size):
         """Request foreground ownership once, before the session starts.

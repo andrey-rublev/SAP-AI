@@ -503,6 +503,7 @@ def activation_window(*, foreground=3, size=(100, 100)):
     """Native window facade with real ctypes structs and mocked Win32 calls."""
     window = WindowsGameWindow.__new__(WindowsGameWindow)
     window.handle, window.mouse = 2, Mock()
+    window._escape_stopped = False
     native = Mock()
     native.IsWindow.return_value = True
     native.IsIconic.return_value = False
@@ -524,6 +525,87 @@ def activation_window(*, foreground=3, size=(100, 100)):
     native.SetForegroundWindow.side_effect = foreground_request
     window.user32 = native
     return window
+
+
+@pytest.mark.parametrize("state,stopped", [(0, False), (1, False), (-32768, True), (-32767, True)])
+def test_escape_stop_uses_only_the_current_held_key_bit(state, stopped):
+    window = activation_window()
+    window.user32.GetAsyncKeyState.return_value = state
+    assert window.stop_requested() is stopped
+    assert window.user32.mock_calls == [call.GetAsyncKeyState(0x1B)]
+    assert window.mouse.mock_calls == []
+
+
+def test_escape_stop_remains_latched_after_release_without_more_key_queries():
+    window = activation_window()
+    window.user32.GetAsyncKeyState.side_effect = [0, -32768, 0]
+    assert window.stop_requested() is False
+    assert window.stop_requested() is True
+    assert window.stop_requested() is True
+    assert window.user32.GetAsyncKeyState.call_args_list == [call(0x1B), call(0x1B)]
+
+
+def test_escape_latch_and_native_short_prototype_are_initialized_for_each_new_run(monkeypatch):
+    native = Mock()
+    native.FindWindowW.return_value = 2
+    native.GetAsyncKeyState.side_effect = [-32768, 0]
+    monkeypatch.setattr(desktop_runtime, "os", SimpleNamespace(name="nt"))
+    monkeypatch.setattr(desktop_runtime.ctypes, "WinDLL", Mock(return_value=native), raising=False)
+    monkeypatch.setitem(sys.modules, "pyautogui", SimpleNamespace())
+    first, second = WindowsGameWindow(), WindowsGameWindow()
+    assert native.GetAsyncKeyState.argtypes == [ctypes.wintypes.INT]
+    assert native.GetAsyncKeyState.restype is ctypes.wintypes.SHORT
+    assert first.stop_requested() is True
+    assert second.stop_requested() is False
+    assert first.stop_requested() is True
+    assert native.GetAsyncKeyState.call_args_list == [call(0x1B), call(0x1B)]
+    native.SetForegroundWindow.assert_not_called()
+
+
+def test_escape_stop_accepts_the_signed_result_of_a_typed_native_function():
+    window = activation_window()
+    callback = ctypes.CFUNCTYPE(ctypes.wintypes.SHORT, ctypes.wintypes.INT)(lambda key: -32768)
+    window.user32.GetAsyncKeyState = callback
+    assert window.stop_requested() is True
+    assert window._escape_stopped is True
+
+
+def test_held_escape_prevents_startup_focus_handoff():
+    window = activation_window()
+    window.user32.GetAsyncKeyState.return_value = -32768
+    window.should_stop = window.stop_requested
+    with pytest.raises(DesktopUnavailable, match="stop requested"):
+        window.activate((100, 100))
+    assert window.user32.mock_calls == [call.GetAsyncKeyState(0x1B)]
+    assert window.mouse.mock_calls == []
+
+
+def test_escape_held_during_pointer_travel_prevents_mouse_press_and_latches():
+    window = activation_window()
+    window.geometry = Mock(return_value=(500, 200, 100, 100))
+    window.user32.GetAsyncKeyState.side_effect = [0, -32768, 0]
+    window.should_stop = window.stop_requested
+    with pytest.raises(DesktopUnavailable, match="stop requested"):
+        window.click((20, 30), (100, 100))
+    window.mouse.moveTo.assert_called_once_with(520, 230, duration=0.15)
+    window.mouse.click.assert_not_called()
+    assert window.stop_requested() is True
+    assert window.user32.GetAsyncKeyState.call_count == 2
+
+
+def test_escape_after_drag_press_releases_mouse_and_latches_stop():
+    window = activation_window()
+    window.geometry = Mock(return_value=(500, 200, 100, 100))
+    window.mouse.FAILSAFE = True
+    window.user32.GetAsyncKeyState.side_effect = [0, 0, -32768, 0]
+    window.should_stop = window.stop_requested
+    with pytest.raises(DesktopUnavailable, match="stop requested"):
+        window.drag((10, 20), (30, 40), (100, 100))
+    window.mouse.mouseDown.assert_called_once_with(510, 220, button="left")
+    window.mouse.mouseUp.assert_called_once_with(button="left", _pause=False)
+    assert window.mouse.FAILSAFE is True
+    assert window.stop_requested() is True
+    assert window.user32.GetAsyncKeyState.call_count == 3
 
 
 def test_missing_window_fails_construction_before_mouse_import(monkeypatch):

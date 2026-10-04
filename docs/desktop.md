@@ -148,6 +148,10 @@ with, for example, `.\play.cmd --max-actions 40 --max-seconds 600`. Stop-file,
 logging, recording, receipt and focus guards are shared with `run`; the launcher
 does not remove an existing STOP file or regain focus after the session starts.
 The `.cmd` entry point works from PowerShell without changing script policies.
+Hold Escape until `play` stops to cancel while the game is foreground. Only
+Escape's current state is polled, and a detected press stays latched for that
+run. A brief tap between checks can be missed; in-flight OCR finishes before
+the next check. No keyboard hook, key log or simulated Escape input is used.
 
 After setting `calibrated` to true and keeping the game foreground:
 

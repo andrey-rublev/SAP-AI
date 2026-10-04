@@ -1,6 +1,6 @@
 """CLI integration with injected observation and input; no desktop access."""
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 import json
 from pathlib import Path
 import shutil
@@ -24,6 +24,7 @@ def cli_runtime(monkeypatch):
     monkeypatch.setattr(desktop, "validate_profile_assets", Mock())
     monkeypatch.setattr(desktop, "validate_live_dependencies", Mock())
     window = Mock()
+    window.return_value.stop_requested.return_value = False
     monkeypatch.setattr(desktop, "WindowsGameWindow", window)
     runtime = SimpleNamespace(observe=Mock(), act=Mock(), last_frame=None,
                               phase_actions=Mock(return_value={Phase.ROUND_RESULT: Action("continue_round")}))
@@ -272,6 +273,44 @@ def test_play_reports_unconfigured_transition_as_failure(tmp_path, cli_runtime):
     with pytest.raises(RuntimeError, match="transition_disabled"):
         desktop.main(play_arguments(tmp_path))
     runtime.act.assert_not_called()
+
+
+def test_play_held_escape_stops_before_activation_or_observation(tmp_path, cli_runtime):
+    runtime, window = cli_runtime
+    window.return_value.stop_requested.return_value = True
+    desktop.main(play_arguments(tmp_path))
+    window.return_value.activate.assert_not_called()
+    runtime.observe.assert_not_called()
+    runtime.act.assert_not_called()
+    events = [json.loads(line) for line in (tmp_path / "session.jsonl").read_text().splitlines()]
+    assert events[-1]["result"] == SessionResult(0, 0, 0, "stopped").to_dict()
+
+
+@pytest.mark.parametrize("pending", [False, True])
+def test_play_escape_blocks_dispatch_or_further_actions_after_pending_input(tmp_path, cli_runtime, pending):
+    runtime, window = cli_runtime
+    runtime.phase_actions.return_value = {Phase.MAIN_MENU: Action("open_play")}
+    calls = []
+    def observe():
+        calls.append(True)
+        if len(calls) == 2 and not pending:
+            window.return_value.stop_requested.return_value = True
+        return Board(Phase.MAIN_MENU)
+    runtime.observe.side_effect = observe
+    def act(action):
+        window.return_value.stop_requested.return_value = True
+    runtime.act.side_effect = act
+    if pending:
+        with pytest.raises(RuntimeError, match="desktop session stopped: stopped"):
+            desktop.main(play_arguments(tmp_path))
+    else:
+        desktop.main(play_arguments(tmp_path))
+    assert len(calls) == 2
+    assert runtime.act.call_args_list == ([call(Action("open_play"))] if pending else [])
+    events = [json.loads(line) for line in (tmp_path / "session.jsonl").read_text().splitlines()]
+    result = events[-1]["result"]
+    assert (result["reason"], result["actions"], result["acknowledgments"]) == ("stopped", int(pending), 0)
+    assert result["pending_action"] == (Action("open_play").to_dict() if pending else None)
 
 
 @pytest.mark.parametrize("reference", ["phase.png", "empty.png", "ant-alt.png", "number.png"])

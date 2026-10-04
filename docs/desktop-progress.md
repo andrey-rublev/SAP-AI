@@ -749,6 +749,24 @@ new dessert-themed naming screen. Every gameplay input was from the standalone
 program; agent inspection supplied no gameplay clicks. The missing naming
 reference is the next calibration blocker. Private captures/logs stay local.
 
+## Held-Escape cancellation, 2026-10-04
+
+The one-command launcher now combines its stop file/deadline with a per-run
+held-Escape latch, checked before startup activation, observations and dispatch,
+and between the native input sequence's moves/clicks. It reads only the current
+Escape high bit through typed Win32 IO; no key hook, key log, synthetic key or
+additional dependency is used. Hold Escape until the bot stops: a tap between
+checks may be missed and in-flight OCR is allowed to finish. Detected Escape
+remains latched after release and resets for a new run. Existing pointer-corner,
+focus and stop-file guards remain.
+
+All 152 runtime tests pass. CLI tests cover cancellation before activation,
+before dispatch and after a pending action, where the receipt remains unresolved
+and no retry/follow-up is sent. Together with session checks, 470 focused tests
+pass. The full suite passes 1,342 with one Windows symlink-permission skip.
+Native Escape cancellation itself has not been exercised with injected
+keys; the program never simulates the user's stop input.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
