@@ -1,0 +1,4542 @@
+{
+  "description": "Recorded Boards, actions and relative polls only; images, paths, timings and account metadata are excluded. This preserves controller evidence, not OCR accuracy, policy quality or combat performance.",
+  "boards": [
+    {
+      "phase": "tier_unlock",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "shop",
+      "gold": 10,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 10,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 9,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 9,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 8,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 8,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 7,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 5,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 6,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 5,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 5,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 4,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 3,
+      "turn": 5,
+      "wins": 2,
+      "lives": 4,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "end_turn_confirm",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "unknown",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "battle",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "round_result",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "shop",
+      "gold": 10,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 1,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 10,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 1,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 9,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 8,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 7,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 7,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 6,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 5,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 5,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 6,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 6,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 3,
+      "turn": 6,
+      "wins": 2,
+      "lives": 3,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 10,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 10,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 4,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 5,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 5,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 9,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 8,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 5,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 8,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 5,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 9,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 5,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 9,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 5,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 6,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 5,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 5,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 4,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": "otter",
+          "attack": 1,
+          "health": 4,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 4,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 5,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 5,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 2,
+      "turn": 7,
+      "wins": 2,
+      "lives": 2,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 10,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 1,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 10,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 1,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 9,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 9,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 5,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 8,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 7,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 6,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 1,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 5,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 5,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 4,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 4,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 4,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 4,
+          "health": 1,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 2,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 3,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": null,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 6,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 3,
+      "turn": 8,
+      "wins": 2,
+      "lives": 1,
+      "shop": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 6,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 3,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 6,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 3,
+          "health": 7,
+          "level": 1
+        }
+      ]
+    },
+    {
+      "phase": "result",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    }
+  ],
+  "observation_runs": [
+    [
+      0,
+      2
+    ],
+    [
+      1,
+      1
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      3
+    ],
+    [
+      5,
+      1
+    ],
+    [
+      6,
+      3
+    ],
+    [
+      7,
+      3
+    ],
+    [
+      8,
+      3
+    ],
+    [
+      9,
+      1
+    ],
+    [
+      10,
+      3
+    ],
+    [
+      11,
+      3
+    ],
+    [
+      12,
+      3
+    ],
+    [
+      13,
+      3
+    ],
+    [
+      12,
+      1
+    ],
+    [
+      14,
+      21
+    ],
+    [
+      15,
+      27
+    ],
+    [
+      14,
+      8
+    ],
+    [
+      16,
+      2
+    ],
+    [
+      14,
+      6
+    ],
+    [
+      17,
+      1
+    ],
+    [
+      18,
+      3
+    ],
+    [
+      19,
+      3
+    ],
+    [
+      20,
+      3
+    ],
+    [
+      21,
+      1
+    ],
+    [
+      22,
+      3
+    ],
+    [
+      23,
+      3
+    ],
+    [
+      24,
+      3
+    ],
+    [
+      25,
+      1
+    ],
+    [
+      26,
+      1
+    ],
+    [
+      27,
+      3
+    ],
+    [
+      28,
+      3
+    ],
+    [
+      13,
+      3
+    ],
+    [
+      28,
+      1
+    ],
+    [
+      14,
+      21
+    ],
+    [
+      15,
+      28
+    ],
+    [
+      14,
+      7
+    ],
+    [
+      16,
+      2
+    ],
+    [
+      14,
+      3
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      29,
+      1
+    ],
+    [
+      30,
+      3
+    ],
+    [
+      31,
+      3
+    ],
+    [
+      32,
+      3
+    ],
+    [
+      33,
+      1
+    ],
+    [
+      34,
+      1
+    ],
+    [
+      35,
+      3
+    ],
+    [
+      36,
+      3
+    ],
+    [
+      37,
+      3
+    ],
+    [
+      38,
+      3
+    ],
+    [
+      39,
+      1
+    ],
+    [
+      40,
+      1
+    ],
+    [
+      41,
+      3
+    ],
+    [
+      42,
+      3
+    ],
+    [
+      13,
+      3
+    ],
+    [
+      42,
+      1
+    ],
+    [
+      14,
+      21
+    ],
+    [
+      15,
+      24
+    ],
+    [
+      14,
+      8
+    ],
+    [
+      16,
+      2
+    ],
+    [
+      14,
+      6
+    ],
+    [
+      43,
+      1
+    ],
+    [
+      44,
+      3
+    ],
+    [
+      45,
+      1
+    ],
+    [
+      46,
+      3
+    ],
+    [
+      47,
+      3
+    ],
+    [
+      48,
+      3
+    ],
+    [
+      49,
+      3
+    ],
+    [
+      50,
+      1
+    ],
+    [
+      51,
+      3
+    ],
+    [
+      52,
+      1
+    ],
+    [
+      53,
+      3
+    ],
+    [
+      54,
+      1
+    ],
+    [
+      55,
+      3
+    ],
+    [
+      13,
+      3
+    ],
+    [
+      55,
+      1
+    ],
+    [
+      14,
+      20
+    ],
+    [
+      15,
+      24
+    ],
+    [
+      14,
+      8
+    ],
+    [
+      56,
+      1
+    ]
+  ],
+  "actions": [
+    {
+      "poll": 2,
+      "action": {
+        "kind": "dismiss_tier",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 5
+    },
+    {
+      "poll": 6,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 9
+    },
+    {
+      "poll": 10,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 13
+    },
+    {
+      "poll": 14,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 16
+    },
+    {
+      "poll": 17,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 19
+    },
+    {
+      "poll": 20,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 23
+    },
+    {
+      "poll": 24,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 26
+    },
+    {
+      "poll": 27,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 29
+    },
+    {
+      "poll": 30,
+      "action": {
+        "kind": "end_turn",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 32
+    },
+    {
+      "poll": 33,
+      "action": {
+        "kind": "confirm_end_turn",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 56
+    },
+    {
+      "poll": 92,
+      "action": {
+        "kind": "continue_round",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 101
+    },
+    {
+      "poll": 102,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 104
+    },
+    {
+      "poll": 105,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 107
+    },
+    {
+      "poll": 108,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 111
+    },
+    {
+      "poll": 112,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 114
+    },
+    {
+      "poll": 115,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 117
+    },
+    {
+      "poll": 118,
+      "action": {
+        "kind": "sell",
+        "slot": 4,
+        "target": null
+      },
+      "acknowledged_poll": 122
+    },
+    {
+      "poll": 123,
+      "action": {
+        "kind": "buy",
+        "slot": 1,
+        "target": 4
+      },
+      "acknowledged_poll": 125
+    },
+    {
+      "poll": 126,
+      "action": {
+        "kind": "end_turn",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 128
+    },
+    {
+      "poll": 129,
+      "action": {
+        "kind": "confirm_end_turn",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 152
+    },
+    {
+      "poll": 188,
+      "action": {
+        "kind": "continue_round",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 193
+    },
+    {
+      "poll": 194,
+      "action": {
+        "kind": "dismiss_tier",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 197
+    },
+    {
+      "poll": 198,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 200
+    },
+    {
+      "poll": 201,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 203
+    },
+    {
+      "poll": 204,
+      "action": {
+        "kind": "sell",
+        "slot": 2,
+        "target": null
+      },
+      "acknowledged_poll": 208
+    },
+    {
+      "poll": 209,
+      "action": {
+        "kind": "buy",
+        "slot": 1,
+        "target": 2
+      },
+      "acknowledged_poll": 211
+    },
+    {
+      "poll": 212,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 214
+    },
+    {
+      "poll": 215,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 217
+    },
+    {
+      "poll": 218,
+      "action": {
+        "kind": "sell",
+        "slot": 3,
+        "target": null
+      },
+      "acknowledged_poll": 222
+    },
+    {
+      "poll": 223,
+      "action": {
+        "kind": "buy",
+        "slot": 0,
+        "target": 3
+      },
+      "acknowledged_poll": 225
+    },
+    {
+      "poll": 226,
+      "action": {
+        "kind": "end_turn",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 228
+    },
+    {
+      "poll": 229,
+      "action": {
+        "kind": "confirm_end_turn",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 252
+    },
+    {
+      "poll": 285,
+      "action": {
+        "kind": "continue_round",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 294
+    },
+    {
+      "poll": 295,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 298
+    },
+    {
+      "poll": 299,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 301
+    },
+    {
+      "poll": 302,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 304
+    },
+    {
+      "poll": 305,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 307
+    },
+    {
+      "poll": 308,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 311
+    },
+    {
+      "poll": 312,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 315
+    },
+    {
+      "poll": 316,
+      "action": {
+        "kind": "roll",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 319
+    },
+    {
+      "poll": 320,
+      "action": {
+        "kind": "end_turn",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 322
+    },
+    {
+      "poll": 323,
+      "action": {
+        "kind": "confirm_end_turn",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 345
+    }
+  ],
+  "expected": {
+    "actions": 42,
+    "acknowledgments": 42,
+    "polls": 377,
+    "reason": "result",
+    "pending_action": null
+  }
+}

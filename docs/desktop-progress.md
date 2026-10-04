@@ -863,7 +863,27 @@ remaining classifications were preserved. All 758 source-mask differences are
 boundary pixels within one pixel of opposing ink; the tolerant score is zero.
 All twelve damaged-footer controls across tier-two/three still abstain. The
 private profile was backed up before changing only this reference's tolerance
-to one. Native continuation using the new option remains to be verified.
+to one.
+
+## Native continuation through Game Over, 2026-10-04
+
+With the optional edge tolerance enabled only for that suffix, `play.cmd`
+dismissed tier three, controlled the turn-five/six/seven/eight shops, dismissed
+the later tier-four overlay and reached RESULT: 42 actions, 42 acknowledgments,
+377 polls, no pending action or error. Fresh independent inspection shows Game
+Over on turn eight with two trophies. This is a completed native continuation
+from a tier overlay; it is not a fresh startup or competitive-performance claim.
+Every action in the run was chosen and physically executed by the standalone
+controller. No agent input occurred during the run.
+
+The sanitized successful fixture reproduces the full native action and receipt
+timeline with real `DesktopPolicy`. Trailing calibrated menu phases remain
+unread after RESULT, so it cannot start another arena accidentally. A separately
+labeled synthetic early terminal observation preserves an unresolved final
+confirmation and stops immediately without follow-up. All 42 focused edge/tier/
+night/terminal/export replay tests pass. Images, names and calibration remain
+private. For the next fresh-start test, the agent used only post-game menu
+navigation to restore MAIN_MENU; that setup is outside the recorded bot run.
 
 ## Remaining milestones
 
