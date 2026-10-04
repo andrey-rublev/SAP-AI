@@ -95,10 +95,18 @@ def action_acknowledged(before: Board, after: Board, action: Action,
                         *, previous_shop_turn: int | None = None) -> bool:
     """Recognize only action-specific evidence, never arbitrary screen changes."""
     if action.kind in {"open_play", "open_arena", "start_arena"}:
-        destination = {"open_play": Phase.PLAY_MENU, "open_arena": Phase.ARENA_SETUP,
-                       "start_arena": Phase.SHOP}[action.kind]
-        return (legal_action(before, action) and after.phase == destination
-                and (action.kind != "start_arena" or after.turn == 1))
+        if not legal_action(before, action):
+            return False
+        if action.kind == "open_play":
+            return after.phase == Phase.PLAY_MENU
+        if action.kind == "open_arena":
+            # Arena resumes an existing run directly instead of showing setup.
+            # Require readable shop counters before handing control to policy.
+            return (after.phase == Phase.ARENA_SETUP or (
+                after.phase == Phase.SHOP and after.turn is not None and after.turn > 0
+                and after.gold is not None
+            ))
+        return after.phase == Phase.SHOP and after.turn == 1
     if action.kind == "end_turn":
         return before.phase == Phase.SHOP and (after.phase in (
             Phase.NAMING, Phase.BATTLE, Phase.ROUND_RESULT, Phase.END_TURN_CONFIRM,

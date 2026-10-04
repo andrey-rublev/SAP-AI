@@ -1,0 +1,219 @@
+{
+  "description": "Recorded Boards, actions and relative polls only; images, paths, timings and account metadata are excluded. This preserves controller evidence, not OCR accuracy, policy quality or combat performance.",
+  "boards": [
+    {
+      "phase": "main_menu",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "play_menu",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "unknown",
+      "gold": null,
+      "turn": null,
+      "wins": null,
+      "lives": null,
+      "shop": [],
+      "team": []
+    },
+    {
+      "phase": "shop",
+      "gold": 1,
+      "turn": 1,
+      "wins": 0,
+      "lives": 5,
+      "shop": [
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": null
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ]
+    },
+    {
+      "phase": "shop",
+      "gold": 1,
+      "turn": 1,
+      "wins": 0,
+      "lives": 5,
+      "shop": [
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ],
+      "team": [
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 2,
+          "health": 2,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": 1
+        },
+        {
+          "occupied": true,
+          "species": null,
+          "attack": 1,
+          "health": 3,
+          "level": 1
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        },
+        {
+          "occupied": false,
+          "species": null,
+          "attack": null,
+          "health": null,
+          "level": null
+        }
+      ]
+    }
+  ],
+  "observation_runs": [
+    [
+      0,
+      2
+    ],
+    [
+      1,
+      3
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      46
+    ]
+  ],
+  "actions": [
+    {
+      "poll": 2,
+      "action": {
+        "kind": "open_play",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": 4
+    },
+    {
+      "poll": 5,
+      "action": {
+        "kind": "open_arena",
+        "slot": null,
+        "target": null
+      },
+      "acknowledged_poll": null
+    }
+  ],
+  "expected": {
+    "actions": 2,
+    "acknowledgments": 1,
+    "polls": 55,
+    "reason": "action_timeout",
+    "pending_action": {
+      "kind": "open_arena",
+      "slot": null,
+      "target": null
+    }
+  }
+}

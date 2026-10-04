@@ -229,6 +229,9 @@ dialog stops without clicking.
 `arena_setup` → turn-one `shop`, using the `open_play`, `open_arena`, and
 `start_arena` buttons. Each phase and point needs calibration; the setup
 reference must identify the selected free pack as well as the Start screen.
+If Arena resumes an existing shop directly, the controller accepts that
+transition only with recognized shop phase, a positive readable turn and
+readable gold. It then resumes policy decisions without clicking Start.
 The bot does not choose packs, dismiss account forms, or restart after a
 terminal result. Without the flag, menu phases stop without input. Preview
 the calibrated proposal before adding `--execute`. This menu flow has offline

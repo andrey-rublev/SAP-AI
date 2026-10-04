@@ -727,6 +727,28 @@ symlink-permission skip. Independent review found no actionable defect.
 `play.cmd --help` works with the local environment. A bounded native run is the
 next check; the command's existence does not establish end-to-end arena play.
 
+## Resume an existing arena, 2026-10-04
+
+The first bounded `play.cmd` test sent its own Open Play and Open Arena inputs.
+Arena resumed the previous turn-one shop directly, bypassing pack setup. The
+old controller expected ARENA_SETUP and stopped after two attempts, one
+acknowledgment and 55 polls. Open Arena now accepts a recognized SHOP only when
+turn is positive and gold readable (including zero). Fresh Start still requires
+turn one; incomplete readings cannot authorize a follow-up or reset the timeout.
+
+The actual failed run is retained as a sanitized typed fixture. Replaying its
+same observations with a two-action bound now acknowledges both menu actions at
+polls four/eleven and stops at poll twelve without a duplicate click. This is
+offline re-evaluation of native observations, not a newly successful native
+resume. Corrupting either shop counter preserves one pending Arena attempt and
+blocks further policy input. All 284 session/startup replay tests pass.
+
+A separate native continuation from that observed shop sent End Turn and the
+confirmation: two attempts, one acknowledgment, 30 polls, then UNKNOWN at the
+new dessert-themed naming screen. Every gameplay input was from the standalone
+program; agent inspection supplied no gameplay clicks. The missing naming
+reference is the next calibration blocker. Private captures/logs stay local.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

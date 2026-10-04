@@ -808,6 +808,87 @@ def test_menu_acknowledgment_requires_exact_source_and_next_phase(phase, kind, e
         assert action_acknowledged(Board(candidate), Board(expected), Action(kind)) is (candidate == phase)
 
 
+@pytest.mark.parametrize("turn", [1, 2, 9, 20])
+@pytest.mark.parametrize("gold", [0, 1, 10])
+def test_open_arena_acknowledges_resumed_shop_with_readable_counters(turn, gold):
+    assert action_acknowledged(Board(Phase.PLAY_MENU), shop(turn=turn, gold=gold),
+                               Action("open_arena"))
+
+
+@pytest.mark.parametrize("after", [
+    shop(turn=None), shop(turn=0), shop(gold=None), Board(Phase.SHOP),
+    Board(Phase.UNKNOWN, turn=1, gold=1), Board(Phase.NAMING, turn=1, gold=1),
+])
+def test_open_arena_rejects_incomplete_or_unrecognized_resumed_shop(after):
+    assert not action_acknowledged(Board(Phase.PLAY_MENU), after, Action("open_arena"))
+
+
+@pytest.mark.parametrize("phase", list(Phase))
+def test_open_arena_resumed_shop_requires_legal_source_menu(phase):
+    assert action_acknowledged(Board(phase), shop(gold=1), Action("open_arena")) is (
+        phase == Phase.PLAY_MENU
+    )
+
+
+@pytest.mark.parametrize("action", [Action("open_arena", 0), Action("open_arena", target=0)])
+def test_open_arena_resumed_shop_rejects_indexed_menu_action(action):
+    assert not action_acknowledged(Board(Phase.PLAY_MENU), shop(gold=1), action)
+
+
+def test_open_play_cannot_skip_its_play_menu_acknowledgment_for_a_resumed_shop():
+    assert not action_acknowledged(Board(Phase.MAIN_MENU), shop(gold=1), Action("open_play"))
+
+
+def test_resumed_arena_waits_for_stable_shop_then_continues_production_policy():
+    menu, play = Board(Phase.MAIN_MENU), Board(Phase.PLAY_MENU)
+    resumed = shop(gold=1, shop=(EMPTY,) * 3,
+                   team=(PetSlot(True, None, 2, 2, 1), PetSlot(True, None, 1, 3, 1),
+                         PetSlot(True, None, 1, 3, 1), EMPTY, EMPTY))
+    partial = replace(resumed, team=(*resumed.team[:1], replace(resumed.team[1], level=None),
+                                    *resumed.team[2:]))
+    naming = Board(Phase.NAMING)
+    runner, clicks, events = session(
+        [menu, menu, play, play, play, Board(Phase.UNKNOWN), partial,
+         resumed, resumed, resumed, naming, naming, naming],
+        phase_actions=arena_phase_actions(), max_actions=3,
+    )
+    runner.policy = DesktopPolicy()
+    result = runner.run()
+    assert clicks == [Action("open_play"), Action("open_arena"), Action("end_turn")]
+    assert (result.reason, result.actions, result.acknowledgments) == ("max_actions", 3, 3)
+    assert result.pending_action is None
+    assert [event["poll"] for event in events if event["event"] == "acted"] == [2, 5, 10]
+    assert [event["poll"] for event in events if event["event"] == "acknowledged"] == [4, 9, 12]
+
+
+@pytest.mark.parametrize("after", [shop(turn=None), shop(turn=0), shop(gold=None),
+                                  Board(Phase.UNKNOWN, turn=1, gold=1)])
+def test_incomplete_resumed_shop_times_out_without_retry_or_policy_input(after):
+    play = Board(Phase.PLAY_MENU)
+    runner, clicks, events = session([play, play, after], Action("roll"),
+                                    phase_actions=arena_phase_actions(), action_max_polls=3)
+    result = runner.run()
+    assert clicks == [Action("open_arena")]
+    assert (result.reason, result.polls, result.actions, result.acknowledgments) == (
+        "action_timeout", 5, 1, 0
+    )
+    assert result.pending_action == clicks[0]
+    assert [event["poll"] for event in events if event["event"] == "proposed"] == [2]
+
+
+def test_changing_incomplete_resumed_shop_does_not_reset_pending_action_budget():
+    play = Board(Phase.PLAY_MENU)
+    incomplete = [shop(turn=None), shop(gold=None), shop(turn=0),
+                  Board(Phase.UNKNOWN, turn=1, gold=1), Board(Phase.NAMING)]
+    runner, clicks, events = session([play, play, *incomplete], Action("roll"),
+                                    phase_actions=arena_phase_actions(), action_max_polls=5)
+    result = runner.run()
+    assert clicks == [Action("open_arena")]
+    assert (result.reason, result.polls, result.acknowledgments) == ("action_timeout", 7, 0)
+    assert result.pending_action == clicks[0]
+    assert not any(event["event"] == "acknowledged" for event in events)
+
+
 @pytest.mark.parametrize("after", [
     Board(Phase.UNKNOWN, turn=1), Board(Phase.SHOP), shop(turn=0), shop(turn=2), shop(turn=9),
     Board(Phase.NAMING), Board(Phase.BATTLE),
@@ -833,7 +914,7 @@ def test_arena_menu_preview_proposes_without_input(phase, action):
 @pytest.mark.parametrize("before,after,action", [
     (Board(Phase.MAIN_MENU), Board(Phase.MAIN_MENU, wins=1), Action("open_play")),
     (Board(Phase.MAIN_MENU), Board(Phase.ARENA_SETUP), Action("open_play")),
-    (Board(Phase.PLAY_MENU), shop(), Action("open_arena")),
+    (Board(Phase.PLAY_MENU), shop(turn=None), Action("open_arena")),
     (Board(Phase.ARENA_SETUP), shop(turn=2), Action("start_arena")),
 ])
 def test_unacknowledged_menu_click_is_never_retried(before, after, action):
