@@ -919,6 +919,50 @@ no-input deferral recovery there, then prepare MAIN_MENU after terminal and
 attempt an uninterrupted fresh-start-to-result run. Do not treat the previous
 calibration/resumption sequence as that evidence.
 
+## Victory recognition and recorded-image deferral validation, 2026-10-04
+
+The requested 7:30 AM continuation began with ordinary five-hour usage reset,
+46% weekly usage and unchanged paid/reset credits. The native recovery from the
+turn-two shop completed 25 actions and 25 acknowledgments in 277 polls, then
+stopped UNKNOWN at a nonterminal Victory screen on turn four. Independent fresh
+inspection confirmed the word and one trophy; no gameplay input came from the
+agent. This run did not exercise a pre-input deferral.
+
+A private strict white-text reference now covers the complete Victory word,
+excluding the character and background. The previous RGB reference exceeded
+its unchanged distance limit and clipped the bottom of the current word. A
+701-frame production-perceptor comparison completed in 58.14 seconds: only the
+new source changed UNKNOWN to ROUND_RESULT, with no known-phase changes. All
+eleven damaged-word/solid-color controls remained UNKNOWN, including removal
+of each of the seven letters. The original native profile was backed up before
+adding exactly one reference; thresholds, existing references and species
+recognition were unchanged. Terminal victory layouts remain unobserved.
+
+With that private reference, the standalone continuation reached RESULT with
+54 actions, 54 acknowledgments and 466 polls, without pending input or error.
+Fresh independent inspection confirmed Game Over on turn nine with one trophy.
+The agent then used only post-game menu navigation to prepare a separate fresh
+MAIN_MENU run; these setup clicks are outside the bot's recorded gameplay.
+
+A separate offline study exercised real Perceptor/OCR/runtime/session/policy
+against a synthetic splice of stored native images, with window capture and
+mouse IO mocked. A changing buff animation rejected the poll-two purchase
+before any fake input. Two fresh settled boards led to a new poll-four purchase,
+acknowledged at poll six. The study used nine captures and two fake clicks and
+finished in 4.02 seconds with one action, one acknowledgment and seven polls.
+This is synthetic recovery evidence, not an uninterrupted native deferral.
+The sanitized typed fixture preserves the timeline without promoting images,
+paths or names. Its real-policy regression also proves that a three-poll bound
+stops after the first fresh board with zero actions, acknowledgments or clicks.
+All 342 focused replay/export/session tests pass.
+
+A private Horse/Beaver portrait candidate was rejected. It recovered two
+highlighted source Horses across 21 labeled scenes, but recovered no species
+in an independently inspected, settled, unhighlighted holdout. Horse distances
+were .040887/.185903 and Beaver .043945 against the unchanged .04 limit. The
+candidate was not promoted and no limits were loosened. Collect separate
+settled training references and independent holdouts before adding species.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
