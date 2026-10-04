@@ -1037,6 +1037,44 @@ A separate fresh-arena Horse still abstained at .155770 against .04. Disjoint
 full images did not establish independent pose coverage. Collect materially
 different, settled and independently labeled portraits before promotion.
 
+## Second fresh native arena with observed deferral recovery, 2026-10-04
+
+A second uninterrupted MAIN_MENU-to-RESULT run under the same private profile
+completed 90 actions and 90 acknowledgments in 818 observations/439.42 seconds,
+with one proven no-input deferral and no pending action or error. The native
+process had loaded the earlier code before typed preflight diagnostics were
+added, so its original deferral deliberately has no reconstructed preflight
+Board. Fresh independent inspection confirmed Game Over on turn nine with two
+trophies. All gameplay input in this run came from the standalone bot.
+
+At poll 87 it rejected Buy shop zero into team four before input. Poll 88
+observed teammate three as unknown, poll 89 read changed 4/2 stats with unknown
+level, and polls 90/91 agreed on level one. The policy then proposed again and
+dispatched at poll 91, acknowledging the purchase at poll 93. The previous
+readable teammate had been 3/2. The native controller continued through all
+shops one through nine and terminal without a calibration pause or gameplay
+intervention. This validates a real deferral recovery as part of a complete
+arena, beyond the earlier synthetic image splice.
+
+The sanitized second-run fixture preserves every native action, acknowledgment
+and deferral poll with real policy. A poll-88 bound stops with the twelve prior
+actions acknowledged, no follow-up input and no pending/proposed action; the
+unknown slot cannot drive a purchase. Terminal replay leaves appended menu
+observations unread. Both fresh runs together have 184 acknowledged actions
+and 1,692 observations; both earned two trophies, so strategic strength remains
+limited. Recognition coverage and long-term unattended reliability still need
+broader evidence.
+
+The one-time 7:30 AM wakeup was deleted after it fired. After both terminal
+tests, the agent used only post-game menu navigation to leave SAP at MAIN_MENU
+for the next `play.cmd` launch. These setup actions are outside bot gameplay.
+Paid and reset credits remained untouched during this continuation.
+The final full suite passes 1,420 tests in 14.14 seconds with one Windows
+symlink-permission skip. Ordinary five-hour usage was 58%, weekly usage 55%,
+and no local game/test job remains running. The documented command workflow
+has two complete native arenas behind it; further changes should target the
+remaining recognition and strategy gaps instead of producing quota commits.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
@@ -1044,7 +1082,7 @@ different, settled and independently labeled portraits before promotion.
 2. Verify OCR, empty slots, species, and proposals across both day and night
    backgrounds. Include naming, battle, victory, and tier-unlock negatives.
 3. Repeat fresh-start-through-terminal validation across independent arenas
-   and newly observed layouts. One uninterrupted run is now verified; broader
+   and newly observed layouts. Two uninterrupted runs are now verified; broader
    unattended reliability and competitive performance remain unmeasured.
 4. Validate naming and further variations of results and shop layouts. A loss
    terminal, victory/draw/defeat continuation, tier dismissal, and the fifth

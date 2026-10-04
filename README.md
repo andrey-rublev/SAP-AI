@@ -185,12 +185,14 @@ The first command previews without input; `--execute` enables the program's own
 clicks. Create `.local/desktop/STOP` to request a stop. Profiles and captures are
 private and are not included in Git. See the controller guide for calibration.
 
-An uninterrupted native Windows run on October 4, 2026 started at the main menu,
-opened Arena, selected and confirmed its name, controlled nine shop turns and
-stopped at Game Over. The standalone program executed and acknowledged all 94
-actions across 874 observations, without agent gameplay input or calibration
-pauses. Independent final inspection showed turn nine and two trophies. This
-establishes one complete run on the local setup. Recognition still has gaps,
+Two uninterrupted native Windows runs on October 4, 2026 started at the main
+menu, opened Arena, selected and confirmed their names, controlled nine shop
+turns each and stopped at Game Over. The standalone program executed and
+acknowledged all 184 actions across 1,692 observations, without agent gameplay
+input or calibration pauses. The second run also recovered from a rejected
+pre-input purchase by waiting for fresh stable observations and replanning.
+Independent final inspections showed turn nine and two trophies in each run.
+This establishes two complete runs on the local setup. Recognition still has gaps,
 and the stat-based strategy does not yet use food, ordering or most abilities;
 general unattended reliability and competitive performance remain unverified.
 [Desktop progress](docs/desktop-progress.md) records the evidence and limits.
