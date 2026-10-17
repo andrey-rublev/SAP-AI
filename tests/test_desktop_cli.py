@@ -11,6 +11,8 @@ import numpy as np
 import pytest
 
 import desktop
+from desktop_launch import connect_game_window
+from desktop_runtime import GameWindowNotFound
 from desktop_session import SessionResult
 from desktop_state import Action, Board, Phase
 from desktop_vision import NumberTemplate, Perceptor, PhaseTemplate, Rect, SlotConfig, VisionProfile
@@ -120,6 +122,7 @@ def test_wall_clock_bound_must_be_finite_positive(value):
 
 def test_play_defaults_enable_execution_and_arena_with_finite_bounds():
     args = desktop.parse_args(["play"])
+    assert args.no_launch is False and args.launch_timeout == 90
     assert args.profile == ".local/desktop/calibration-native.json"
     assert args.window == "Super Auto Pets"
     assert args.execute is True
@@ -349,3 +352,44 @@ def test_cmd_launcher_missing_venv_is_clear_without_running_python(tmp_path):
     assert "python -m venv .venv" in result.stderr
     assert '-m pip install -e ".[live]"' in result.stderr
     assert "Tesseract OCR must also be installed" in result.stderr
+
+
+def test_play_forwards_explicit_launch_controls(tmp_path, cli_runtime, monkeypatch):
+    runtime, window = cli_runtime
+    runtime.observe.return_value = Board(Phase.RESULT)
+    connect = Mock(return_value=window.return_value)
+    monkeypatch.setattr(desktop, "connect_game_window", connect)
+    desktop.main(play_arguments(tmp_path) + ["--no-launch", "--launch-timeout", "12"])
+    args, kwargs = connect.call_args
+    assert args == ("Super Auto Pets", window)
+    assert kwargs["launch"] is False and kwargs["timeout"] == 12
+    assert callable(kwargs["should_stop"])
+    window.return_value.activate.assert_called_once()
+
+
+@pytest.mark.parametrize("stop", ["stop_file", "deadline", "escape"])
+def test_play_cold_launch_honors_stop_controls_before_activation_or_capture(tmp_path, cli_runtime, monkeypatch, stop):
+    runtime, window = cli_runtime
+    clock, escape = [10.], [False]
+    monkeypatch.setattr(desktop.time, "monotonic", lambda: clock[0])
+    window.side_effect = GameWindowNotFound("closed game", stop_requested=lambda: escape[0])
+    def launch():
+        if stop == "stop_file":
+            (tmp_path / "STOP").touch()
+        elif stop == "deadline":
+            clock[0] = 11.
+        else:
+            escape[0] = True
+    start = Mock(side_effect=launch)
+    def connect(*args, **kwargs):
+        return connect_game_window(*args, **kwargs, launch_game=start,
+                                   clock=lambda: clock[0], sleep=lambda _: pytest.fail("must stop before waiting"))
+    monkeypatch.setattr(desktop, "connect_game_window", connect)
+    desktop.main(play_arguments(tmp_path) + ["--max-seconds", "1"])
+    start.assert_called_once()
+    window.assert_called_once()
+    window.return_value.activate.assert_not_called()
+    runtime.observe.assert_not_called()
+    runtime.act.assert_not_called()
+    final = json.loads((tmp_path / "session.jsonl").read_text().splitlines()[-1])["result"]
+    assert (final["reason"], final["actions"], final["polls"], final["pending_action"]) == ("stopped", 0, 0, None)

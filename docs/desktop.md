@@ -132,8 +132,8 @@ Team slots are always present. Validate the schedule against the actual client.
 
 ## Preview and controlled execution
 
-For the native profile on this Windows checkout, open and restore the game,
-change to the repository in PowerShell, and run:
+For the native profile on this Windows checkout, change to the repository in
+PowerShell and run:
 
 ```powershell
 .\play.cmd
@@ -144,8 +144,20 @@ This invokes the project's `.venv` Python with `desktop.py play`, using
 arena menu transitions, checks all reference images and OCR dependencies before
 desktop access, and requests foreground ownership once. A missing environment,
 missing profile/reference, wrong client size or denied focus request fails with
-a diagnostic. It does not launch the game, restore a minimized client, or handle
-authentication. Profiles remain private and must match the running client.
+a diagnostic. If the standard SAP client is closed, it requests its installed
+Steam game once and waits up to 90 seconds for a client at the calibrated size.
+The wait reads window geometry without activating it. Existing clients retain
+the normal immediate size/focus checks. Use `--no-launch` to require an already
+open client, or `--launch-timeout 120` to change the bounded startup wait.
+It does not restore a minimized client or handle authentication. Profiles
+remain private and must match the running client.
+
+Before its first recognized phase, `play` allows up to 300 initial unknown
+observations for loading screens; `--startup-polls` adjusts that bound. It sends
+no input on unknown screens. The normal 25-unknown-observation limit resumes
+after the first recognized phase. Total observation/runtime bounds, stop file
+and held Escape remain active during startup; a stalled or manual sign-in
+screen eventually stops without input.
 
 `play` defaults to 600 actions, 12,000 observations and one hour. Override these
 with, for example, `.\play.cmd --max-actions 40 --max-seconds 600`. Stop-file,

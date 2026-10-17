@@ -56,6 +56,14 @@ class DesktopUnavailable(RuntimeError):
     pass
 
 
+class GameWindowNotFound(DesktopUnavailable):
+    """No game client exists yet; other window failures must not relaunch it."""
+
+    def __init__(self, message, *, stop_requested=None):
+        super().__init__(message)
+        self.stop_requested = stop_requested
+
+
 def _tesseract_executable():
     executable = shutil.which("tesseract")
     if executable:
@@ -141,7 +149,8 @@ class WindowsGameWindow:
         self.title = title
         self.handle = self.user32.FindWindowW(None, title)
         if not self.handle:
-            raise DesktopUnavailable(f"open the {title!r} game window first")
+            raise GameWindowNotFound(f"open the {title!r} game window first",
+                                     stop_requested=self.stop_requested)
         import pyautogui
         pyautogui.FAILSAFE = True
         pyautogui.PAUSE = 0.1
@@ -158,6 +167,19 @@ class WindowsGameWindow:
         if not self._escape_stopped:
             self._escape_stopped = bool(self.user32.GetAsyncKeyState(VK_ESCAPE) & 0x8000)
         return self._escape_stopped
+
+    def ready_for_profile(self, expected_size):
+        """Read startup client geometry without activation or capture.
+
+        Unity can expose its final title before applying its saved fullscreen
+        size. A newly launched client must reach calibration before startup
+        activation; existing clients still use activate's immediate checks.
+        """
+        if not self.user32.IsWindow(self.handle) or self.user32.IsIconic(self.handle):
+            return False
+        rect = wintypes.RECT()
+        return bool(self.user32.GetClientRect(self.handle, ctypes.byref(rect))
+                    and (rect.right, rect.bottom) == tuple(expected_size))
 
     def activate(self, expected_size):
         """Request foreground ownership once, before the session starts.

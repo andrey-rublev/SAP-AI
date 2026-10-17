@@ -42,7 +42,10 @@ class SessionResult:
     error: str | None = None
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        result = asdict(self)
+        if self.last_board is not None:
+            result["last_board"] = self.last_board.to_dict()
+        return result
 
 
 def _same_turn(before: Board, after: Board) -> bool:
@@ -199,11 +202,14 @@ class DesktopSession:
                  stable_frames=2, action_timeout=10.0, action_max_polls=50,
                  max_unknown_polls=25, clock=time.monotonic, sleep=time.sleep,
                  should_stop: Callable[[], bool] | None = None,
-                 phase_actions=None, max_transition_polls=300):
+                 phase_actions=None, max_transition_polls=300, max_initial_unknown_polls=None):
+        if max_initial_unknown_polls is None:
+            max_initial_unknown_polls = max_unknown_polls
         for name, value in (("max_actions", max_actions), ("max_polls", max_polls),
                             ("stable_frames", stable_frames),
                             ("action_max_polls", action_max_polls),
                             ("max_unknown_polls", max_unknown_polls),
+                            ("max_initial_unknown_polls", max_initial_unknown_polls),
                             ("max_transition_polls", max_transition_polls)):
             if type(value) is not int or value < 1:
                 raise ValueError(f"{name} must be a positive integer")
@@ -219,6 +225,7 @@ class DesktopSession:
         self.poll_interval, self.stable_frames = poll_interval, stable_frames
         self.action_timeout, self.action_max_polls = action_timeout, action_max_polls
         self.max_unknown_polls = max_unknown_polls
+        self.max_initial_unknown_polls = max_initial_unknown_polls
         self.clock, self.sleep, self.should_stop = clock, sleep, should_stop
         self.phase_actions = {Phase(phase): action for phase, action in (phase_actions or {}).items()}
         for phase, action in self.phase_actions.items():
@@ -234,6 +241,7 @@ class DesktopSession:
         waiting_turn = last_shop_turn = None
         transition_active, transition_polls = False, 0
         completed_transitions = set()
+        initial_unknown = True
         started = pending_at = self.clock()
         reason, error, stage = "max_polls", None, "event"
         event_failed = False
@@ -268,12 +276,15 @@ class DesktopSession:
                 fingerprint = board.fingerprint()
                 stable = stable + 1 if fingerprint == last_fingerprint else 1
                 last_fingerprint = fingerprint
-                emit("observed", board=asdict(board), stable_frames=stable)
+                emit("observed", board=board.to_dict(), stable_frames=stable)
                 unknown = unknown + 1 if board.phase == Phase.UNKNOWN else 0
+                if board.phase != Phase.UNKNOWN:
+                    initial_unknown = False
                 if board.phase == Phase.RESULT:
                     reason = "result"
                     break
-                if unknown >= self.max_unknown_polls:
+                unknown_limit = self.max_initial_unknown_polls if initial_unknown else self.max_unknown_polls
+                if unknown >= unknown_limit:
                     reason = "unknown_timeout"
                     break
                 if board.phase in PHASE_ACTION_KINDS or board.phase == Phase.BATTLE:
@@ -295,7 +306,7 @@ class DesktopSession:
                                                      previous_shop_turn=last_shop_turn)
                     if confirmed and (stable >= self.stable_frames or board.phase == Phase.BATTLE):
                         acknowledgments += 1
-                        emit("acknowledged", action=asdict(pending), board=asdict(board))
+                        emit("acknowledged", action=asdict(pending), board=board.to_dict())
                         pending = None
                         continue
                     if (pending_polls >= self.action_max_polls
@@ -338,7 +349,7 @@ class DesktopSession:
                 if proposal.kind == "end_turn" and board.turn is None:
                     reason = "turn_unreadable"
                     break
-                emit("proposed", action=asdict(proposal), board=asdict(board))
+                emit("proposed", action=asdict(proposal), board=board.to_dict())
                 if self.preview:
                     reason = "preview"
                     break

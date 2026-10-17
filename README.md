@@ -12,8 +12,7 @@ this arena is not evidence of real-game performance.
 
 ## Start here
 
-For the calibrated desktop setup on this laptop, open Super Auto Pets at its
-main menu and restore its window, then run in PowerShell:
+For the calibrated desktop setup on this laptop, run in PowerShell:
 
 ```powershell
 cd C:\Users\nikhi\Downloads\SAP-AI
@@ -21,6 +20,8 @@ cd C:\Users\nikhi\Downloads\SAP-AI
 ```
 
 The command uses the project's Python environment and private native profile.
+If the game is closed, it opens the installed Steam game once and waits for
+startup. An already open game must be restored at the calibrated window size.
 Hold Escape until it stops, or move the pointer to a screen corner. A completed
 game stops the program; return to the main menu before starting another arena.
 See [Desktop controller](docs/desktop.md) for dependencies, calibration and
@@ -157,8 +158,7 @@ calibrated phases, chooses actions, physically clicks, and checks their effects.
 It controls only the foreground game window and stops on ambiguous observations,
 unacknowledged actions, loss of focus, a stop file, or its runtime limit.
 
-On this Windows checkout, open Super Auto Pets and restore its window, then run
-these commands in PowerShell:
+On this Windows checkout, run these commands in PowerShell:
 
 ```powershell
 cd C:\Users\nikhi\Downloads\SAP-AI
@@ -166,7 +166,7 @@ cd C:\Users\nikhi\Downloads\SAP-AI
 ```
 
 The launcher uses the project's `.venv`, checks the private native calibration
-and OCR dependencies, brings the game forward once, and enables the bot's own
+and OCR dependencies, opens a closed game through Steam, brings it forward once, and enables the bot's own
 actions and arena transitions. It stops after a terminal result or a configured
 bound (one hour, 600 actions, 12,000 observations by default). Changing apps later
 stops control. Hold Escape until the bot stops, move the pointer to a screen corner, or create

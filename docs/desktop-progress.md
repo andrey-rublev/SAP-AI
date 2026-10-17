@@ -1075,6 +1075,41 @@ and no local game/test job remains running. The documented command workflow
 has two complete native arenas behind it; further changes should target the
 remaining recognition and strategy gaps instead of producing quota commits.
 
+## Cold game startup and loading grace, 2026-10-17
+
+The renewed work window began from a clean main branch with ordinary five-hour
+usage at 1% and no paid/reset credits used. The current installed client was
+closed. A fresh baseline from its main menu completed 81 actions and 81
+acknowledgments in 738 observations/390.43 seconds, with one typed pre-input
+deferral, no pending action and no error. Independent final inspection showed
+Game Over on turn eight with two trophies. All gameplay input came from the
+standalone program; the agent only opened the installed client for setup.
+
+`play.cmd` can now open the installed Steam game when its standard window is
+missing. Only the specific missing-window error permits one launch; arbitrary
+window/focus/dependency failures cannot relaunch it. The original native Escape
+latch works even before a client exists. Stop-file/runtime limits remain live
+through the bounded 90-second wait. `--no-launch` requires an existing game and
+`--launch-timeout` adjusts that bound. No authentication input is implemented.
+
+The first cold test revealed that Unity exposes the final title before applying
+saved fullscreen geometry. It stopped before capture/input. Newly launched
+clients now wait for the calibrated size using native reads without focus or
+capture. The second test reached full size but stopped after 25 unknown
+observations/8.04 seconds on the game's automatic login/loading screen, again
+with zero actions. Initial unknown grace is now separately bounded: `play`
+allows 300 initial observations, then restores the normal limit of 25 after
+the first recognized phase. Other run/session defaults remain unchanged.
+
+After confirming the game was closed, the third command-only test launched it,
+waited through 30 initial unknown observations and dispatched Open Play/Open
+Arena/Start Arena at polls 32/35/38. Its first three purchases were acknowledged
+and it reached the turn-one shop without agent input. The full run is still
+being recorded. Private profiles, capture regions and thresholds are unchanged.
+Independent review approved the startup guards and loading grace; mocked
+startup/runtime/CLI/session tests cover stop conditions, late windows, geometry
+transitions and restoring the original unknown limit.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

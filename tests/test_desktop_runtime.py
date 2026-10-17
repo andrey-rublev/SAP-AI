@@ -10,6 +10,7 @@ import pytest
 
 from desktop import main
 import desktop_runtime
+from desktop_runtime import GameWindowNotFound
 from desktop_runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow, prepare_numeric_crop, tesseract_ocr, validate_live_dependencies
 from desktop_session import DesktopSession
 from desktop_state import Action, Board, BoardChangedBeforeInput, DesktopPolicy, PetSlot, Phase
@@ -644,12 +645,17 @@ def test_escape_after_drag_press_releases_mouse_and_latches_stop():
 def test_missing_window_fails_construction_before_mouse_import(monkeypatch):
     native = Mock()
     native.FindWindowW.return_value = 0
+    native.GetAsyncKeyState.return_value = -32768
     monkeypatch.setattr(desktop_runtime, "os", SimpleNamespace(name="nt"))
     loader = Mock(return_value=native)
     monkeypatch.setattr(desktop_runtime.ctypes, "WinDLL", loader, raising=False)
     monkeypatch.setitem(sys.modules, "pyautogui", None)
-    with pytest.raises(DesktopUnavailable, match="open the 'Super Auto Pets' game window first"):
+    with pytest.raises(GameWindowNotFound, match="open the 'Super Auto Pets' game window first") as caught:
         WindowsGameWindow()
+    assert caught.value.stop_requested() is True
+    native.GetAsyncKeyState.return_value = 0
+    assert caught.value.stop_requested() is True
+    native.GetAsyncKeyState.assert_called_once_with(0x1B)
     native.SetForegroundWindow.assert_not_called()
 
 
@@ -663,6 +669,27 @@ def test_startup_activates_target_once_after_checking_calibrated_size():
     assert window.user32.GetForegroundWindow.call_count == 2
     window.mouse.assert_not_called()
     assert window.mouse.mock_calls == []
+
+
+@pytest.mark.parametrize("size,expected", [((100, 100), True), ((50, 50), False)])
+def test_cold_launch_geometry_readiness_never_activates_or_captures(size, expected):
+    window = activation_window(size=size)
+    assert window.ready_for_profile((100, 100)) is expected
+    window.user32.SetForegroundWindow.assert_not_called()
+    window.user32.GetForegroundWindow.assert_not_called()
+    assert window.mouse.mock_calls == []
+
+
+@pytest.mark.parametrize("state", ["closed", "minimized"])
+def test_closed_or_minimized_window_is_not_ready_for_cold_launch(state):
+    window = activation_window()
+    if state == "closed":
+        window.user32.IsWindow.return_value = False
+    else:
+        window.user32.IsIconic.return_value = True
+    assert window.ready_for_profile((100, 100)) is False
+    window.user32.GetClientRect.assert_not_called()
+    window.user32.SetForegroundWindow.assert_not_called()
 
 
 def test_startup_does_not_change_focus_when_target_is_already_foreground():

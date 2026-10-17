@@ -13,6 +13,7 @@ import numpy as np
 
 from desktop_runtime import (CachedOCR, DesktopRuntime, WindowsGameWindow,
                              tesseract_ocr, validate_live_dependencies)
+from desktop_launch import connect_game_window
 from desktop_session import DesktopSession, SessionResult
 from desktop_state import DesktopPolicy
 from desktop_vision import Perceptor, Rect, VisionProfile
@@ -110,6 +111,12 @@ def add_session_arguments(command, *, play=False):
     command.add_argument("--window", default="Super Auto Pets")
     if play:
         command.set_defaults(execute=True, start_arena=True)
+        command.add_argument("--no-launch", action="store_true",
+                             help="require an already open game instead of launching it through Steam")
+        command.add_argument("--launch-timeout", type=positive_seconds, default=90,
+                             help="seconds to wait for a closed game to open; runtime and stop controls still apply")
+        command.add_argument("--startup-polls", type=positive_int, default=300,
+                             help="initial unknown observations allowed while the game loads; normal unknown limit resumes after recognition")
     else:
         command.add_argument("--execute", action="store_true")
         command.add_argument("--start-arena", action="store_true",
@@ -224,7 +231,15 @@ def main(argv=None):
         if should_stop():
             stopped_before_start(args)
             return
-    window = WindowsGameWindow(args.window)
+    if args.command == "play":
+        window = connect_game_window(args.window, WindowsGameWindow, launch=not args.no_launch,
+                                     timeout=args.launch_timeout, should_stop=should_stop,
+                                     is_ready=lambda candidate: candidate.ready_for_profile(profile.image_size))
+        if window is None:
+            stopped_before_start(args)
+            return
+    else:
+        window = WindowsGameWindow(args.window)
     if args.command == "play":
         escape_requested = window.stop_requested
         window.should_stop = should_stop
@@ -241,6 +256,7 @@ def main(argv=None):
         session = DesktopSession(runtime.observe, runtime.act, DesktopPolicy(),
                                  preview=not args.execute, max_actions=args.max_actions,
                                  max_polls=args.max_polls, action_timeout=args.action_timeout,
+                                 max_initial_unknown_polls=args.startup_polls if args.command == "play" else None,
                                  event_callback=event,
                                  phase_actions=runtime.phase_actions(start_arena=args.start_arena),
                                  should_stop=should_stop)
