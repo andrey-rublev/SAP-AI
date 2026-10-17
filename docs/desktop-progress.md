@@ -1287,6 +1287,32 @@ Further layouts, names and negative screens need validation before a runtime
 observer can use this evidence for gameplay decisions.
 The combined repository suite now passes 1,834 tests with one expected skip.
 
+## Verified restart through a fresh arena result, 2026-10-17
+
+After the private turn-eleven calibration, the resumed arena reached RESULT with
+11 actions/11 acknowledgments in 77 observations. The batch observed the terminal
+again, requested normal shutdown, verified disappearance and cold-launched the
+next game. That fresh session waited through 30 unknown loading observations,
+opened Play/Arena, selected and confirmed its name and completed nine shop turns.
+It stopped at RESULT with 90 actions/90 acknowledgments in 854 observations and
+416.91 seconds. Independent final inspection confirmed turn nine and three
+trophies. No gameplay input came from the agent.
+
+The full batch completed two arenas with 101 actions/101 acknowledgments, 932
+observations (including one fresh restart check), one shutdown attempt and no
+pending action/error. Only the second arena began fresh; this does not rewrite
+earlier interrupted sessions as uninterrupted runs. Together with the earlier
+October 17 baseline and two October 4 runs, four complete fresh runs are verified.
+
+The sanitized fresh-arena fixture preserves all 90 policy-generated actions,
+acknowledgments and 854 polls under real policy/session replay with mocked IO.
+An unreadable late-roll gold receipt instead stops at 88 attempted/87 acknowledged
+actions, retaining the pending roll without reading a later terminal. Export
+checks exclude capture paths, chosen names and account metadata. Both new tests
+pass. A six-arena, 90-minute native soak is running with bounded private recording;
+its outcome is not yet claimed. The offline wheel also builds without network
+dependencies and contains the required modules without private assets.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
@@ -1294,7 +1320,7 @@ The combined repository suite now passes 1,834 tests with one expected skip.
 2. Verify OCR, empty slots, species, and proposals across both day and night
    backgrounds. Include naming, battle, victory, and tier-unlock negatives.
 3. Repeat fresh-start-through-terminal validation across independent arenas
-   and newly observed layouts. Two uninterrupted runs are now verified; broader
+   and newly observed layouts. Four uninterrupted fresh runs are now verified; broader
    unattended reliability and competitive performance remain unmeasured.
 4. Validate naming and further variations of results and shop layouts. A loss
    terminal, victory/draw/defeat continuation, tier dismissal, and the fifth

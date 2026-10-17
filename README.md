@@ -195,7 +195,11 @@ acknowledged all 184 actions across 1,692 observations, without agent gameplay
 input or calibration pauses. The second run also recovered from a rejected
 pre-input purchase by waiting for fresh stable observations and replanning.
 Independent final inspections showed turn nine and two trophies in each run.
-This establishes two complete runs on the local setup. Recognition still has gaps,
+Two more fresh main-menu-to-result runs completed on October 17. The latest
+followed a verified bot-controlled game restart and completed 90 actions with
+90 acknowledgments, ending at turn nine with three trophies. Its batch also
+finished a resumed arena, for 101 actions/101 acknowledgments across both sessions.
+This establishes four complete fresh runs on the local setup. Recognition still has gaps,
 and the stat-based strategy does not yet use food, ordering or most abilities;
 general unattended reliability and competitive performance remain unverified.
 [Desktop progress](docs/desktop-progress.md) records the evidence and limits.
