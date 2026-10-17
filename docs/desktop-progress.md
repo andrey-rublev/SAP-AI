@@ -1104,8 +1104,10 @@ the first recognized phase. Other run/session defaults remain unchanged.
 After confirming the game was closed, the third command-only test launched it,
 waited through 30 initial unknown observations and dispatched Open Play/Open
 Arena/Start Arena at polls 32/35/38. Its first three purchases were acknowledged
-and it reached the turn-one shop without agent input. The full run is still
-being recorded. Private profiles, capture regions and thresholds are unchanged.
+and it reached the turn-one shop without agent input. It later stopped safely
+at turn six with 53 dispatched actions and 52 acknowledgments: an unidentified
+level-one Pig sold for two gold, but the receipt expected one. Private profiles,
+capture regions and thresholds are unchanged.
 Independent review approved the startup guards and loading grace; mocked
 startup/runtime/CLI/session tests cover stop conditions, late windows, geometry
 transitions and restoring the original unknown limit.
@@ -1132,6 +1134,27 @@ The historical proposal audit covered 393 distinct recorded shop Boards:
 290 legal proposals, 103 abstentions and zero changed choices. There is no
 demonstrated native benefit, so the candidate remains a sandbox. All 85 focused
 candidate/economy/Pig-sale/opening replay tests pass. The report remains private.
+
+## Unidentified level-one sale receipt, 2026-10-17
+
+The selected native 4/1 pet became transiently unreadable, then visibly empty,
+while gold rose from eight to ten. Sale acknowledgment now accepts one or two
+gold for an unidentified level-one seller after the selected slot becomes empty.
+Planning still budgets only one gold. Identified pets retain their exact receipt
+rules, unsupported levels remain protected, and the controller still requires
+stable observations and never retries a pending sale.
+
+A sanitized seven-observation fixture replays this recorded window through the
+real policy/session with mocked input. It dispatches one sale at relative poll
+two and acknowledges it at poll six. This is offline evidence; the original
+native timeout remains recorded and the new receipt still needs live validation.
+Counterfactual gold, occupancy, target, species and level cases reject invalid
+receipts. All 309 focused session/Pig-sale/replay tests pass.
+
+Earlier today a separate fresh native arena completed with 81 dispatched actions,
+81 acknowledgments and no pending action, reaching the turn-eight loss terminal
+with two trophies. This establishes another complete bounded run, not competitive
+performance or general unattended reliability.
 
 ## Remaining milestones
 

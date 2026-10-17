@@ -201,8 +201,8 @@ def test_known_level_one_pig_sale_requires_exact_two_gold(income, acknowledged):
     assert action_acknowledged(before, after, Action("sell", 0)) is acknowledged
 
 
-@pytest.mark.parametrize("species", [None, "ant", "fish"])
-def test_two_gold_sale_requires_identified_pig(species):
+@pytest.mark.parametrize("species", ["ant", "fish"])
+def test_two_gold_sale_rejects_contradictory_identified_non_pig(species):
     before = shop(team=(replace(ANT, species=species), EMPTY, EMPTY, EMPTY, EMPTY))
     after = replace(before, gold=12, team=(EMPTY,) * 5)
     assert not action_acknowledged(before, after, Action("sell", 0))

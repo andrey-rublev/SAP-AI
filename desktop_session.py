@@ -156,8 +156,14 @@ def action_acknowledged(before: Board, after: Board, action: Action,
         i = action.slot
         if i is None or i >= len(before.team) or i >= len(after.team):
             return False
-        income = observed_sale_income(before.team[i])
-        return income is not None and after.team[i].occupied is False and delta == income
+        sold = before.team[i]
+        income = observed_sale_income(sold)
+        # An unidentified level-one Pig can return two gold. Keep planning on
+        # the supported one-gold minimum; acknowledge only its observed bounded
+        # receipt after the selected slot is visibly empty. This does not infer
+        # species, plan a bonus, or permit a sale retry.
+        receipts = (1, 2) if sold.species is None and sold.level == 1 else (income,)
+        return income is not None and after.team[i].occupied is False and delta in receipts
     if action.kind not in ("buy", "merge"):
         return False
     i, j = action.slot, action.target

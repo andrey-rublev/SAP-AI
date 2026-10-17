@@ -61,7 +61,7 @@ def test_recorded_pig_sale_with_incomplete_receipt_stops_without_retry(recording
         after = replace(after, gold=before.gold + 1)
     else:
         pets = list(before.team)
-        pets[1] = replace(pets[1], species=None)
+        pets[1] = replace(pets[1], species="fish")
         before = replace(before, team=tuple(pets))
     action = Action.from_dict(data["action"])
     result, clicks, events = replay(action, [before, before] + [after] * 5, action_max_polls=5)
