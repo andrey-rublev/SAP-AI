@@ -1356,6 +1356,10 @@ gate refused final evaluation because resized inputs were near-duplicates across
 training/calibration/test splits. No predictions or final accuracy were produced.
 No rows, crops, features or thresholds were changed to bypass the refusal. New
 independent appearance data is required before this candidate can be assessed.
+The subsequent duplicate-only audit found overlap in 10 of 15 known crops and
+all six empties, including seven and four exact copies respectively. None of
+the three unfamiliar crops overlapped. The audit computed no classifier scores;
+there was no alternate-subset evaluation.
 
 ## Start another arena from an existing result, 2026-10-17
 
@@ -1376,7 +1380,28 @@ All 1,857 repository tests pass with one expected skip. The final native test
 started from the completed soak result, verified it twice, closed it once and
 launched a fresh arena using the standalone program. A first activation attempt
 was denied focus and stopped before input; after setup restored game focus, the
-test resumed as a new invocation. Its full arena outcome is still being recorded.
+test resumed as a new invocation. That invocation completed a fresh arena with
+92 actions/92 acknowledgments in 811 observations and 403.07 session seconds.
+The two bootstrap observations bring its total to 813. It requested one normal
+close, retained the old zero-action/one-poll result receipt, and stopped with no
+pending action or error. Independent inspection confirmed Game Over at turn nine
+with one trophy. All gameplay and the completed-client restart came from the bot.
+
+Eleven complete fresh native runs are now verified across October 4 and 17.
+The final wheel builds offline, includes the updated bootstrap implementation,
+and contains no private images, calibration or trained models. All project
+controller/training jobs were stopped before the 5 p.m. control deadline; the
+game remains open at its completed result. Both requested October 17 continuation
+wakeups were deleted after firing, with no further schedule created.
+
+The delivered command is `cd C:\Users\nikhi\Downloads\SAP-AI`, then
+`.\play.cmd`. Hold Escape until it stops, use a screen corner, or create the
+documented STOP file. This is a working calibrated desktop baseline on this
+laptop, not a finished competitive player: food, ordering and most abilities
+remain unsupported, species recognition has gaps, and learned recognizers remain
+disabled. Further work should validate tooltip/target association and readable
+shop levels before enabling identity-dependent decisions, then implement food
+observation, execution and receipts with current-game evidence.
 
 ## Remaining milestones
 
@@ -1385,7 +1410,7 @@ test resumed as a new invocation. Its full arena outcome is still being recorded
 2. Verify OCR, empty slots, species, and proposals across both day and night
    backgrounds. Include naming, battle, victory, and tier-unlock negatives.
 3. Repeat fresh-start-through-terminal validation across independent arenas
-   and newly observed layouts. Ten uninterrupted fresh runs are now verified; broader
+   and newly observed layouts. Eleven uninterrupted fresh runs are now verified; broader
    unattended reliability and competitive performance remain unmeasured.
 4. Validate naming and further variations of results and shop layouts. A loss
    terminal, victory/draw/defeat continuation, tier dismissal, and the fifth

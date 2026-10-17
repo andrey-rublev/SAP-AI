@@ -201,7 +201,9 @@ followed a verified bot-controlled game restart and completed 90 actions with
 90 acknowledgments, ending at turn nine with three trophies. Its batch also
 finished a resumed arena, for 101 actions/101 acknowledgments across both sessions.
 A subsequent six-arena soak completed 490 actions/490 acknowledgments and five
-verified client restarts without intervention. This establishes ten complete
+verified client restarts without intervention. A final launcher test began at an
+existing Game Over screen, restarted it once and completed another fresh arena
+with 92 actions/92 acknowledgments. This establishes eleven complete
 fresh runs on the local setup. All six soak games were losses with 0–4 trophies;
 the strategy remains weak. Recognition still has gaps,
 and the stat-based strategy does not yet use food, ordering or most abilities;

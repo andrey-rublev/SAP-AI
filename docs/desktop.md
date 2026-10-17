@@ -151,7 +151,7 @@ PowerShell and run:
 This invokes the project's `.venv` Python with `desktop.py play`, using
 `.local/desktop/calibration-native.json` by default. It enables execution and
 arena menu transitions, checks all reference images and OCR dependencies before
-desktop access, and requests foreground ownership once. A missing environment,
+desktop access, and requests foreground ownership once per session. A missing environment,
 missing profile/reference, wrong client size or denied focus request fails with
 a diagnostic. If the standard SAP client is closed, it requests its installed
 Steam game once and waits up to 90 seconds for a client at the calibrated size.
@@ -200,7 +200,7 @@ the process or repeats a failed close. With `--restart-completed`, one initial
 completed screen may bootstrap into the first actual arena; this separate
 one-attempt allowance is additional to the N-minus-one normal between-arena
 restarts. Without that flag, a zero-action result stops without being counted.
-The default remains one arena and does not close the game.
+The default plays one actual arena and leaves its final result open.
 
 Batch summaries and separate arena logs go into a new directory beside `--log`;
 the supplied log file itself is preserved. `--record-dir` records into separate
