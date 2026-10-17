@@ -90,6 +90,47 @@ def observed_sale_income(pet: PetSlot) -> int | None:
     return 1
 
 
+SINGLE_TARGET_STATS = "single_target_stats"
+SUPPORTED_STAT_FOOD_IDS = frozenset({"apple"})
+
+
+@dataclass(frozen=True)
+class FoodSlot:
+    """Optional observed food data; no price or effect is supplied by identity.
+
+    ``None`` occupancy means an unreadable calibrated slot. A Board with no
+    food slots instead means that food observation is not configured. Apple is
+    only an allowlisted identity token for an explicit flat-stat contract; this
+    schema does not establish its current game mechanics or stat caps.
+    """
+
+    occupied: bool | None
+    food_id: str | None = None
+    cost: int | None = None
+    effect: str | None = None
+    attack_bonus: int | None = None
+    health_bonus: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.occupied is not None and type(self.occupied) is not bool:
+            raise ValueError("occupied must be True, False, or None")
+        for name in ("food_id", "effect"):
+            value = getattr(self, name)
+            if value is not None:
+                if not isinstance(value, str) or not value.strip():
+                    raise ValueError(f"{name} must be a nonempty string or None")
+                object.__setattr__(self, name, " ".join(value.split()).casefold())
+        if self.effect is not None and self.effect != SINGLE_TARGET_STATS:
+            raise ValueError("unsupported food effect")
+        _integer(self.cost, "cost", minimum=1)
+        _integer(self.attack_bonus, "attack_bonus")
+        _integer(self.health_bonus, "health_bonus")
+        if self.occupied is False and any(value is not None for value in (
+            self.food_id, self.cost, self.effect, self.attack_bonus, self.health_bonus,
+        )):
+            raise ValueError("an empty slot cannot contain food metadata")
+
+
 @dataclass(frozen=True)
 class Board:
     phase: Phase
@@ -99,6 +140,7 @@ class Board:
     lives: int | None = None
     shop: tuple[PetSlot, ...] = ()
     team: tuple[PetSlot, ...] = ()
+    food: tuple[FoodSlot, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "phase", Phase(self.phase))
@@ -111,20 +153,34 @@ class Board:
             if not all(isinstance(slot, PetSlot) for slot in values):
                 raise ValueError(f"{name} must contain PetSlot values")
             object.__setattr__(self, name, tuple(values))
+        if not isinstance(self.food, (list, tuple)) or len(self.food) > 5:
+            raise ValueError("food must contain at most five FoodSlot values")
+        if not all(isinstance(slot, FoodSlot) for slot in self.food):
+            raise ValueError("food must contain FoodSlot values")
+        object.__setattr__(self, "food", tuple(self.food))
 
     def fingerprint(self) -> tuple:
         """A stable, hashable state signature for repeated-frame detection."""
         def slots(values: tuple[PetSlot, ...]) -> tuple:
             return tuple((pet.occupied, pet.species, pet.attack, pet.health, pet.level) for pet in values)
 
-        return (self.phase.value, self.gold, self.turn, self.wins, self.lives,
-                slots(self.shop), slots(self.team))
+        legacy = (self.phase.value, self.gold, self.turn, self.wins, self.lives,
+                  slots(self.shop), slots(self.team))
+        if not self.food:
+            return legacy
+        return (*legacy, ("food", tuple((item.occupied, item.food_id, item.cost, item.effect,
+                                         item.attack_bonus, item.health_bonus) for item in self.food)))
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
         result["phase"] = self.phase.value
         result["shop"] = list(result["shop"])
         result["team"] = list(result["team"])
+        if self.food:
+            result["food"] = list(result["food"])
+        else:
+            # Keep old logs, typed fixtures and exported Board schemas exact.
+            result.pop("food")
         return result
 
     @classmethod
@@ -133,6 +189,10 @@ class Board:
         for name in ("shop", "team"):
             if name in values:
                 values[name] = tuple(PetSlot(**slot) for slot in values[name])
+        if "food" in values:
+            if not isinstance(values["food"], (list, tuple)):
+                raise ValueError("food must contain FoodSlot mappings")
+            values["food"] = tuple(FoodSlot(**slot) for slot in values["food"])
         return cls(**values)
 
 
@@ -143,7 +203,7 @@ class Action:
     target: int | None = None
 
     def __post_init__(self) -> None:
-        if self.kind not in {"buy", "roll", "sell", "end_turn", "merge", "continue",
+        if self.kind not in {"buy", "buy_food", "roll", "sell", "end_turn", "merge", "continue",
                              "choose_name", "confirm_name", "continue_round", "dismiss_tier",
                              "dismiss_life_reward",
                              "confirm_end_turn", "open_play", "open_arena", "start_arena"}:
@@ -191,6 +251,19 @@ def legal_action(board: Board, action: Action) -> bool:
                 and action.slot is None and action.target is None)
     if not _known_shop(board):
         return False
+    if action.kind == "buy_food":
+        if (action.slot is None or action.target is None
+                or action.slot >= len(board.food) or action.target >= len(board.team)):
+            return False
+        source, target = board.food[action.slot], board.team[action.target]
+        return (
+            source.occupied is True and source.food_id in SUPPORTED_STAT_FOOD_IDS
+            and source.effect == SINGLE_TARGET_STATS and source.cost is not None
+            and board.gold >= source.cost
+            and source.attack_bonus is not None and source.health_bonus is not None
+            and source.attack_bonus + source.health_bonus > 0
+            and target.occupied is True and target.attack is not None and target.health is not None
+        )
     if action.kind in {"roll", "end_turn"}:
         return action.slot is None and action.target is None and (
             action.kind == "end_turn" or board.gold >= 1

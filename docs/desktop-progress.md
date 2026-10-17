@@ -1156,6 +1156,18 @@ Earlier today a separate fresh native arena completed with 81 dispatched actions
 with two trophies. This establishes another complete bounded run, not competitive
 performance or general unattended reliability.
 
+## Explicit food observation schema, 2026-10-17
+
+`Board` can now carry optional typed food slots with separately observed identity,
+price, effect and stat bonuses. No values are inferred from an identity. An
+uncalibrated food row remains distinct from an unknown or empty calibrated slot;
+legacy board JSON and fingerprints remain exact when food is not configured.
+The legality check requires an allowlisted flat-stat food contract, enough gold
+and a readable occupied target. The default policy, perceptor and native runtime
+do not yet buy food; this is a foundation for separately validated observation,
+execution and receipts. No current Apple balance or stat-cap rules are claimed.
+Independent review found no compatibility blocker; 164 targeted tests passed.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
