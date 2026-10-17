@@ -110,6 +110,19 @@ def test_hover_rechecks_after_travel_without_any_followup_input(failure):
     assert target.mouse.mock_calls == [call.moveTo(520, 230, duration=.15)]
 
 
+def test_stop_during_hover_geometry_query_prevents_pointer_travel():
+    target = native_window()
+    stopped = [False]
+    target.should_stop = lambda: stopped[0]
+    def geometry():
+        stopped[0] = True
+        return 500, 200, 100, 100
+    target.geometry = geometry
+    with pytest.raises(DesktopUnavailable, match="stop requested"):
+        target.hover((20, 30), (100, 100))
+    assert target.mouse.mock_calls == []
+
+
 def tooltip_runtime(*, execute=True, rest=(50, 95)):
     empty, fish = PetSlot(False), PetSlot(True, "fish", 2, 3, 1)
     before = Board(Phase.SHOP, gold=3, turn=10, shop=(fish,), team=(empty,) * 5)

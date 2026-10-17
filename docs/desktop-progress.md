@@ -1267,6 +1267,26 @@ other-turn crops matched; the closest distance was .07417 (observed turns 1–10
 not independent manual labels). No global threshold or receipt rule changed.
 The original timeout is preserved; a new resumed batch is being tested.
 
+## Calibrated tooltip title location, 2026-10-17
+
+A pure offline layout helper can now locate a single connected white panel and
+return its title crop with geometric evidence. Search bounds, panel dimensions,
+title offset and color/density checks are explicit calibration inputs; no game
+coordinates are built in. Clipped, fragmented, sparse or ambiguous panels abstain.
+The helper does not capture, hover, OCR or enrich a Board. Combined synthetic
+title/layout tests pass: 81 tests.
+
+Development calibration on the two new hover frames located Tiger and Rhino in
+different screen positions, and both exact OCR preparations read each title.
+The no-tooltip control produced no panel. Body text occupied more than the
+default density allowance; private calibration used white fraction .75 with
+edge fraction .8. The optional one-pixel dark-perimeter check rejected these
+antialiased panels and remains disabled in that private experiment. These are
+calibration samples, not independent accuracy measurements or native integration.
+Further layouts, names and negative screens need validation before a runtime
+observer can use this evidence for gameplay decisions.
+The combined repository suite now passes 1,834 tests with one expected skip.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

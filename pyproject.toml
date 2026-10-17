@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sap-ai"
 version = "0.2.0"
-description = "Reproducible reinforcement-learning experiments in a SAP-inspired toy arena"
+description = "Offline learning experiments and a calibrated Super Auto Pets desktop controller"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["gymnasium>=1.0,<2", "numpy>=1.26,<3"]
@@ -24,7 +24,7 @@ sap-dqn = "dqn:main"
 sap-desktop = "desktop:cli"
 
 [tool.setuptools]
-py-modules = ["agent", "autogui", "benchmark", "desktop", "desktop_launch", "desktop_runtime", "desktop_session", "desktop_state", "desktop_tooltip", "desktop_vision", "dqn", "evaluation", "game", "heuristic", "main", "metrics", "play", "train"]
+py-modules = ["agent", "autogui", "benchmark", "desktop", "desktop_launch", "desktop_runtime", "desktop_session", "desktop_state", "desktop_tooltip", "desktop_tooltip_layout", "desktop_vision", "dqn", "evaluation", "game", "heuristic", "main", "metrics", "play", "train"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
