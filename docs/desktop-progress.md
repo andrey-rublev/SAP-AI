@@ -1110,6 +1110,29 @@ Independent review approved the startup guards and loading grace; mocked
 startup/runtime/CLI/session tests cover stop conditions, late windows, geometry
 transitions and restoring the original unknown limit.
 
+## Visible-shop planning study, 2026-10-17
+
+A sandbox candidate plans several supported level-one replacements using the
+visible offers and observed sale-income lower bounds. For example, two gold
+can fund two identified Pig replacements instead of one ordinary replacement.
+It preserves unknown-state abstention, empty-slot fills, identified merges and
+baseline ordering when the candidate adds no modeled utility. Every actual
+proposal would still need a fresh board and an observed receipt; the plan is
+not an input macro. The candidate is separate from the live policy.
+
+On disjoint 25,000 development/25,000 held-out synthetic shops, the fixed
+candidate improved held-out attack-plus-health by .02572 per shop (95% paired
+mean interval .02255 to .02889): 278 better, 24,722 equal and zero worse on that
+stat proxy. It spent .0184 more gold per shop. Both splits passed 64,640 modeled
+production receipt checks. No weights or parameters were trained. Combat,
+abilities, food, experience and future-roll value are excluded, so this is not
+a win-rate or general no-regression result.
+
+The historical proposal audit covered 393 distinct recorded shop Boards:
+290 legal proposals, 103 abstentions and zero changed choices. There is no
+demonstrated native benefit, so the candidate remains a sandbox. All 85 focused
+candidate/economy/Pig-sale/opening replay tests pass. The report remains private.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

@@ -326,6 +326,18 @@ replacement's net cost against a three-gold merge: one gold for selling an
 identified level-one Pig then buying, two for an ordinary supported sale.
 Missing or unsupported Pig levels cannot supply the bonus.
 
+`tools/eval_desktop_replacements.py` studies complete sequences of supported
+replacements within the currently visible shop. It compares a fixed candidate
+against the live policy on disjoint development and held-out seeds, stops
+before a roll, and checks modeled transitions with production receipt logic.
+This sandbox can reveal competing uses of sale receipts; it does not train
+weights, simulate combat or change the live policy. Reports include both stat
+gain and gold spent because more immediate stats can consume future roll value.
+
+```powershell
+python tools/eval_desktop_replacements.py --train-pairs 25000 --heldout-pairs 25000 --output .local/desktop/replacements.json
+```
+
 `tools/eval_desktop_frames.py` evaluates an explicitly labeled private frame
 manifest against a frozen copy of the profile and templates. `--sweep` applies
 small brightness, contrast, and JPEG perturbations without moving the layout.
