@@ -1168,6 +1168,42 @@ do not yet buy food; this is a foundation for separately validated observation,
 execution and receipts. No current Apple balance or stat-cap rules are claimed.
 Independent review found no compatibility blocker; 164 targeted tests passed.
 
+## Real-image species training and rejection study, 2026-10-17
+
+The offline training tool now supports labeled native crops with separate
+training, calibration and final-test roles. It records source/reference hashes,
+rejects split aliases and near-duplicates (including resized/mirrored inputs),
+distinguishes unfamiliar occupied pets from empty slots, and freezes weights and
+rejection thresholds before final evaluation. Final-test preflight rejects
+changed declarations, resolved source paths, invalid weights or unsafe thresholds
+before opening test images. Models, images and audit reports remain private;
+production promotion is explicitly disabled. Independently reviewed species and
+prototype tests pass: 74 passed, one expected Windows symlink skip.
+
+The October 4 first fresh arena was explicitly reassigned to training and the
+second to calibration. Manually checked head-inclusive crops produced 149 unique
+training inputs and 111 calibration inputs across 19 known species plus unknown
+and empty classes. Artwork recurs and samples remain correlated; these are
+appearance/theme/slot tests, not independent novel-art generalization. Badger is
+missing from calibration. October 17 images remain unopened final-test data.
+
+A bounded CPU run completed 20,000 steps in 317.55 seconds. Although it fit all
+124 known training inputs, the original .95 threshold accepted six wrong known
+identities and 18 of 24 unfamiliar pets on calibration. Tightening the confidence
+threshold retained only four of 83 known inputs with zero observed unsafe accepts.
+A separate fixed RGB prototype baseline retained eight of 83 at distance .04 and
+margin .015 with zero observed unsafe accepts. Neither recognized the four
+calibration empty slots. Both remain disabled: further training alone would not
+resolve this demonstrated recognition gap. Calibration metrics are not final-test
+accuracy or evidence of safe native species recognition.
+
+Reproduction entry points, using a reviewed private manifest:
+
+```powershell
+.\.venv\Scripts\python.exe tools/train_desktop_species.py train-real --manifest .local/desktop/real-species-heads-traincal-1017.json --output .local/desktop/new-species-run --seconds 900 --steps 20000 --threads 3
+.\.venv\Scripts\python.exe tools/eval_desktop_species_prototypes.py --manifest .local/desktop/real-species-heads-traincal-1017.json --output .local/desktop/new-prototype-run
+```
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

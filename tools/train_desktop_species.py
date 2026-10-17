@@ -1,8 +1,8 @@
 """Private, offline sprite-to-desktop species experiment; never controls the game.
 
-Fit partial-crop geometry on calibration templates, train a tiny CPU classifier on
-composited sprites, and report held-out real-frame results separately. This is not
-a production recognizer and does not modify the desktop vision profile.
+Fit partial-crop geometry for the original sprite-composite experiment, or use
+train-real for explicitly labeled real crops with disjoint sessions and poses.
+Both report held-out results offline and never modify the desktop vision profile.
 """
 from __future__ import annotations
 
@@ -29,10 +29,16 @@ if str(ROOT) not in sys.path:
 from desktop_vision import SlotConfig
 
 UNKNOWN = "__unknown__"
+EMPTY = "__empty__"
+REAL_SPLITS = ("train", "calibration", "test")
+# Fixed before examining results; backgrounds or almost unchanged portraits cannot
+# establish transfer merely because they came from another full screenshot.
+REAL_NEAR_DUPLICATE_MAE = .01
 INPUT_SIZE = (64, 32)
 PRIVATE_ROOT = ROOT / ".local"
 # Capture the implementation loaded for this process, never a later file revision.
-IMPLEMENTATION_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+IMPLEMENTATION_SOURCE = Path(__file__).read_bytes()
+IMPLEMENTATION_SHA256 = hashlib.sha256(IMPLEMENTATION_SOURCE).hexdigest()
 PREPROCESSING = "RGB; BILINEAR resize to 64x32; CHW float32 / 255"
 
 
@@ -389,6 +395,364 @@ def evaluate_checkpoint(plan_path, labels_path, model_path, output):
     return report
 
 
+def _canonical(value):
+    return isinstance(value, str) and bool(value) and value == " ".join(value.split()).casefold()
+
+
+def _pixel_key(image):
+    return hashlib.sha256(str(image.size).encode() + image.tobytes()).hexdigest()
+
+
+def real_input_distance(first, second):
+    """Training includes mirror augmentation, so mirrored aliases also leak."""
+    return min(float(np.abs(first - second).mean()), float(np.abs(first[:, :, ::-1] - second).mean()))
+
+
+def load_real_crops(manifest_path, *, _manifest_bytes=None):
+    """Validate independently labeled real crops before any fitting or scoring.
+
+    Each sample explicitly supplies image, rect, expected, occupied, split,
+    session, pose_group and label_source. Unknown occupied pets also name their
+    source_species: their species stay disjoint between splits. A pose_group
+    identifies the same portrait appearance across frames/sessions, not a slot.
+    This gate can detect leakage; metadata cannot prove independent labeling.
+    """
+    manifest_path = private_path(manifest_path)
+    manifest_bytes = manifest_path.read_bytes() if _manifest_bytes is None else _manifest_bytes
+    manifest = json.loads(manifest_bytes)
+    known = manifest.get("known_species", [])
+    if (manifest.get("version") != 1 or not known or len(known) != len(set(known))
+            or any(not _canonical(name) or name.startswith("__") for name in known)):
+        raise ValueError("real manifest needs version 1 and unique canonical known_species")
+    labels = [UNKNOWN, EMPTY, *sorted(known)]
+    samples, arrays = [], []
+    groups, identities, unknown_species = {}, {}, {}
+    source_hashes = {}
+    for entry in manifest.get("samples", []):
+        expected, occupied, split = entry.get("expected"), entry.get("occupied"), entry.get("split")
+        if (expected not in labels or type(occupied) is not bool or (expected == EMPTY) == occupied
+                or split not in REAL_SPLITS):
+            raise ValueError("invalid real sample label, occupied flag or split")
+        for key in ("session", "pose_group", "label_source"):
+            if not isinstance(entry.get(key), str) or not entry[key].strip():
+                raise ValueError(f"real sample needs explicit {key}")
+        source_species = entry.get("source_species", expected)
+        if expected == UNKNOWN and (not _canonical(source_species) or source_species in labels
+                                    or source_species.startswith("__")):
+            raise ValueError("occupied unknown needs an independently labeled unfamiliar source_species")
+        if expected not in (UNKNOWN, EMPTY) and source_species != expected:
+            raise ValueError("known source_species must equal expected")
+        if expected == UNKNOWN:
+            previous = unknown_species.setdefault(source_species, split)
+            if previous != split:
+                raise ValueError("unknown source species crosses real splits")
+        path = private_path(manifest_path.parent / entry["image"])
+        image_bytes = path.read_bytes()
+        frame_hash = hashlib.sha256(image_bytes).hexdigest()
+        if source_hashes.setdefault(str(path), frame_hash) != frame_hash:
+            raise ValueError("real source image changed while loading samples")
+        with Image.open(io.BytesIO(image_bytes)) as source:
+            source = source.convert("RGB")
+            rect = entry.get("rect")
+            if (not isinstance(rect, list) or len(rect) != 4 or any(type(n) is not int for n in rect)
+                    or min(rect[:2]) < 0 or min(rect[2:]) <= 0
+                    or rect[0] + rect[2] > source.width or rect[1] + rect[3] > source.height):
+                raise ValueError("real crop rectangle must be inside its source image")
+            x, y, width, height = rect
+            crop = source.crop((x, y, x + width, y + height))
+            frame_pixels = _pixel_key(source)
+        array = preprocess(crop)
+        input_hash = hashlib.sha256(array.tobytes()).hexdigest()
+        mirror_hash = hashlib.sha256(array[:, :, ::-1].tobytes()).hexdigest()
+        row = {**entry, "source_species": source_species, "image": str(path),
+               "frame_sha256": source_hashes[str(path)], "frame_pixel_sha256": frame_pixels,
+               "crop_sha256": _pixel_key(crop), "input_sha256": input_hash,
+               "mirror_group_sha256": min(input_hash, mirror_hash)}
+        # Frame bytes/pixels, declared sessions/poses, raw crops and effective
+        # model inputs all stay together, including copied or resized aliases.
+        for key, value in (("session", row["session"]), ("pose_group", row["pose_group"]),
+                           ("frame", frame_pixels), ("crop", row["crop_sha256"]), ("input", row["input_sha256"]),
+                           ("mirror", row["mirror_group_sha256"])):
+            previous = groups.setdefault((key, value), split)
+            if previous != split:
+                raise ValueError(f"{key} crosses real splits")
+        for key in (row["crop_sha256"], row["mirror_group_sha256"]):
+            previous = identities.setdefault(key, expected)
+            if previous != expected:
+                raise ValueError("identical real crop has conflicting labels")
+        for previous, previous_array in zip(samples, arrays):
+            if previous["split"] != split and real_input_distance(previous_array, array) <= REAL_NEAR_DUPLICATE_MAE:
+                raise ValueError("near-duplicate model inputs cross real splits")
+        samples.append(row)
+        arrays.append(array)
+    if not samples:
+        raise ValueError("real manifest has no samples")
+    if manifest.get("test_withheld") is True and any(row["split"] == "test" for row in samples):
+        raise ValueError("test_withheld manifest cannot contain test samples")
+    required_splits = REAL_SPLITS[:2] if manifest.get("test_withheld") is True else REAL_SPLITS
+    for split in required_splits:
+        present = {row["expected"] for row in samples if row["split"] == split}
+        required = set(labels) if split == "train" else {UNKNOWN, EMPTY}
+        if not required <= present or not (set(known) & present):
+            raise ValueError(f"incomplete real {split}: need known pets, occupied unknowns and explicit empties")
+    references = []
+    for name in manifest.get("reference_images", []):
+        path = private_path(manifest_path.parent / name)
+        image_bytes = path.read_bytes()
+        with Image.open(io.BytesIO(image_bytes)) as reference:
+            array = preprocess(reference)
+        references.append({"path": str(path), "sha256": hashlib.sha256(image_bytes).hexdigest()})
+        for row, candidate in zip(samples, arrays):
+            if row["split"] != "train" and real_input_distance(candidate, array) <= REAL_NEAR_DUPLICATE_MAE:
+                raise ValueError("held-out real crop overlaps a calibration/template reference")
+    # Within-split aliases are reported and receive one vote/weight per input.
+    unique = {}
+    for row, array in zip(samples, arrays):
+        unique.setdefault((row["split"], row["mirror_group_sha256"]), (row, array))
+    provenance = {"manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+                  "source_sha256": source_hashes, "reference_images": references,
+                  "preprocessing": PREPROCESSING, "near_duplicate_mae": REAL_NEAR_DUPLICATE_MAE,
+                  "dataset_metadata": {key: value for key, value in manifest.items() if key not in ("samples", "reference_images")},
+                  "sample_count": len(samples), "unique_input_count": len(unique),
+                  "counts": {split: {label: sum(row["split"] == split and row["expected"] == label
+                                                for row, _ in unique.values()) for label in labels}
+                             for split in REAL_SPLITS}}
+    return {"labels": labels, "samples": samples, "unique": list(unique.values()), "provenance": provenance,
+            "manifest_bytes": manifest_bytes,
+            "test_withheld": manifest.get("test_withheld") is True}
+
+
+def score_real_predictions(records, threshold):
+    """Only an accepted known species is an identity claim; empty stays distinct."""
+    if isinstance(threshold, bool) or not isinstance(threshold, (float, int)) or not math.isfinite(threshold) or not .95 <= threshold <= 1:
+        raise ValueError("real confidence threshold must be between .95 and one")
+    result = {"threshold": threshold, "samples": len(records), "known_samples": 0, "known_correct": 0,
+              "known_wrong_accepts": 0, "unknown_samples": 0, "unknown_false_accepts": 0,
+              "empty_samples": 0, "empty_false_accepts": 0, "empty_correct": 0,
+              "occupied_false_empty": 0, "accepted_species": 0, "per_species": {}}
+    scored = []
+    for original in records:
+        row = dict(original)
+        top, expected = row["top_label"], row["expected"]
+        prediction = top if row["confidence"] >= threshold else UNKNOWN
+        accepted = prediction not in (UNKNOWN, EMPTY)
+        row["prediction"] = prediction
+        scored.append(row)
+        result["accepted_species"] += int(accepted)
+        if expected == EMPTY:
+            result["empty_samples"] += 1
+            result["empty_false_accepts"] += int(accepted)
+            result["empty_correct"] += int(prediction == EMPTY)
+        elif expected == UNKNOWN:
+            result["unknown_samples"] += 1
+            result["unknown_false_accepts"] += int(accepted)
+        else:
+            result["known_samples"] += 1
+            result["known_correct"] += int(prediction == expected)
+            result["known_wrong_accepts"] += int(accepted and prediction != expected)
+            entry = result["per_species"].setdefault(expected, {"samples": 0, "correct": 0})
+            entry["samples"] += 1
+            entry["correct"] += int(prediction == expected)
+        result["occupied_false_empty"] += int(expected != EMPTY and prediction == EMPTY)
+    result["records"] = scored
+    result["known_recall"] = result["known_correct"] / result["known_samples"] if result["known_samples"] else None
+    result["accepted_species_precision"] = result["known_correct"] / result["accepted_species"] if result["accepted_species"] else None
+    # These are observed rates only. Correlated crops cannot support a
+    # population error bound by treating every screenshot as independent.
+    for name in ("unknown", "empty"):
+        total, errors = result[f"{name}_samples"], result[f"{name}_false_accepts"]
+        result[f"{name}_false_accept_rate"] = errors / total if total else None
+    return result
+
+
+def calibrate_real_threshold(records):
+    """Select once on calibration only, never lowering the original .95 floor.
+
+    Empty predictions on occupied crops also count as unsafe. If even confidence
+    one cannot reject a wrong certainty, calibration fails closed explicitly.
+    Zero observed errors on this small set is not a statistical guarantee.
+    """
+    candidates = sorted({.95, 1., *(float(np.nextafter(row["confidence"], 1.))
+                                   for row in records if .95 <= row["confidence"] < 1.)})
+    for threshold in candidates:
+        report = score_real_predictions(records, threshold)
+        if not sum(report[key] for key in ("known_wrong_accepts", "unknown_false_accepts",
+                                           "empty_false_accepts", "occupied_false_empty")):
+            return {"status": "calibrated", "threshold": threshold, "report": report}
+    return {"status": "unsafe_at_all_thresholds", "threshold": 1.,
+            "report": score_real_predictions(records, 1.)}
+
+
+def train_real(manifest_path, output, seconds=900, max_steps=20000, threads=3, batch_size=32):
+    """Train solely on deduplicated real training crops; touch test once at end."""
+    import torch
+    if (isinstance(seconds, bool) or not isinstance(seconds, (float, int)) or not math.isfinite(seconds)
+            or not 0 < seconds <= 2700 or any(type(n) is not int or n <= 0 for n in (threads, max_steps, batch_size))
+            or threads > 3):
+        raise ValueError("real training bounds must be positive, at most 2700 seconds and three threads")
+    output = private_path(output)
+    if output.exists():
+        raise ValueError("real training requires a new output directory")
+    data = load_real_crops(manifest_path)
+    output.mkdir(parents=True)
+    write_output(output / "training-source.py", lambda handle: handle.write(IMPLEMENTATION_SOURCE))
+    write_output(output / "training-manifest.json", lambda handle: handle.write(data["manifest_bytes"]))
+    torch.set_num_threads(threads)
+    torch.manual_seed(48271)
+    rng = random.Random(48271)
+    labels = data["labels"]
+    training = [(row, array) for row, array in data["unique"] if row["split"] == "train"]
+    by_label = [[array for row, array in training if row["expected"] == label] for label in labels]
+    model = model_for(len(labels))
+    optimizer = torch.optim.Adam(model.parameters(), lr=.001)
+    loss_function = torch.nn.CrossEntropyLoss()
+    start, last, step, history = time.monotonic(), time.monotonic(), 0, []
+    loss = None
+    while step < max_steps and time.monotonic() - start < seconds:
+        model.train()
+        targets = [(step * batch_size + i) % len(labels) for i in range(batch_size)]
+        batch = []
+        for target in targets:
+            array = rng.choice(by_label[target]).copy()
+            if rng.random() < .5:
+                array = array[:, :, ::-1].copy()
+            # Mild photometry only. No composites, new labels or pose claims.
+            batch.append(np.clip(array * rng.uniform(.94, 1.06), 0., 1.))
+        optimizer.zero_grad()
+        loss = loss_function(model(torch.from_numpy(np.stack(batch))), torch.tensor(targets))
+        loss.backward()
+        optimizer.step()
+        step += 1
+        if time.monotonic() - last >= 60:
+            history.append({"step": step, "seconds": time.monotonic() - start, "training_loss": float(loss.detach())})
+            dump(output / "progress.json", history)
+            print(json.dumps(history[-1]), flush=True)
+            last = time.monotonic()
+    model.eval()
+    def predictions(split):
+        rows = []
+        with torch.no_grad():
+            for row, array in data["unique"]:
+                if row["split"] != split:
+                    continue
+                probabilities = model(torch.from_numpy(array.copy()).unsqueeze(0)).softmax(1)[0]
+                probability, index = probabilities.max(0)
+                rows.append({**row, "top_label": labels[int(index)], "confidence": float(probability)})
+        return rows
+    calibration = calibrate_real_threshold(predictions("calibration"))
+    # Fixed schedule; calibration never selects weights or stopping time.
+    test_predictions = predictions("test") if not data["test_withheld"] else None
+    report = {"kind": "real_crop_species_experiment", "steps": step, "seconds": time.monotonic() - start,
+              "threads": threads, "seed": 48271, "device": "cpu", "labels": labels, "history": history,
+              "implementation_sha256": IMPLEMENTATION_SHA256, **data["provenance"],
+              "calibration": calibration, "test_state": "withheld" if data["test_withheld"] else "evaluated",
+              "test": score_real_predictions(test_predictions, calibration["threshold"]) if test_predictions is not None else None,
+              "test_at_original_threshold": score_real_predictions(test_predictions, .95) if test_predictions is not None else None,
+              "training": score_real_predictions(predictions("train"), .95),
+              "eligible_for_promotion": False,
+              "limitations": ["Small manually labeled dataset; session/pose metadata requires independent review.",
+                              "Near-duplicate filtering cannot prove novel poses or independent labeling.",
+                              "Calibration and test report unique inputs; nearby within-split crops remain correlated.",
+                              "Fixed training schedule; test never selects thresholds, weights or stopping time.",
+                              "Offline only; no recognizer/profile integration or production readiness claim."]}
+    report["missing_known_species"] = {split: sorted(set(labels) - {UNKNOWN, EMPTY} -
+                                                   {row["expected"] for row, _ in data["unique"] if row["split"] == split})
+                                       for split in ("calibration", "test")}
+    write_output(output / "model.pt", lambda handle: torch.save(
+        {"state_dict": model.state_dict(), "labels": labels, "manifest_sha256": data["provenance"]["manifest_sha256"],
+         "implementation_sha256": IMPLEMENTATION_SHA256, "preprocessing": PREPROCESSING,
+         "calibration_threshold": calibration["threshold"], "calibration_status": calibration["status"],
+         "data_provenance": data["provenance"]}, handle))
+    dump(output / "data-audit.json", {**data["provenance"], "samples": data["samples"]})
+    dump(output / "report.json", report)
+    print(json.dumps({"steps": step, "seconds": report["seconds"], "calibration": calibration["status"],
+                      "threshold": calibration["threshold"], "test": {k: v for k, v in report["test"].items() if k != "records"}
+                      if report["test"] is not None else None}), flush=True)
+    return report
+
+
+def evaluate_real_checkpoint(training_manifest_path, manifest_path, model_path, output, threads=3):
+    """Open a final test only after weights, calibration and training are frozen."""
+    import torch
+    if type(threads) is not int or not 0 < threads <= 3:
+        raise ValueError("evaluation needs one to three threads")
+    output = private_path(output, writable=True)
+    if output.exists():
+        raise ValueError("real evaluation requires a new report path")
+    training = load_real_crops(training_manifest_path)
+    model_bytes = private_path(model_path).read_bytes()
+    checkpoint = torch.load(io.BytesIO(model_bytes), map_location="cpu", weights_only=True)
+    if (checkpoint["manifest_sha256"] != training["provenance"]["manifest_sha256"]
+            or checkpoint["labels"] != training["labels"]
+            or checkpoint.get("preprocessing") != PREPROCESSING):
+        raise ValueError("real model does not match frozen training manifest/preprocessing")
+    frozen = checkpoint.get("data_provenance")
+    if (not isinstance(frozen, dict) or frozen.get("manifest_sha256") != checkpoint["manifest_sha256"]
+            or any(key not in frozen for key in ("source_sha256", "reference_images"))):
+        raise ValueError("real checkpoint lacks frozen source/reference provenance; retrain")
+    if any(frozen[key] != training["provenance"][key] for key in ("source_sha256", "reference_images")):
+        raise ValueError("training images or references changed since the frozen checkpoint")
+    if not training["test_withheld"]:
+        raise ValueError("final evaluation needs a withheld training manifest")
+    # Check the actual frozen weights and rejection policy before touching test
+    # imagery. An unsafe calibration keeps the final test unopened.
+    score_real_predictions([], checkpoint["calibration_threshold"])
+    if checkpoint["calibration_status"] != "calibrated":
+        raise ValueError("real checkpoint calibration is unsafe; final test remains withheld")
+    torch.set_num_threads(threads)
+    model = model_for(len(training["labels"]))
+    model.load_state_dict(checkpoint["state_dict"])
+    model.eval()
+    # Compare declarations using JSON alone: even a changed label_source, rect
+    # or pose in a non-test row must fail before Image.open can see final test.
+    original = json.loads(training["manifest_bytes"])
+    final_manifest_path = private_path(manifest_path)
+    final_bytes = final_manifest_path.read_bytes()
+    declarations = json.loads(final_bytes)
+    if (declarations.get("known_species") != original["known_species"]
+            or declarations.get("version") != original["version"] or declarations.get("test_withheld") is True
+            or not isinstance(declarations.get("samples"), list)):
+        raise ValueError("final evaluation needs withheld training and a complete evaluation manifest")
+    if ([row for row in declarations["samples"] if row.get("split") != "test"] != original["samples"]
+            or declarations.get("reference_images", []) != original.get("reference_images", [])):
+        raise ValueError("training/calibration declarations or reference paths changed before final test")
+    # Identical relative declarations can point at different files when the
+    # final manifest lives elsewhere. Check their effective paths without
+    # opening any imagery before the full loader sees test rows.
+    declared_sources = [private_path(final_manifest_path.parent / row["image"])
+                        for row in declarations["samples"] if row["split"] != "test"]
+    declared_references = [private_path(final_manifest_path.parent / name)
+                           for name in declarations.get("reference_images", [])]
+    if (declared_sources != [Path(row["image"]) for row in training["samples"]]
+            or declared_references != [Path(row["path"]) for row in training["provenance"]["reference_images"]]):
+        raise ValueError("training/calibration source or reference paths changed before final test")
+    # Reuse those exact bytes so a second manifest read cannot bypass preflight.
+    evaluation = load_real_crops(manifest_path, _manifest_bytes=final_bytes)
+    if (training["samples"] != [row for row in evaluation["samples"] if row["split"] != "test"]
+            or training["provenance"]["reference_images"] != evaluation["provenance"]["reference_images"]):
+        raise ValueError("training/calibration samples or references changed before final test")
+    records = []
+    with torch.no_grad():
+        for row, array in evaluation["unique"]:
+            if row["split"] == "test":
+                probability, index = model(torch.from_numpy(array.copy()).unsqueeze(0)).softmax(1)[0].max(0)
+                records.append({**row, "top_label": training["labels"][int(index)], "confidence": float(probability)})
+    report = {"kind": "frozen_real_crop_final_test", "model_sha256": hashlib.sha256(model_bytes).hexdigest(),
+              "training_manifest_sha256": checkpoint["manifest_sha256"], **evaluation["provenance"],
+              "training_implementation_sha256": checkpoint["implementation_sha256"],
+              "evaluation_implementation_sha256": IMPLEMENTATION_SHA256,
+              "calibration_status": checkpoint["calibration_status"],
+              "test": score_real_predictions(records, checkpoint["calibration_threshold"]),
+              "test_at_original_threshold": score_real_predictions(records, .95), "eligible_for_promotion": False,
+              "missing_known_species": {split: sorted(set(training["labels"]) - {UNKNOWN, EMPTY} -
+                                                       {row["expected"] for row in evaluation["samples"] if row["split"] == split})
+                                         for split in ("calibration", "test")},
+              "limitations": ["Single fixed checkpoint/threshold; test does not select either.",
+                              "Small independent test; no production readiness claim."]}
+    dump(output, report)
+    return report
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -404,15 +768,30 @@ def main(argv=None):
     evaluation = commands.add_parser("evaluate")
     for name in ("plan", "labels", "model", "output"):
         evaluation.add_argument("--" + name, type=Path, required=True)
+    real = commands.add_parser("train-real", help="offline real crops with session/pose-disjoint calibration and test")
+    real.add_argument("--manifest", type=Path, required=True)
+    real.add_argument("--output", type=Path, required=True)
+    real.add_argument("--seconds", type=float, default=900)
+    real.add_argument("--steps", type=int, default=20000)
+    real.add_argument("--threads", type=int, default=3)
+    final = commands.add_parser("evaluate-real", help="score a frozen real model on a newly labeled final test")
+    for name in ("training-manifest", "manifest", "model", "output"):
+        final.add_argument("--" + name, type=Path, required=True)
+    final.add_argument("--threads", type=int, default=3)
     args = parser.parse_args(argv)
     if args.command == "prepare":
         plan = prepare(args.profile, args.assets, args.negatives, args.output)
         print(json.dumps({"entries": len(plan["entries"]), "labels": plan["labels"]}))
     elif args.command == "train":
         train(args.plan, args.labels, args.seconds, args.steps, threads=args.threads)
-    else:
+    elif args.command == "evaluate":
         report = evaluate_checkpoint(args.plan, args.labels, args.model, args.output)
         print(json.dumps({key: value for key, value in report["real_holdout"].items() if key != "records"}))
+    elif args.command == "train-real":
+        train_real(args.manifest, args.output, args.seconds, args.steps, args.threads)
+    else:
+        report = evaluate_real_checkpoint(args.training_manifest, args.manifest, args.model, args.output, args.threads)
+        print(json.dumps({key: value for key, value in report["test"].items() if key != "records"}))
 
 
 if __name__ == "__main__":
