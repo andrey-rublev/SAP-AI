@@ -1219,8 +1219,26 @@ Unique private batch directories preserve existing logs and separate each
 arena's receipts/recordings. `first_recognized_phase` distinguishes resumed
 shops from menu starts. Root review and 601 focused tests covered the lifecycle,
 then 58 batch/lifecycle tests passed after final diagnostic refinements. The
-combined suite passed 1,686 tests with one expected skip. A two-arena native
-validation is running; no unattended batch reliability claim is made yet.
+combined suite passed 1,686 tests with one expected skip. The first two-arena
+native attempt resumed the shop and stopped after 40 actions/40 acknowledgments
+at turn ten, without completing or restarting an arena. A hover tooltip covered
+three team stat regions. No unattended batch reliability claim is made yet.
+
+## Keep hover tooltips out of observations, 2026-10-17
+
+An optional calibrated `pointer_rest` now moves the pointer to a neutral place
+before the first executing observation and once after each dispatched input.
+Preview and unconfigured profiles do not move. The movement-only native primitive
+checks focus, bounds and stop conditions before and after travel. Failures retain
+pending actions and cannot trigger gameplay retries or substitute known stats.
+
+Mocked tooltip-camera tests verify startup recovery, post-purchase acknowledgment,
+preview preservation and failure cleanup; 87 focused parking/batch tests pass.
+On the stopped native turn-ten shop, startup parking removed the tooltip and all
+five team stats became readable before the bot resumed. A separate later stop at
+turn eleven exposed a blank OCR result for the turn counter after tier dismissal;
+that receipt remains recorded as unacknowledged and is being diagnosed separately.
+The pointer-rest calibration is private and no recognition limits were loosened.
 
 ## Remaining milestones
 

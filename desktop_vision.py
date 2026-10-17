@@ -180,6 +180,7 @@ class VisionProfile:
     calibrated: bool = False
     base_dir: Path = field(default_factory=lambda: Path("."), repr=False, compare=False)
     numeric_templates: tuple[NumberTemplate, ...] = ()
+    pointer_rest: tuple[int, int] | None = None
 
     def numeric_region(self, name):
         """Resolve an explicit HUD/slot field and its allowed integer range."""
@@ -210,6 +211,10 @@ class VisionProfile:
             x, y = _coordinates(point, 2, "button")
             if not 0 <= x < width or not 0 <= y < height:
                 raise ValueError("button lies outside image_size")
+        if self.pointer_rest is not None:
+            x, y = _coordinates(self.pointer_rest, 2, "pointer_rest")
+            if not 0 <= x < width or not 0 <= y < height:
+                raise ValueError("pointer_rest lies outside image_size")
         for item in self.phase_templates:
             if not isinstance(item.phase, Phase) or item.phase == Phase.UNKNOWN:
                 raise ValueError("phase templates must identify a known phase")
@@ -259,16 +264,19 @@ class VisionProfile:
     def from_dict(cls, data, *, base_dir=Path(".")):
         if not isinstance(data, dict) or type(data.get("version")) is not int or data["version"] != 1:
             raise ValueError("unsupported vision profile format; expected version 1")
-        allowed = {"version", "image_size", "phase_templates", "hud", "shop", "team", "buttons", "calibrated", "numeric_templates"}
+        allowed = {"version", "image_size", "phase_templates", "hud", "shop", "team", "buttons", "calibrated", "numeric_templates", "pointer_rest"}
         if set(data) - allowed:
             raise ValueError(f"unknown vision profile fields: {sorted(set(data) - allowed)}")
         try:
-            return cls(image_size=_coordinates(data["image_size"], 2, "image_size"), phase_templates=tuple(PhaseTemplate.from_dict(item) for item in data.get("phase_templates", [])), hud={name: Rect.from_list(value) for name, value in data.get("hud", {}).items()}, shop=tuple(SlotConfig.from_dict(item) for item in data.get("shop", [])), team=tuple(SlotConfig.from_dict(item) for item in data.get("team", [])), buttons={name: _coordinates(value, 2, "button") for name, value in data.get("buttons", {}).items()}, calibrated=data.get("calibrated", False), base_dir=Path(base_dir), numeric_templates=tuple(NumberTemplate.from_dict(item) for item in data.get("numeric_templates", []))).validate()
+            return cls(image_size=_coordinates(data["image_size"], 2, "image_size"), phase_templates=tuple(PhaseTemplate.from_dict(item) for item in data.get("phase_templates", [])), hud={name: Rect.from_list(value) for name, value in data.get("hud", {}).items()}, shop=tuple(SlotConfig.from_dict(item) for item in data.get("shop", [])), team=tuple(SlotConfig.from_dict(item) for item in data.get("team", [])), buttons={name: _coordinates(value, 2, "button") for name, value in data.get("buttons", {}).items()}, calibrated=data.get("calibrated", False), base_dir=Path(base_dir), numeric_templates=tuple(NumberTemplate.from_dict(item) for item in data.get("numeric_templates", [])), pointer_rest=_coordinates(data["pointer_rest"], 2, "pointer_rest") if data.get("pointer_rest") is not None else None).validate()
         except (KeyError, TypeError, AttributeError) as exc:
             raise ValueError(f"invalid vision profile: {exc}") from exc
 
     def to_dict(self):
-        return {"version": 1, "image_size": list(self.image_size), "calibrated": self.calibrated, "phase_templates": [item.to_dict() for item in self.phase_templates], "hud": {name: value.to_list() for name, value in self.hud.items()}, "shop": [slot.to_dict() for slot in self.shop], "team": [slot.to_dict() for slot in self.team], "buttons": {name: list(point) for name, point in self.buttons.items()}, "numeric_templates": [item.to_dict() for item in self.numeric_templates]}
+        result = {"version": 1, "image_size": list(self.image_size), "calibrated": self.calibrated, "phase_templates": [item.to_dict() for item in self.phase_templates], "hud": {name: value.to_list() for name, value in self.hud.items()}, "shop": [slot.to_dict() for slot in self.shop], "team": [slot.to_dict() for slot in self.team], "buttons": {name: list(point) for name, point in self.buttons.items()}, "numeric_templates": [item.to_dict() for item in self.numeric_templates]}
+        if self.pointer_rest is not None:
+            result["pointer_rest"] = list(self.pointer_rest)
+        return result
 
     @classmethod
     def load(cls, path):

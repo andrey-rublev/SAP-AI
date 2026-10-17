@@ -286,6 +286,16 @@ class WindowsGameWindow:
         _require_running(self.should_stop)
         self.mouse.click(*target)
 
+    def hover(self, point, expected_size):
+        """Move within the calibrated foreground client without pressing buttons."""
+        _require_running(self.should_stop)
+        target = self._screen_point(point, expected_size)
+        _require_running(self.should_stop)
+        self.mouse.moveTo(*target, duration=0.15)
+        if self._screen_point(point, expected_size) != target:
+            raise DesktopUnavailable("game moved during hover; no further input sent")
+        _require_running(self.should_stop)
+
     def drag(self, source, target, expected_size):
         start = self._screen_point(source, expected_size)
         end = self._screen_point(target, expected_size)
@@ -401,6 +411,7 @@ class DesktopRuntime:
             window.should_stop = should_stop
         self.last_board = None
         self.last_frame = None
+        self._pointer_dirty = True
 
     def phase_actions(self, *, start_arena=False):
         """Enable calibrated transitions; entering a new arena is opt-in."""
@@ -423,6 +434,12 @@ class DesktopRuntime:
                 if phase in recognized and all(point in self.profile.buttons for point in points)}
 
     def observe(self):
+        rest = getattr(self.profile, "pointer_rest", None)
+        if self.execute and rest is not None and self._pointer_dirty:
+            _require_running(self.should_stop)
+            self.window.hover(rest, self.profile.image_size)
+            _require_running(self.should_stop)
+            self._pointer_dirty = False
         self.last_frame = self.window.capture()
         self.last_board = self.perceptor.observe(self.last_frame)
         return self.last_board
@@ -445,6 +462,7 @@ class DesktopRuntime:
         size = self.profile.image_size
         def click(point):
             _require_running(self.should_stop)
+            self._pointer_dirty = True
             self.window.click(point, size)
 
         if action.kind in ("buy", "merge"):

@@ -44,6 +44,7 @@ Fields:
 | `shop` | One configuration for each currently visible pet shop slot (up to five) |
 | `team` | Exactly five team slot configurations |
 | `buttons` | Calibrated `roll`, `end_turn`, optional `sell` points |
+| `pointer_rest` | Optional `[x, y]` neutral point, verified not to cover observation regions |
 
 Each slot contains `portrait`, `attack`, `health`, and optional `level`
 rectangles. `empty_template` references an image of that exact portrait region
@@ -106,6 +107,14 @@ two-digit values. OCR isolates contrasting glyphs, removes frame lines, and
 pads the result before one recognition call. Blank or substantially clipped
 glyphs return unknown; they are not repaired by guessing a number. Validate
 counter zeroes, levels, and larger stats as well as the opening shop.
+
+Pet hover tooltips can cover other slots. With a calibrated `pointer_rest`, an
+executing runtime moves the pointer there before its first capture and before
+the next observation after gameplay input. Movement checks focus, size and stop
+conditions and never presses a mouse button. Preview and profiles without this
+field retain their existing behavior. Choose a neutral point across all supported
+screens; no default coordinates are supplied. A parking failure stops with any
+pending action preserved.
 
 An OCR engine or dependency failure aborts the observation and stops the session
 with `observation_error`, including when an action is awaiting acknowledgment.
