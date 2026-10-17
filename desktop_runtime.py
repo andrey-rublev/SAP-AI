@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import time
 
 import numpy as np
 
@@ -140,6 +141,8 @@ class WindowsGameWindow:
         self.user32.GetForegroundWindow.restype = wintypes.HWND
         self.user32.SetForegroundWindow.argtypes = [wintypes.HWND]
         self.user32.SetForegroundWindow.restype = wintypes.BOOL
+        self.user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+        self.user32.PostMessageW.restype = wintypes.BOOL
         self.user32.GetAsyncKeyState.argtypes = [wintypes.INT]
         self.user32.GetAsyncKeyState.restype = wintypes.SHORT
         self.user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
@@ -208,6 +211,41 @@ class WindowsGameWindow:
         if geometry[2:] != expected_size:
             raise DesktopUnavailable("game size changed during startup activation")
         return geometry
+
+    def close_for_restart(self, expected_size, *, timeout=90., clock=time.monotonic, sleep=time.sleep):
+        """Request normal application shutdown once, then verify disappearance.
+
+        The caller must first verify a completed terminal result. This method
+        never kills a process, retries a close, changes focus, or sends keys.
+        """
+        if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not np.isfinite(timeout) or timeout <= 0:
+            raise ValueError("close timeout must be finite and positive")
+        deadline = clock() + timeout
+        if self.should_stop is not None and self.should_stop():
+            return False
+        if self.geometry()[2:] != tuple(expected_size):
+            raise DesktopUnavailable("game size differs from the calibrated profile; no close requested")
+        if self.should_stop is not None and self.should_stop():
+            return False
+        if clock() >= deadline:
+            raise DesktopUnavailable("timed out before requesting normal game shutdown")
+        if self.user32.GetForegroundWindow() != self.handle:
+            raise DesktopUnavailable("game lost focus before shutdown; no close requested")
+        if not self.user32.PostMessageW(self.handle, 0x0010, 0, 0):  # WM_CLOSE
+            raise DesktopUnavailable("game rejected normal shutdown; no restart attempted")
+        while True:
+            if self.should_stop is not None and self.should_stop():
+                return False
+            if clock() >= deadline:
+                raise DesktopUnavailable("timed out waiting for game shutdown; no restart attempted")
+            if not self.user32.IsWindow(self.handle):
+                return True
+            if self.user32.GetForegroundWindow() != self.handle:
+                # Closing can invalidate the handle between these two reads.
+                if not self.user32.IsWindow(self.handle):
+                    continue
+                raise DesktopUnavailable("game lost focus during shutdown; no restart attempted")
+            sleep(min(.1, max(0., deadline - clock())))
 
     def geometry(self):
         if not self.user32.IsWindow(self.handle) or self.user32.IsIconic(self.handle):

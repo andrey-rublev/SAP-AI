@@ -1204,6 +1204,24 @@ Reproduction entry points, using a reviewed private manifest:
 .\.venv\Scripts\python.exe tools/eval_desktop_species_prototypes.py --manifest .local/desktop/real-species-heads-traincal-1017.json --output .local/desktop/new-prototype-run
 ```
 
+## Bounded arena collection, 2026-10-17
+
+`play --arenas N` adds optional multi-arena collection without changing the
+single-arena default. A batch shares all action, observation, time and stop
+budgets. Only an arena with acknowledged gameplay and verified RESULT can
+restart. The controller observes the terminal again, requests normal WM_CLOSE
+once, verifies disappearance and uses the existing bounded Steam startup path.
+It does not force-kill or retry shutdown. Zero-action terminal clients, pending
+actions, errors, lost focus and exhausted budgets prevent further restarts.
+Restart attempts are separately logged and capped at N minus one.
+
+Unique private batch directories preserve existing logs and separate each
+arena's receipts/recordings. `first_recognized_phase` distinguishes resumed
+shops from menu starts. Root review and 601 focused tests covered the lifecycle,
+then 58 batch/lifecycle tests passed after final diagnostic refinements. The
+combined suite passed 1,686 tests with one expected skip. A two-arena native
+validation is running; no unattended batch reliability claim is made yet.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

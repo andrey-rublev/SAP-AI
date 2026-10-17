@@ -164,6 +164,28 @@ with, for example, `.\play.cmd --max-actions 40 --max-seconds 600`. Stop-file,
 logging, recording, receipt and focus guards are shared with `run`; the launcher
 does not remove an existing STOP file or regain focus after the session starts.
 The `.cmd` entry point works from PowerShell without changing script policies.
+
+For a bounded multi-arena run:
+
+```powershell
+.\play.cmd --arenas 3 --max-actions 600 --max-polls 12000 --max-seconds 3600
+```
+
+All limits apply to the entire batch, including startup and shutdown time.
+After acknowledged gameplay reaches RESULT, the bot observes the terminal again,
+requests normal game shutdown once, verifies that the window disappeared, and
+launches the next arena. A pending action, failed shutdown, changed screen,
+lost focus, stop request or exhausted budget prevents restart. It never kills
+the process or repeats a failed close. An already completed result screen with
+no gameplay in this invocation stops without counting or restarting it.
+The default remains one arena and does not close the game.
+
+Batch summaries and separate arena logs go into a new directory beside `--log`;
+the supplied log file itself is preserved. `--record-dir` records into separate
+arena directories with `--record-limit` per arena. Summary receipts include the
+first recognized phase, so a resumed shop is distinguishable from a menu start.
+Multi-arena mode requires the standard game title and automatic Steam launching.
+
 Hold Escape until `play` stops to cancel while the game is foreground. Only
 Escape's current state is polled, and a detected press stays latched for that
 run. A brief tap between checks can be missed; in-flight OCR finishes before

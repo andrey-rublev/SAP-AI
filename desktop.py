@@ -13,9 +13,9 @@ import numpy as np
 
 from desktop_runtime import (CachedOCR, DesktopRuntime, WindowsGameWindow,
                              tesseract_ocr, validate_live_dependencies)
-from desktop_launch import connect_game_window
+from desktop_launch import GAME_TITLE, connect_game_window
 from desktop_session import DesktopSession, SessionResult
-from desktop_state import DesktopPolicy
+from desktop_state import DesktopPolicy, Phase
 from desktop_vision import Perceptor, Rect, VisionProfile
 from evaluation import positive_int
 
@@ -114,14 +114,17 @@ def add_session_arguments(command, *, play=False):
         command.add_argument("--no-launch", action="store_true",
                              help="require an already open game instead of launching it through Steam")
         command.add_argument("--launch-timeout", type=positive_seconds, default=90,
-                             help="seconds to wait for a closed game to open; runtime and stop controls still apply")
+                             help="seconds allowed for each Steam startup or normal shutdown; runtime and stop controls still apply")
         command.add_argument("--startup-polls", type=positive_int, default=300,
                              help="initial unknown observations allowed while the game loads; normal unknown limit resumes after recognition")
+        command.add_argument("--arenas", type=positive_int, default=1,
+                             help="maximum arenas to collect; budgets apply to the entire batch, with at most N-1 normal shutdown requests")
     else:
         command.add_argument("--execute", action="store_true")
         command.add_argument("--start-arena", action="store_true",
                              help="enable calibrated main menu, Play, and arena start transitions")
-    command.add_argument("--max-actions", type=positive_int, default=600 if play else 40)
+    command.add_argument("--max-actions", type=positive_int, default=600 if play else 40,
+                         help="maximum gameplay actions; shared across all arenas in a batch")
     command.add_argument("--max-polls", type=positive_int, default=12000 if play else 600)
     command.add_argument("--max-seconds", type=positive_seconds, default=3600 if play else 1800,
                          help="wall-clock budget checked before each observation and action")
@@ -182,7 +185,175 @@ def parse_args(argv=None):
     add_session_arguments(run)
     play = commands.add_parser("play", help="take game control with execution and arena transitions enabled")
     add_session_arguments(play, play=True)
-    return p.parse_args(argv)
+    args = p.parse_args(argv)
+    if args.command == "play" and args.arenas > 1:
+        if args.no_launch or args.window != GAME_TITLE:
+            p.error("--arenas greater than 1 requires automatic Steam launch and the default game window")
+    return args
+
+
+def run_desktop_session(args, profile, perceptor, window, should_stop, session_info=None):
+    """Run one arena with the existing receipt and recording contract."""
+    runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute, should_stop=should_stop)
+    recorder = FrameRecorder(args.record_dir, args.record_limit) if args.record_dir else None
+    log_path = Path(args.log)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("a", encoding="utf-8") as log:
+        def event(data):
+            if session_info is not None and data.get("event") == "observed":
+                phase = data["board"]["phase"]
+                if phase != Phase.UNKNOWN.value and session_info["first_recognized_phase"] is None:
+                    session_info["first_recognized_phase"] = phase
+            if recorder is not None:
+                data = recorder.record(data, runtime.last_frame)
+            log.write(json.dumps(data) + "\n")
+            log.flush()
+        session = DesktopSession(runtime.observe, runtime.act, DesktopPolicy(),
+                                 preview=not args.execute, max_actions=args.max_actions,
+                                 max_polls=args.max_polls, action_timeout=args.action_timeout,
+                                 max_initial_unknown_polls=args.startup_polls if args.command == "play" else None,
+                                 event_callback=event,
+                                 phase_actions=runtime.phase_actions(start_arena=args.start_arena),
+                                 should_stop=should_stop)
+        try:
+            if args.command == "play" and not should_stop():
+                window.activate(profile.image_size)
+            result = session.run()
+        except KeyboardInterrupt:
+            event({"event": "stopped", "reason": "keyboard_interrupt"})
+            print("Stopped by keyboard interrupt.")
+            return None
+        finally:
+            if runtime.last_frame is not None:
+                save_image(runtime.last_frame, args.last_frame)
+    if getattr(args, "arenas", 1) == 1:
+        print(json.dumps(result.to_dict(), indent=2))
+    return result
+
+
+def session_failed(args, result):
+    return bool(result.error or result.pending_action or result.reason in {
+        "action_timeout", "unknown_timeout", "next_shop_timeout", "turn_unreadable",
+        "illegal_action", "transition_timeout", "repeated_transition"} or (
+        args.command == "play" and result.reason == "transition_disabled"))
+
+
+def run_arena_batch(args, profile, perceptor, open_window, should_stop):
+    """Collect bounded arenas, restarting only after verified terminal results."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+    batch_name = f"{Path(args.log).stem}-batch-{stamp}-{uuid4().hex}"
+    batch_dir = Path(args.log).parent / batch_name
+    batch_dir.mkdir(parents=True, exist_ok=False)
+    summary = {"requested_arenas": args.arenas, "completed_arenas": 0, "sessions": [],
+               "actions": 0, "acknowledgments": 0, "polls": 0, "restart_polls": 0,
+               "restart_attempts": 0, "max_restart_attempts": args.arenas - 1,
+               "reason": "stopped", "error": None, "directory": str(batch_dir.resolve())}
+    summary_path = batch_dir / "summary.json"
+    log_path = batch_dir / "batch.jsonl"
+    with log_path.open("a", encoding="utf-8") as log:
+        def event(kind, **fields):
+            log.write(json.dumps({"event": kind, "batch": batch_name, **fields}) + "\n")
+            log.flush()
+        event("batch_started", requested_arenas=args.arenas, directory=summary["directory"],
+              max_actions=args.max_actions, max_polls=args.max_polls, max_seconds=args.max_seconds,
+              max_restart_attempts=summary["max_restart_attempts"])
+        stage = "startup"
+        try:
+            for arena in range(1, args.arenas + 1):
+                if should_stop():
+                    break
+                if summary["actions"] >= args.max_actions:
+                    summary["reason"] = "max_actions"
+                    break
+                if summary["polls"] >= args.max_polls:
+                    summary["reason"] = "max_polls"
+                    break
+                stage = "startup"
+                window = open_window()
+                if window is None or should_stop():
+                    break
+                arena_dir = batch_dir / f"arena-{arena:04d}"
+                arena_dir.mkdir()
+                session_args = argparse.Namespace(**vars(args))
+                session_args.log = str(arena_dir / "session.jsonl")
+                session_args.last_frame = str(arena_dir / Path(args.last_frame).name)
+                session_args.record_dir = (str(Path(args.record_dir) / batch_name / f"arena-{arena:04d}")
+                                           if args.record_dir else None)
+                session_args.max_actions = args.max_actions - summary["actions"]
+                session_args.max_polls = args.max_polls - summary["polls"]
+                stage = "session"
+                session_info = {"first_recognized_phase": None}
+                result = run_desktop_session(session_args, profile, perceptor, window, should_stop, session_info)
+                if result is None:
+                    break
+                summary["actions"] += result.actions
+                summary["acknowledgments"] += result.acknowledgments
+                summary["polls"] += result.polls
+                receipt = {"arena": arena, "log": str(Path(session_args.log).resolve()),
+                           **session_info, "result": result.to_dict()}
+                summary["sessions"].append(receipt)
+                event("arena_finished", **receipt)
+                # Merely observing a terminal client does not collect an arena.
+                # This also prevents recounting a restored terminal screen.
+                has_gameplay = result.actions > 0
+                complete = (result.reason == "result" and result.last_board is not None
+                            and result.last_board.phase == Phase.RESULT
+                            and result.pending_action is None and result.error is None
+                            and result.actions == result.acknowledgments
+                            and has_gameplay)
+                if not complete:
+                    empty_terminal = result.reason == "result" and not has_gameplay
+                    summary["reason"] = ("empty_terminal" if empty_terminal else
+                                         "incomplete_terminal" if result.reason == "result" else result.reason)
+                    if session_failed(args, result) or result.reason == "result":
+                        summary["error"] = result.error or (
+                            "terminal result contained no acknowledged gameplay" if empty_terminal
+                            else f"arena did not finish safely: {summary['reason']}")
+                    break
+                summary["completed_arenas"] += 1
+                if arena == args.arenas:
+                    summary["reason"] = "completed"
+                    break
+                if should_stop():
+                    break
+                if summary["actions"] >= args.max_actions:
+                    summary["reason"] = "max_actions"
+                    break
+                # A fresh result check and at least one next-session poll must fit.
+                if summary["polls"] + 1 >= args.max_polls:
+                    summary["reason"] = "max_polls"
+                    break
+                stage = "restart"
+                fresh = perceptor.observe(window.capture())
+                summary["polls"] += 1
+                summary["restart_polls"] += 1
+                event("restart_observed", arena=arena, board=fresh.to_dict(), polls=summary["polls"])
+                if should_stop():
+                    break
+                if fresh.phase != Phase.RESULT:
+                    raise RuntimeError("terminal screen changed before restart; no close requested")
+                # Shutdown attempts are separate control operations, capped at N-1.
+                # An attempt is retained even if Win32 refuses the request.
+                summary["restart_attempts"] += 1
+                event("restart_attempted", arena=arena, attempt=summary["restart_attempts"])
+                if not window.close_for_restart(profile.image_size, timeout=args.launch_timeout):
+                    break
+        except KeyboardInterrupt:
+            summary["reason"] = "stopped"
+        except Exception as exc:
+            summary["reason"] = f"{stage}_error"
+            summary["error"] = f"{type(exc).__name__}: {exc}"
+        finally:
+            summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+            event("batch_finished", summary=str(summary_path.resolve()),
+                  completed_arenas=summary["completed_arenas"], actions=summary["actions"],
+                  polls=summary["polls"], restart_attempts=summary["restart_attempts"],
+                  reason=summary["reason"], error=summary["error"])
+    print(json.dumps({**{key: value for key, value in summary.items() if key != "sessions"},
+                      "summary": str(summary_path.resolve())}, indent=2))
+    if summary["error"]:
+        raise RuntimeError(f"desktop batch stopped: {summary['reason']}; see {summary_path}")
+    return summary
 
 
 def main(argv=None):
@@ -231,52 +402,29 @@ def main(argv=None):
         if should_stop():
             stopped_before_start(args)
             return
-    if args.command == "play":
+    def open_window():
+        nonlocal escape_requested
         window = connect_game_window(args.window, WindowsGameWindow, launch=not args.no_launch,
                                      timeout=args.launch_timeout, should_stop=should_stop,
                                      is_ready=lambda candidate: candidate.ready_for_profile(profile.image_size))
+        if window is not None:
+            escape_requested = window.stop_requested
+            window.should_stop = should_stop
+        return window
+
+    if args.command == "play" and args.arenas > 1:
+        run_arena_batch(args, profile, perceptor, open_window, should_stop)
+        return
+    if args.command == "play":
+        window = open_window()
         if window is None:
             stopped_before_start(args)
             return
     else:
         window = WindowsGameWindow(args.window)
-    if args.command == "play":
-        escape_requested = window.stop_requested
-        window.should_stop = should_stop
-    runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute, should_stop=should_stop)
-    recorder = FrameRecorder(args.record_dir, args.record_limit) if args.record_dir else None
-    log_path = Path(args.log)
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    with log_path.open("a", encoding="utf-8") as log:
-        def event(data):
-            if recorder is not None:
-                data = recorder.record(data, runtime.last_frame)
-            log.write(json.dumps(data) + "\n")
-            log.flush()
-        session = DesktopSession(runtime.observe, runtime.act, DesktopPolicy(),
-                                 preview=not args.execute, max_actions=args.max_actions,
-                                 max_polls=args.max_polls, action_timeout=args.action_timeout,
-                                 max_initial_unknown_polls=args.startup_polls if args.command == "play" else None,
-                                 event_callback=event,
-                                 phase_actions=runtime.phase_actions(start_arena=args.start_arena),
-                                 should_stop=should_stop)
-        try:
-            if args.command == "play" and not should_stop():
-                window.activate(profile.image_size)
-            result = session.run()
-        except KeyboardInterrupt:
-            event({"event": "stopped", "reason": "keyboard_interrupt"})
-            print("Stopped by keyboard interrupt.")
-            return
-        finally:
-            if runtime.last_frame is not None:
-                save_image(runtime.last_frame, args.last_frame)
-        print(json.dumps(result.to_dict(), indent=2))
-        if result.error or result.pending_action or result.reason in {
-                "action_timeout", "unknown_timeout", "next_shop_timeout", "turn_unreadable",
-                "illegal_action", "transition_timeout", "repeated_transition"} or (
-                args.command == "play" and result.reason == "transition_disabled"):
-            raise RuntimeError(f"desktop session stopped: {result.reason}; see {log_path}")
+    result = run_desktop_session(args, profile, perceptor, window, should_stop)
+    if result is not None and session_failed(args, result):
+        raise RuntimeError(f"desktop session stopped: {result.reason}; see {args.log}")
 
 
 def cli():
