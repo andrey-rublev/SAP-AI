@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from datetime import datetime, timezone
 import json
 import math
@@ -118,7 +119,9 @@ def add_session_arguments(command, *, play=False):
         command.add_argument("--startup-polls", type=positive_int, default=300,
                              help="initial unknown observations allowed while the game loads; normal unknown limit resumes after recognition")
         command.add_argument("--arenas", type=positive_int, default=1,
-                             help="maximum arenas to collect; budgets apply to the entire batch, with at most N-1 normal shutdown requests")
+                             help="maximum arenas to collect; shared budgets, at most N-1 normal restarts plus one separately bounded completed-client bootstrap if enabled")
+        command.add_argument("--restart-completed", action=argparse.BooleanOptionalAction, default=False,
+                             help="allow one normal restart of an initially completed zero-action arena")
     else:
         command.add_argument("--execute", action="store_true")
         command.add_argument("--start-arena", action="store_true",
@@ -189,6 +192,8 @@ def parse_args(argv=None):
     if args.command == "play" and args.arenas > 1:
         if args.no_launch or args.window != GAME_TITLE:
             p.error("--arenas greater than 1 requires automatic Steam launch and the default game window")
+    if args.command == "play" and args.restart_completed and (args.no_launch or args.window != GAME_TITLE):
+        p.error("--restart-completed requires automatic Steam launch and the default game window")
     return args
 
 
@@ -238,6 +243,78 @@ def session_failed(args, result):
         args.command == "play" and result.reason == "transition_disabled"))
 
 
+def run_with_completed_restart(args, profile, perceptor, window, should_stop, open_window, session_info=None):
+    """Allow one zero-action terminal bootstrap, retaining its separate receipt."""
+    result = run_desktop_session(args, profile, perceptor, window, should_stop, session_info)
+    info = {"polls": 0, "attempts": 0, "log": None}
+    def empty_terminal(value):
+        return (value is not None and value.reason == "result" and value.actions == 0
+                and value.acknowledgments == 0 and value.pending_action is None and value.error is None
+                and value.last_board is not None and value.last_board.phase == Phase.RESULT)
+    if not args.restart_completed or not empty_terminal(result):
+        return result, window, info
+    info["polls"] = result.polls
+    path = Path(args.log).with_name(f"{Path(args.log).stem}-bootstrap-{uuid4().hex}.jsonl")
+    info["log"] = str(path.resolve())
+    with path.open("x", encoding="utf-8") as log:
+        def event(kind, **fields):
+            log.write(json.dumps({"event": kind, **fields}) + "\n")
+            log.flush()
+        event("bootstrap_started", receipt=result.to_dict(), max_attempts=1)
+        actual_started = False
+        actual_error = None
+        try:
+            if should_stop():
+                result = SessionResult(0, 0, 0, "stopped")
+            elif info["polls"] + 1 >= args.max_polls:
+                result = SessionResult(0, 0, 0, "max_polls")
+            else:
+                fresh = perceptor.observe(window.capture())
+                info["polls"] += 1
+                event("bootstrap_observed", board=fresh.to_dict(), polls=info["polls"])
+                if should_stop():
+                    result = SessionResult(0, 0, 0, "stopped")
+                elif fresh.phase != Phase.RESULT:
+                    raise RuntimeError("completed screen changed before bootstrap; no close requested")
+                else:
+                    info["attempts"] = 1
+                    event("bootstrap_close_attempted", attempt=1)
+                    if not window.close_for_restart(profile.image_size, timeout=args.launch_timeout):
+                        result = SessionResult(0, 0, 0, "stopped")
+                    elif should_stop():
+                        result = SessionResult(0, 0, 0, "stopped")
+                    else:
+                        window = open_window()
+                        if window is None or should_stop():
+                            result = SessionResult(0, 0, 0, "stopped")
+                        else:
+                            remaining = argparse.Namespace(**vars(args))
+                            remaining.max_polls -= info["polls"]
+                            if session_info is not None:
+                                session_info["first_recognized_phase"] = None
+                            actual_started = True
+                            result = None
+                            result = run_desktop_session(remaining, profile, perceptor, window, should_stop, session_info)
+                            if empty_terminal(result):
+                                result = replace(result, reason="empty_terminal",
+                                                 error="restarted client still shows a completed arena; no second bootstrap allowed")
+        except KeyboardInterrupt:
+            if actual_started:
+                actual_error = "KeyboardInterrupt during actual arena; counts unknown"
+                raise
+            result = SessionResult(0, 0, 0, "stopped")
+        except Exception as exc:
+            if actual_started:
+                actual_error = f"{type(exc).__name__}: {exc}"
+                raise
+            result = SessionResult(0, 0, 0, "bootstrap_error", error=f"{type(exc).__name__}: {exc}")
+        finally:
+            event("bootstrap_finished", **info, result=result.to_dict() if result is not None else None,
+                  actual_session_counts_known=not actual_started or result is not None,
+                  actual_session_error=actual_error)
+    return result, window, info
+
+
 def run_arena_batch(args, profile, perceptor, open_window, should_stop):
     """Collect bounded arenas, restarting only after verified terminal results."""
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
@@ -248,6 +325,8 @@ def run_arena_batch(args, profile, perceptor, open_window, should_stop):
                "actions": 0, "acknowledgments": 0, "polls": 0, "restart_polls": 0,
                "restart_attempts": 0, "max_restart_attempts": args.arenas - 1,
                "reason": "stopped", "error": None, "directory": str(batch_dir.resolve())}
+    if args.restart_completed:
+        summary.update(bootstrap_attempts=0, max_bootstrap_attempts=1, bootstrap_polls=0)
     summary_path = batch_dir / "summary.json"
     log_path = batch_dir / "batch.jsonl"
     with log_path.open("a", encoding="utf-8") as log:
@@ -283,7 +362,16 @@ def run_arena_batch(args, profile, perceptor, open_window, should_stop):
                 session_args.max_polls = args.max_polls - summary["polls"]
                 stage = "session"
                 session_info = {"first_recognized_phase": None}
-                result = run_desktop_session(session_args, profile, perceptor, window, should_stop, session_info)
+                if args.restart_completed and arena == 1:
+                    result, window, bootstrap = run_with_completed_restart(
+                        session_args, profile, perceptor, window, should_stop, open_window, session_info)
+                    summary["polls"] += bootstrap["polls"]
+                    summary["bootstrap_polls"] += bootstrap["polls"]
+                    summary["bootstrap_attempts"] += bootstrap["attempts"]
+                    if bootstrap["log"]:
+                        event("bootstrap_finished", **bootstrap)
+                else:
+                    result = run_desktop_session(session_args, profile, perceptor, window, should_stop, session_info)
                 if result is None:
                     break
                 summary["actions"] += result.actions
@@ -422,7 +510,13 @@ def main(argv=None):
             return
     else:
         window = WindowsGameWindow(args.window)
-    result = run_desktop_session(args, profile, perceptor, window, should_stop)
+    if args.command == "play" and args.restart_completed:
+        result, window, bootstrap = run_with_completed_restart(
+            args, profile, perceptor, window, should_stop, open_window)
+        if bootstrap["log"]:
+            print(json.dumps({"bootstrap": bootstrap, "reason": result.reason if result is not None else "stopped"}, indent=2))
+    else:
+        result = run_desktop_session(args, profile, perceptor, window, should_stop)
     if result is not None and session_failed(args, result):
         raise RuntimeError(f"desktop session stopped: {result.reason}; see {args.log}")
 

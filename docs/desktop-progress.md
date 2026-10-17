@@ -1357,6 +1357,27 @@ training/calibration/test splits. No predictions or final accuracy were produced
 No rows, crops, features or thresholds were changed to bypass the refusal. New
 independent appearance data is required before this candidate can be assessed.
 
+## Start another arena from an existing result, 2026-10-17
+
+The PowerShell launcher now enables `--restart-completed`. One initial clean
+zero-action RESULT can receive a fresh terminal check and normal close/relaunch
+before the actual arena. The old terminal remains a separate exportable receipt;
+it does not count as gameplay. Both observations consume the shared poll budget,
+and time, Escape, stop-file and focus guards remain active. A second empty
+terminal fails without another bootstrap. Batch summaries separate this one
+bootstrap allowance from their N-minus-one normal restarts. Direct CLI behavior
+without the flag remains unchanged, and `--no-restart-completed` overrides the
+launcher default.
+
+Root review caught an exception-accounting issue: an unexpected actual-arena
+exception must propagate with unknown counts, rather than fabricate a zero-action
+bootstrap error. That fix and a dispatch-then-error regression are included.
+All 1,857 repository tests pass with one expected skip. The final native test
+started from the completed soak result, verified it twice, closed it once and
+launched a fresh arena using the standalone program. A first activation attempt
+was denied focus and stopped before input; after setup restored game focus, the
+test resumed as a new invocation. Its full arena outcome is still being recorded.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

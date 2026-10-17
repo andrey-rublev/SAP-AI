@@ -8,5 +8,5 @@ if not exist ".venv\Scripts\python.exe" (
     >&2 echo Tesseract OCR must also be installed; see docs\desktop.md.
     exit /b 1
 )
-".venv\Scripts\python.exe" desktop.py play %*
+".venv\Scripts\python.exe" desktop.py play --restart-completed %*
 exit /b %errorlevel%

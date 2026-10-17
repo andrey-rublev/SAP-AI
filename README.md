@@ -23,10 +23,11 @@ The command uses the project's Python environment and private native profile.
 If the game is closed, it opens the installed Steam game once and waits for
 startup. An already open game must be restored at the calibrated window size.
 Hold Escape until it stops, or move the pointer to a screen corner. A completed
-game stops the program. For a bounded batch, use
+game stops the program. Starting the command again from that completed screen
+verifies the result and restarts the client once to play a new arena. For a bounded batch, use
 `.\play.cmd --arenas 3 --max-seconds 3600`; it restarts the client only after
-verified completed arenas. Return to the main menu before starting from an
-already completed result screen.
+verified completed arenas. Use `--no-restart-completed` to leave an already
+completed game untouched.
 See [Desktop controller](docs/desktop.md) for dependencies, calibration and
 other stop controls.
 

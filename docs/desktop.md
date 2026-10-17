@@ -156,10 +156,21 @@ missing profile/reference, wrong client size or denied focus request fails with
 a diagnostic. If the standard SAP client is closed, it requests its installed
 Steam game once and waits up to 90 seconds for a client at the calibrated size.
 The wait reads window geometry without activating it. Existing clients retain
-the normal immediate size/focus checks. Use `--no-launch` to require an already
-open client, or `--launch-timeout 120` to change the bounded startup wait.
+the normal immediate size/focus checks. Use
+`.\play.cmd --no-restart-completed --no-launch` to require an already open client,
+or `--launch-timeout 120` to change the bounded startup wait.
 It does not restore a minimized client or handle authentication. Profiles
 remain private and must match the running client.
+
+`play.cmd` enables `--restart-completed`: when the initial session observes a
+completed game with zero attempted actions, the program verifies RESULT again,
+requests normal shutdown once and opens a new game. The old terminal is recorded
+as a zero-input receipt and never counted as an arena played. A separate bootstrap
+log records the check and close attempt; both observations consume the shared
+poll budget and the same runtime/stop controls apply. A restored terminal after
+that restart stops with a diagnostic, without another restart attempt. Use
+`--no-restart-completed` to disable this behavior. Direct `desktop.py play` leaves
+it disabled unless explicitly requested.
 
 Before its first recognized phase, `play` allows up to 300 initial unknown
 observations for loading screens; `--startup-polls` adjusts that bound. It sends
@@ -185,8 +196,10 @@ After acknowledged gameplay reaches RESULT, the bot observes the terminal again,
 requests normal game shutdown once, verifies that the window disappeared, and
 launches the next arena. A pending action, failed shutdown, changed screen,
 lost focus, stop request or exhausted budget prevents restart. It never kills
-the process or repeats a failed close. An already completed result screen with
-no gameplay in this invocation stops without counting or restarting it.
+the process or repeats a failed close. With `--restart-completed`, one initial
+completed screen may bootstrap into the first actual arena; this separate
+one-attempt allowance is additional to the N-minus-one normal between-arena
+restarts. Without that flag, a zero-action result stops without being counted.
 The default remains one arena and does not close the game.
 
 Batch summaries and separate arena logs go into a new directory beside `--log`;
