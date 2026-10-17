@@ -199,7 +199,10 @@ Two more fresh main-menu-to-result runs completed on October 17. The latest
 followed a verified bot-controlled game restart and completed 90 actions with
 90 acknowledgments, ending at turn nine with three trophies. Its batch also
 finished a resumed arena, for 101 actions/101 acknowledgments across both sessions.
-This establishes four complete fresh runs on the local setup. Recognition still has gaps,
+A subsequent six-arena soak completed 490 actions/490 acknowledgments and five
+verified client restarts without intervention. This establishes ten complete
+fresh runs on the local setup. All six soak games were losses with 0–4 trophies;
+the strategy remains weak. Recognition still has gaps,
 and the stat-based strategy does not yet use food, ordering or most abilities;
 general unattended reliability and competitive performance remain unverified.
 [Desktop progress](docs/desktop-progress.md) records the evidence and limits.

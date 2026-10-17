@@ -1309,9 +1309,53 @@ acknowledgments and 854 polls under real policy/session replay with mocked IO.
 An unreadable late-roll gold receipt instead stops at 88 attempted/87 acknowledged
 actions, retaining the pending roll without reading a later terminal. Export
 checks exclude capture paths, chosen names and account metadata. Both new tests
-pass. A six-arena, 90-minute native soak is running with bounded private recording;
-its outcome is not yet claimed. The offline wheel also builds without network
+pass. The subsequent six-arena native soak completed, as recorded below.
+The offline wheel also builds without network
 dependencies and contains the required modules without private assets.
+
+## Six consecutive native arenas, 2026-10-17
+
+One bounded standalone invocation completed six fresh main-menu-to-RESULT arenas
+and five verified client restarts: 490 actions, 490 acknowledgments and 4,392
+observations, including five fresh restart checks. There were no pending actions,
+errors or agent gameplay inputs. Session elapsed time summed to 2,154.82 seconds;
+client startup/shutdown time is additional. All six began at the main menu.
+
+| Arena | Actions acknowledged | Final turn | Trophies |
+| --- | ---: | ---: | ---: |
+| 1 | 81 | 8 | 1 |
+| 2 | 81 | 8 | 0 |
+| 3 | 85 | 8 | 1 |
+| 4 | 70 | 7 | 0 |
+| 5 | 91 | 9 | 4 |
+| 6 | 82 | 8 | 0 |
+
+Independent final inspection confirmed the last turn-eight loss with zero
+trophies. Four unidentified level-one sales returned two gold and were
+acknowledged live, validating the bounded receipt change beyond offline replay.
+The run also covered the life-reward phase. Its 856 recorded changed-board frames
+and detailed logs remain private. Ten complete fresh runs are now verified across
+October 4 and 17, but the six losses and low trophy counts show the stat baseline
+is still a weak strategy. This is bounded control evidence, not competitive play
+or reliability across arbitrary layouts, packs or unseen states.
+
+## Frozen foreground recognition evaluation, 2026-10-17
+
+A separate foreground-shape/color experiment suppressed background and shared
+hat regions. Its fixed metric ranked 70 of 83 calibration identities correctly,
+but accepted four unfamiliar pets; calibrated rejection retained 62 of 83 with
+zero observed unsafe accepts. These are development metrics, not test accuracy.
+The candidate does not recognize emptiness and remains disabled in production.
+
+After independent source/provenance review, the complete executable closure and
+policy were frozen before final annotation. Root visually annotated 24 slots in
+three previously reserved panels: 15 known pets, three unfamiliar Whale/Kangaroo
+examples and six empties. Previously used Sheep/Worm negative identities were
+excluded before scoring. Metadata preflight passed, but the unchanged dataset
+gate refused final evaluation because resized inputs were near-duplicates across
+training/calibration/test splits. No predictions or final accuracy were produced.
+No rows, crops, features or thresholds were changed to bypass the refusal. New
+independent appearance data is required before this candidate can be assessed.
 
 ## Remaining milestones
 
@@ -1320,7 +1364,7 @@ dependencies and contains the required modules without private assets.
 2. Verify OCR, empty slots, species, and proposals across both day and night
    backgrounds. Include naming, battle, victory, and tier-unlock negatives.
 3. Repeat fresh-start-through-terminal validation across independent arenas
-   and newly observed layouts. Four uninterrupted fresh runs are now verified; broader
+   and newly observed layouts. Ten uninterrupted fresh runs are now verified; broader
    unattended reliability and competitive performance remain unmeasured.
 4. Validate naming and further variations of results and shop layouts. A loss
    terminal, victory/draw/defeat continuation, tier dismissal, and the fifth
