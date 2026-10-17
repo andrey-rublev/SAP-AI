@@ -1240,6 +1240,33 @@ turn eleven exposed a blank OCR result for the turn counter after tier dismissal
 that receipt remains recorded as unacknowledged and is being diagnosed separately.
 The pointer-rest calibration is private and no recognition limits were loosened.
 
+## New hover/title diagnostics and turn-eleven calibration, 2026-10-17
+
+The movement-only diagnostic probe requires an existing foreground client, a
+calibrated pointer-rest point and two matching fresh SHOP observations before
+hovering each occupied profile slot. It caps targets at five and time at 30
+seconds, parks between targets and records typed before/after observations into
+a new private directory. Its manifest declares development use before capture;
+these new diagnostic frames cannot enter held-out species evaluation. It never
+clicks, launches, activates or interprets an identity. The final 66 probe/parking
+tests passed, including OCR time reservation and path confinement.
+
+A native two-target probe completed in 8.51 seconds with five pointer moves, six
+captures and the pointer restored. Independently inspected tooltip titles showed
+Tiger and Rhino. The offline exact-title reader returned both correctly using
+two agreeing preparations on manually selected title-only crops. Its 47
+synthetic/injected-OCR tests cover ambiguity, missing color evidence, malformed
+names, dependency failures and bounded engine errors. This establishes two
+diagnostic readings, not automated title location or production recognition.
+
+Separately, the parked run stopped with 11 attempted actions/10 acknowledgments
+after tier dismissal because numeric OCR returned blank for the visible turn 11.
+An independently inspected private turn-eleven reference now uses the existing
+numeric-template mechanism at distance .005. None of 117 distinct historical
+other-turn crops matched; the closest distance was .07417 (observed turns 1–10,
+not independent manual labels). No global threshold or receipt rule changed.
+The original timeout is preserved; a new resumed batch is being tested.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
