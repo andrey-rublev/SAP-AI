@@ -138,6 +138,8 @@ def add_session_arguments(command, *, play=False):
                          help="wall-clock budget checked before each observation and action")
     command.add_argument("--action-timeout", type=positive_seconds, default=30,
                          help="seconds allowed for observed action acknowledgment")
+    command.add_argument("--sale-funded-rolls", action="store_true",
+                         help="experimental: spend spare gold on a roll when supported sale income could still fund a replacement")
     command.add_argument("--log", default=".local/desktop/session.jsonl")
     command.add_argument("--stop-file", default=".local/desktop/STOP",
                          help="stop before further input when this local file exists")
@@ -210,11 +212,14 @@ def parse_args(argv=None):
 def run_desktop_session(args, profile, perceptor, window, should_stop, session_info=None):
     """Run one arena with the existing receipt and recording contract."""
     runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute, should_stop=should_stop)
+    policy = DesktopPolicy(sale_funded_rolls=getattr(args, "sale_funded_rolls", False))
     recorder = FrameRecorder(args.record_dir, args.record_limit) if args.record_dir else None
     log_path = Path(args.log)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as log:
         def event(data):
+            if data.get("event") == "started" and policy.sale_funded_rolls:
+                data = {**data, "policy": {"name": "stats", "sale_funded_rolls": True}}
             if session_info is not None and data.get("event") == "observed":
                 phase = data["board"]["phase"]
                 if phase != Phase.UNKNOWN.value and session_info["first_recognized_phase"] is None:
@@ -223,7 +228,7 @@ def run_desktop_session(args, profile, perceptor, window, should_stop, session_i
                 data = recorder.record(data, runtime.last_frame)
             log.write(json.dumps(data) + "\n")
             log.flush()
-        session = DesktopSession(runtime.observe, runtime.act, DesktopPolicy(),
+        session = DesktopSession(runtime.observe, runtime.act, policy,
                                  preview=not args.execute, max_actions=args.max_actions,
                                  max_polls=args.max_polls, action_timeout=args.action_timeout,
                                  max_initial_unknown_polls=args.startup_polls if args.command == "play" else None,

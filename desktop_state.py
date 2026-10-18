@@ -301,13 +301,18 @@ class DesktopPolicy:
     Fill empty spaces, combine identified duplicates, and replace only known
     level-one pets for a substantial stat gain. This does not model abilities,
     food, frozen shops, or positioning, and never invokes the toy DQN.
+    ``sale_funded_rolls`` optionally searches with spare gold when a supported
+    level-one sale could still fund a replacement after paying for the roll.
     """
 
-    def __init__(self, *, minimum_upgrade_gain: int = 4) -> None:
+    def __init__(self, *, minimum_upgrade_gain: int = 4, sale_funded_rolls: bool = False) -> None:
         _integer(minimum_upgrade_gain, "minimum_upgrade_gain", minimum=1)
         if minimum_upgrade_gain is None:
             raise ValueError("minimum_upgrade_gain must be an integer")
+        if type(sale_funded_rolls) is not bool:
+            raise ValueError("sale_funded_rolls must be a boolean")
         self.minimum_upgrade_gain = minimum_upgrade_gain
+        self.sale_funded_rolls = sale_funded_rolls
 
     def choose_action(self, board: Board) -> Action | None:
         if not isinstance(board, Board) or not _known_shop(board):
@@ -348,4 +353,11 @@ class DesktopPolicy:
         # Preserve enough gold to use the new shop after a refresh.
         if board.gold >= 4:
             return Action("roll")
+        if self.sale_funded_rolls and empty is None and board.gold >= 1:
+            # An optional final search can still fund a replacement through a
+            # supported sale. This authorizes only the roll, never a queued
+            # sale: fresh observations must establish a useful offer first.
+            if any(pet.level == 1 and (income := observed_sale_income(pet)) is not None
+                   and board.gold - 1 + income >= 3 for pet in board.team):
+                return Action("roll")
         return Action("end_turn")

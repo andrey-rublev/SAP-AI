@@ -1543,6 +1543,41 @@ counterexample; all 49 layout tests pass. Keep unresolved evidence unknown.
 Further work needs justified calibration or a separately validated appearance
 method, rather than relaxing clearance merely to make these samples pass.
 
+## October 18: opt-in sale-funded replacement searches
+
+`play.cmd --sale-funded-rolls` enables an experimental use of spare gold. After
+all existing buy/merge/sell choices, a full team can roll when a supported known
+level-one sale would still fund a three-gold replacement after the roll cost.
+Ordinary supported pets permit a final roll from three gold; an identified
+level-one Pig can fund a roll from two. Unknown species use only the existing
+one-gold minimum, and unknown/higher levels cannot fund this option. Only the
+roll is proposed; the policy must see a useful new offer before proposing any
+sale. Unhelpful results end normally. The option is off by default, preserves
+the current launcher behavior, and records its enabled configuration in the
+private session-start event for later comparisons.
+
+All 229 focused policy/CLI/replay tests pass, including a complete mocked
+roll-sale-purchase sequence with three acknowledgments and a disappointing roll
+that never triggers a sale. On 504 distinct typed shop states from the six-arena
+development logs, this option changes 38 end-turn proposals into legal roll
+opportunities. These are counterfactual proposals, not executed actions or win
+rate evidence. The previous visible-replacement allocation candidate changes
+zero proposals on the same states, so it remains outside the live launcher.
+
+The same recorded audit finds only 50 identified species among 1,522 occupied
+shop-slot observations and no known shop levels; team readings identify 245 of
+2,253 occupied observations with 2,071 known levels. These repeated states are
+correlated and not an independent accuracy study. They show why more training
+of the existing allocation candidate would not resolve the native recognition
+blocker. No model was promoted and the frozen failed final study was unchanged.
+Native validation of the new optional search remains outstanding.
+
+Final integration passes all 2,156 tests with one expected Windows symlink skip
+in 30.99 seconds. The final wheel builds offline, includes the controller lease
+and optional policy, and contains no private assets. No project CPU/controller
+job remains running. Work stayed in the background; renewed desktop permission
+was requested because the previous October 17 control window expired.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

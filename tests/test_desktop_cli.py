@@ -121,6 +121,23 @@ def test_controller_error_exits_lease_before_propagating(tmp_path, cli_runtime, 
     assert exited == [True]
 
 
+@pytest.mark.parametrize("enabled", [False, True])
+def test_sale_funded_roll_option_reaches_policy_and_records_experimental_provenance(tmp_path, cli_runtime, enabled):
+    from desktop_state import PetSlot
+    runtime, _ = cli_runtime
+    runtime.observe.return_value = Board(Phase.SHOP, gold=3, turn=4,
+        shop=(PetSlot(True, None, 0, 1),), team=(PetSlot(True, None, 1, 1, 1),) * 5)
+    desktop.main(arguments(tmp_path) + (["--sale-funded-rolls"] if enabled else []))
+    events = [json.loads(line) for line in (tmp_path / "session.jsonl").read_text().splitlines()]
+    proposed = [row["action"]["kind"] for row in events if row["event"] == "proposed"]
+    assert proposed == ["roll" if enabled else "end_turn"]
+    if enabled:
+        assert events[0]["policy"] == {"name": "stats", "sale_funded_rolls": True}
+    else:
+        assert "policy" not in events[0]
+    runtime.act.assert_not_called()
+
+
 def test_existing_stop_file_prevents_observation_and_input(tmp_path, cli_runtime):
     runtime, _ = cli_runtime
     (tmp_path / "STOP").touch()

@@ -183,6 +183,10 @@ first controller before retrying; the lease is released automatically when its
 process exits. Passive preview and snapshot commands remain available.
 
 For a shorter run, use `.\play.cmd --max-actions 40 --max-seconds 600`.
+The experimental `.\play.cmd --sale-funded-rolls` can spend spare gold on an
+extra roll when a supported level-one sale could still fund a replacement.
+It replans after every observation and never queues a sale. This option has
+offline contract tests; its effect on native results has not been measured.
 With an already verified profile, the separate preview interface remains:
 
 ```bash
