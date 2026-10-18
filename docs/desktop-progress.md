@@ -1813,6 +1813,35 @@ by PowerShell are now accepted alongside ordinary UTF-8, with Unicode paths,
 legacy defaults and save/roundtrip behavior preserved. All 379 focused JSON,
 schema, numeric-color, vision and preflight tests pass without native IO.
 
+## October 18, afternoon: freeze native diagnostic calibration
+
+The saved hover study exposed a provenance gap: its old manifest named the
+profile path without retaining the loaded calibration. Future native diagnostic
+manifests now contain a detached profile snapshot and canonical JSON digest,
+plus shape/dtype-bound hashes of every loaded phase, pet, food and numeric RGB
+reference and its calibrated uses. The perceptor uses a separate detached
+profile and read-only copies of those already-loaded pixels. Later profile or
+image file changes cannot substitute the probe's inputs. The report binds the
+exact UTF-8 manifest bytes; incoherent/missing cached assets fail before input
+ownership or window construction. Existing acceptance and stop gates remain.
+All 124 focused provenance/hover/replay tests pass with mocked native IO.
+
+An offline examination of the four permitted hover development images found
+paired target-local corner outlines, but the tooltip obscures some other slots
+and adjacent slots have partial outline leakage. Three identical-looking Rhinos
+also share stats and level. These observations do not establish unique target
+binding or rule out a stale tooltip. No outline detector, species enrichment or
+new native run was enabled. Fresh independently recorded hover/re-clear
+sequences and distinct-target controls remain necessary after authorization.
+
+Afternoon integration passes 2,546 tests with one expected Windows symlink skip
+in 42.03 seconds. An offline wheel builds and imports the desktop modules in
+isolation, preserving numeric-color configuration and the preflight command;
+its 26 files contain no private image/model/log assets. The actual PowerShell
+`play.cmd --check` passes with the unchanged native profile and reports
+`live_validation: false`. No October 18 desktop inspection or game input
+occurred. No new model was trained or promoted from these development studies.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

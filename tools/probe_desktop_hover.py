@@ -114,9 +114,10 @@ def private_path(value):
 
 
 def write_json(path, value):
-    with private_path(path).open("x", encoding="utf-8") as output:
-        json.dump(value, output, indent=2, allow_nan=False)
-        output.write("\n")
+    payload = (json.dumps(value, indent=2, allow_nan=False) + "\n").encode("utf-8")
+    with private_path(path).open("xb") as output:
+        output.write(payload)
+    return hashlib.sha256(payload).hexdigest()
 
 
 def write_image(path, frame):
@@ -153,6 +154,69 @@ def load_tooltip_layout(path, image_size):
 def pixel_sha256(image):
     array = np.asarray(image)
     return hashlib.sha256(str((array.shape, array.dtype.str)).encode() + array.tobytes()).hexdigest()
+
+
+def freeze_profile_snapshot(profile):
+    """Detach loaded profile metadata from both its source and the capture reader."""
+    try:
+        payload = json.dumps(profile.to_dict(), sort_keys=True, separators=(",", ":"),
+                             ensure_ascii=False, allow_nan=False).encode("utf-8")
+        snapshot = json.loads(payload)
+        detached = VisionProfile.from_dict(json.loads(payload), base_dir=profile.base_dir)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"loaded calibration cannot be frozen: {exc}") from exc
+    return detached, {"data": snapshot, "canonical_sha256": hashlib.sha256(payload).hexdigest(),
+                      "hash_format": "sorted-key compact UTF-8 JSON, ensure_ascii=false, allow_nan=false"}
+
+
+def freeze_loaded_reference_pixels(profile, perceptor):
+    """Bind cached RGB pixels actually loaded by asset preflight, never reread files.
+
+    Own read-only copies keep later changes to a source file or previously held
+    array from altering the references used by this probe. Zero-reference
+    profiles do not require a perceptor cache API.
+    """
+    uses = {}
+    def add(name, region, field):
+        uses.setdefault(name, []).append({"field": field, "region": region.to_list()})
+    for index, item in enumerate(profile.phase_templates):
+        add(item.template, item.region, f"phase.{index}")
+    for row in ("shop", "team"):
+        for index, slot in enumerate(getattr(profile, row)):
+            if slot.empty_template is not None:
+                add(slot.empty_template, slot.portrait, f"{row}.{index}.empty")
+            for species, name in slot.species_references():
+                add(name, slot.portrait, f"{row}.{index}.species.{species}")
+    for index, slot in enumerate(profile.food):
+        if slot.empty_template is not None:
+            add(slot.empty_template, slot.portrait, f"food.{index}.empty")
+        for food_id, name in slot.food_references():
+            add(name, slot.portrait, f"food.{index}.food_id.{food_id}")
+    for item in profile.numeric_templates:
+        region, _, _ = profile.numeric_region(item.field)
+        add(item.template, region, f"numeric.{item.field}.{item.value}")
+    if not uses:
+        return []
+    cache = getattr(perceptor, "_templates", None)
+    if not isinstance(cache, dict):
+        raise ValueError("loaded calibration reference cache is missing")
+    references = []
+    for name, fields in sorted(uses.items()):
+        array = cache.get(name)
+        if array is None:
+            raise ValueError(f"loaded calibration reference is missing: {name!r}")
+        if not isinstance(array, np.ndarray) or array.dtype != np.uint8 or array.ndim != 3 or array.shape[2] != 3:
+            raise ValueError(f"loaded calibration reference must be uint8 RGB: {name!r}")
+        for use in fields:
+            _, _, width, height = use["region"]
+            if array.shape != (height, width, 3):
+                raise ValueError(f"loaded calibration reference dimensions are incoherent: {name!r}")
+        frozen = array.copy(order="C")
+        frozen.flags.writeable = False
+        cache[name] = frozen
+        references.append({"name": name, "shape": list(frozen.shape), "dtype": frozen.dtype.str,
+                           "pixel_sha256": pixel_sha256(frozen), "uses": fields})
+    return references
 
 
 def collect_association(profile, target, layout, *, capture, hover, observe, wait,
@@ -284,6 +348,7 @@ def run_probe(args, *, clock=None, sleep=None, tooltip_layout=None):
     report = {"version": 2, "data_usage": "development_diagnostic", "directory": None,
               "reason": "stopped", "error": None, "targets": [], "pointer_moves": 0,
               "captures": 0, "pointer_restored": False, "elapsed": 0.,
+              "manifest_sha256": None,
               "association_limit": ASSOCIATION_LIMIT, "identity_interpretation": "none"}
     if stopped():
         return report
@@ -292,6 +357,7 @@ def run_probe(args, *, clock=None, sleep=None, tooltip_layout=None):
         profile_path = ROOT / profile_path
     profile = VisionProfile.load(profile_path)
     profile.validate(require_calibrated=True)
+    profile, profile_snapshot = freeze_profile_snapshot(profile)
     if profile.pointer_rest is None:
         raise ValueError("hover probe requires a calibrated pointer_rest to clear tooltips between targets")
     for target in args.target:
@@ -312,6 +378,7 @@ def run_probe(args, *, clock=None, sleep=None, tooltip_layout=None):
         return result
     perceptor = Perceptor(profile, ocr=CachedOCR(guarded_ocr))
     validate_profile_assets(perceptor)
+    reference_pixels = freeze_loaded_reference_pixels(profile, perceptor)
     validate_live_dependencies()
     if stopped():
         return report
@@ -319,9 +386,11 @@ def run_probe(args, *, clock=None, sleep=None, tooltip_layout=None):
     private_path(output).mkdir(exist_ok=False)
     report["directory"] = str(output)
     # Written before constructing a window or capturing any new development frame.
-    write_json(output / "manifest.json", {
+    report["manifest_sha256"] = write_json(output / "manifest.json", {
         "version": 2, "data_usage": "development_diagnostic", "held_out_evaluation": False,
         "created_utc": datetime.now(timezone.utc).isoformat(), "profile": str(profile_path),
+        "profile_snapshot": profile_snapshot, "loaded_reference_pixels": reference_pixels,
+        "reference_pixel_hash_format": "SHA256 of str((shape, dtype.str)).encode() followed by C-order RGB bytes",
         "targets": [{"row": target.row, "index": target.index} for target in args.target],
         "max_seconds": args.max_seconds, "max_captures": len(args.target) * 6,
         "max_pointer_moves": len(args.target) * 3,

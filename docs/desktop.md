@@ -542,6 +542,15 @@ remain unresolved outside the panel; this protocol never weakens the strict
 tooltip-clearance check used by native diagnostics. Neither title text nor a
 successful sequence authorizes species enrichment or gameplay actions.
 
+For explicitly authorized native development diagnostics,
+`tools/probe_desktop_hover.py` records the loaded calibration snapshot and its
+canonical JSON digest before window access. Its manifest also binds the exact
+cached RGB references by shape, dtype, pixel digest and calibrated uses. The
+probe uses detached metadata and read-only reference copies, so later file
+changes cannot alter that sequence's inputs. The report includes the exact
+manifest file digest. All such metadata and captured frames belong under
+`.local/`; this provenance does not establish tooltip identity or accuracy.
+
 `tools/extract_desktop_assets.py` can extract selected named textures from an
 installed Unity 6000.3 Windows client for private recognition experiments.
 It supports only the explicitly checked version-22 layout and DXT1/DXT5 formats,
