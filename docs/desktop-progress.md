@@ -2,11 +2,12 @@
 
 ## Working agreement
 
-**Current continuation, 2026-10-18:** work in the background using source edits,
-mocked IO, recorded development frames and bounded CPU jobs. The October 17 live
-control window expired at 5 p.m.; live inspection/control needs renewed human
-authorization for today in this chat. Do not launch, focus, capture or control
-desktop apps until then. The requested deliverable remains a PowerShell command
+**Current continuation, 2026-10-18:** the human explicitly authorized a bounded
+desktop test this afternoon. The first installed-game launch exposed Steam's
+sign-in window without a game window; the human must complete authentication
+and open the game before the test can continue. No gameplay input was sent.
+Use source edits, mocked IO, recorded development frames and bounded CPU jobs
+while waiting. The requested deliverable remains a PowerShell command
 that runs the standalone bot, which itself observes, decides, acts and verifies.
 Check ordinary Plus usage first and reserve enough to test, review, push and
 write a handoff. Do not spend paid/reset credits or change account settings.
@@ -35,8 +36,10 @@ the requested live objective is verified complete.
 Normal start is `.\play.cmd`; hold Escape, move to a screen corner or create
 `.local/desktop/STOP` to stop. Eleven earlier uninterrupted fresh native runs
 are evidence for the earlier conservative baseline; no October 18 native run
-has occurred. Current blockers include tooltip/target binding, readable shop
-levels and directly validated food effects. No learned recognizer is enabled;
+has occurred. A bounded native test now has authorization but awaits manual
+Steam sign-in and a fresh observed game state. Current blockers include
+tooltip/target binding, readable shop levels and directly validated food
+effects. No learned recognizer is enabled;
 the consumed duplicate-refused final species study must not be rescored or
 described as unseen data. Keep the toy DQN separate from real-game decisions.
 
@@ -1859,6 +1862,17 @@ Final integration after the shared decoder passes 2,573 tests with one expected
 Windows symlink skip in 34.81 seconds. The rebuilt 26-file wheel imports in
 isolation with the current source bytes and no private assets. The actual
 PowerShell resource preflight passes again; the native calibration is unchanged.
+
+## October 18, afternoon: authorized test awaits Steam sign-in
+
+After the offline changes, the human explicitly selected “Allow a bounded
+desktop test now.” Computer Use app inventory found no running game. Launching
+the installed Super Auto Pets entry returned no targetable game window; a fresh
+window inventory showed only Steam's sign-in window. Authentication was left to
+the human. No bot session, gameplay clicks, screenshot capture, new training or
+native validation occurred. The test can resume after manual sign-in and game
+launch, following a fresh state observation. Existing Escape/STOP safeguards and
+the requirement that the bot itself perform gameplay actions remain in force.
 
 ## Remaining milestones
 
