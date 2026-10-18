@@ -412,8 +412,17 @@ class VisionProfile:
 
     @classmethod
     def load(cls, path):
+        def unique_fields(pairs):
+            result = {}
+            for name, value in pairs:
+                if name in result:
+                    raise ValueError(f"duplicate JSON key in vision profile: {name!r}")
+                result[name] = value
+            return result
+
         path = Path(path)
-        return cls.from_dict(json.loads(path.read_text(encoding="utf-8")), base_dir=path.parent)
+        data = json.loads(path.read_text(encoding="utf-8-sig"), object_pairs_hook=unique_fields)
+        return cls.from_dict(data, base_dir=path.parent)
 
     def save(self, path):
         self.validate()

@@ -1802,6 +1802,17 @@ level-1-only development results do not measure unseen accuracy or improve the
 reference-assisted live baseline by the same amount. No filter/model was
 promoted; real higher-level and broader negative validation remain necessary.
 
+## October 18, afternoon: unambiguous profile JSON
+
+Profile loading now rejects repeated decoded JSON keys at every nesting level.
+Previously the last value silently won, allowing a second `calibrated` flag,
+slot availability, level region or reference threshold to replace the first.
+Equal-valued and escaped duplicate keys also fail before profile conversion;
+the same field names in separate objects remain valid. UTF-8 BOM profiles made
+by PowerShell are now accepted alongside ordinary UTF-8, with Unicode paths,
+legacy defaults and save/roundtrip behavior preserved. All 379 focused JSON,
+schema, numeric-color, vision and preflight tests pass without native IO.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
