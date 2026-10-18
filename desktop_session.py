@@ -244,6 +244,9 @@ class DesktopSession:
     ``phase_actions`` explicitly enables calibrated interstitial actions;
     unconfigured dialogs stop the session. A round transition has its own poll
     budget and never infers a new turn from a dismissed overlay.
+    An optional pure ``shop_ready(board)`` predicate can defer policy decisions
+    for a bounded number of incomplete shop observations. Pending actions keep
+    their existing acknowledgment budget and never use this extra allowance.
     """
 
     def __init__(self, observe: Callable[[], Board], act: Callable[[Action], None], policy,
@@ -252,7 +255,9 @@ class DesktopSession:
                  stable_frames=2, action_timeout=10.0, action_max_polls=50,
                  max_unknown_polls=25, clock=time.monotonic, sleep=time.sleep,
                  should_stop: Callable[[], bool] | None = None,
-                 phase_actions=None, max_transition_polls=300, max_initial_unknown_polls=None):
+                 phase_actions=None, max_transition_polls=300, max_initial_unknown_polls=None,
+                 shop_ready: Callable[[Board], bool] | None = None,
+                 max_incomplete_shop_polls=0):
         if max_initial_unknown_polls is None:
             max_initial_unknown_polls = max_unknown_polls
         for name, value in (("max_actions", max_actions), ("max_polls", max_polls),
@@ -263,6 +268,10 @@ class DesktopSession:
                             ("max_transition_polls", max_transition_polls)):
             if type(value) is not int or value < 1:
                 raise ValueError(f"{name} must be a positive integer")
+        if type(max_incomplete_shop_polls) is not int or max_incomplete_shop_polls < 0:
+            raise ValueError("max_incomplete_shop_polls must be a nonnegative integer")
+        if max_incomplete_shop_polls and not callable(shop_ready):
+            raise ValueError("shop_ready must be callable when incomplete shop waiting is enabled")
         if stable_frames < 2:
             raise ValueError("stable_frames must be at least 2")
         if (not isfinite(poll_interval) or not isfinite(action_timeout)
@@ -276,6 +285,7 @@ class DesktopSession:
         self.action_timeout, self.action_max_polls = action_timeout, action_max_polls
         self.max_unknown_polls = max_unknown_polls
         self.max_initial_unknown_polls = max_initial_unknown_polls
+        self.shop_ready, self.max_incomplete_shop_polls = shop_ready, max_incomplete_shop_polls
         self.clock, self.sleep, self.should_stop = clock, sleep, should_stop
         self.phase_actions = {Phase(phase): action for phase, action in (phase_actions or {}).items()}
         for phase, action in self.phase_actions.items():
@@ -286,7 +296,7 @@ class DesktopSession:
         self.max_transition_polls = max_transition_polls
 
     def run(self) -> SessionResult:
-        actions = acknowledgments = polls = stable = unknown = pending_polls = 0
+        actions = acknowledgments = polls = stable = unknown = pending_polls = incomplete_shop_polls = 0
         board = proposal = pending = before = last_fingerprint = last_acted = None
         waiting_turn = last_shop_turn = None
         transition_active, transition_polls = False, 0
@@ -307,7 +317,9 @@ class DesktopSession:
                     raise
 
         try:
-            emit("started", preview=self.preview)
+            readiness_options = ({"max_incomplete_shop_polls": self.max_incomplete_shop_polls}
+                                 if self.max_incomplete_shop_polls else {})
+            emit("started", preview=self.preview, **readiness_options)
             while polls < self.max_polls:
                 stage = "stop_check"
                 if self.should_stop is not None and self.should_stop():
@@ -350,6 +362,7 @@ class DesktopSession:
                         reason = "transition_timeout"
                         break
                 if pending is not None:
+                    incomplete_shop_polls = 0
                     pending_polls += 1
                     # Battles animate constantly; their phase alone confirms End Turn.
                     confirmed = action_acknowledged(before, board, pending,
@@ -367,6 +380,24 @@ class DesktopSession:
                 if actions >= self.max_actions:
                     reason = "max_actions"
                     break
+                if self.max_incomplete_shop_polls:
+                    if board.phase == Phase.SHOP:
+                        stage = "policy"
+                        ready = self.shop_ready(board)
+                        if type(ready) is not bool:
+                            raise TypeError("shop_ready must return a boolean")
+                        if not ready:
+                            # Count observations, not matching fingerprints:
+                            # changing unreadable fields cannot renew the budget.
+                            incomplete_shop_polls += 1
+                            if incomplete_shop_polls >= self.max_incomplete_shop_polls:
+                                reason = "shop_observation_timeout"
+                                break
+                            # Readiness must earn fresh stable observations;
+                            # incomplete repeats cannot pause transition timeouts.
+                            stable, last_fingerprint = 0, None
+                            continue
+                    incomplete_shop_polls = 0
                 if stable < self.stable_frames:
                     continue
                 if board.phase == Phase.SHOP:

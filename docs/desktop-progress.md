@@ -1681,6 +1681,34 @@ no native profile, threshold, species model or gameplay default was changed.
 All 264 focused tooltip/inventory/replay/native-probe mock tests pass; runtime
 package versions and private IO helper hashes are retained in replay reports.
 
+## October 18, morning: bounded recovery for incomplete shops
+
+The standard CLI now waits through a bounded episode of incomplete SHOP readings
+instead of immediately ending when the stat policy cannot decide. It requires
+a positive readable turn and the baseline's existing gold/occupancy/stat
+requirements. Missing fields remain unknown; fresh complete observations must
+earn stability again. The default limit is 30 nonpending incomplete observations,
+configurable with `--max-incomplete-shop-polls`; persistent failure stops with
+`shop_observation_timeout` and a failing CLI result. Pending acknowledgment,
+transition, unknown-phase, overall poll/time and stop limits keep precedence.
+Direct generic sessions remain unchanged unless explicitly configured.
+
+Typed and mocked CLI regressions cover changing incomplete fingerprints,
+readable-turn recovery, permanent failure, fresh stability, original pending
+timeouts, callback errors and stop controls. The 534 focused state/session/CLI/
+export tests pass. An audit of the six earlier soak logs found 100 incomplete
+SHOP polls, all with a pending action; none demonstrates the new predecision
+recovery. A bounded replay then reproduced all six recorded timelines exactly:
+4,387 polls, 490 actions and 490 acknowledgments in 0.239 seconds, with the new
+readiness guard enabled. The initial replay attempt used the generic 25-poll
+startup limit and stopped before recognition; the successful report explicitly
+uses the CLI's 300-poll startup allowance. Private reports preserve both.
+These are compatibility and preventive tests, not new native gameplay evidence.
+The full repository suite passes 2,381 tests with one expected Windows symlink
+skip in 38.69 seconds. An offline wheel builds successfully, contains the new
+tooltip module and controller lease, and includes no private image/model/log
+assets. No native application was opened or controlled.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

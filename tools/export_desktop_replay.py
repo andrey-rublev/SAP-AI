@@ -27,6 +27,7 @@ REPLAY_REASONS = {
     "max_actions", "max_polls", "result", "unknown_timeout", "transition_timeout",
     "action_timeout", "policy_stopped", "illegal_action", "transition_disabled",
     "repeated_transition", "turn_unreadable", "preview", "stopped", "next_shop_timeout",
+    "shop_observation_timeout",
 }
 
 

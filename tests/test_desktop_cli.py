@@ -16,7 +16,7 @@ from desktop_control import DesktopControlConflict
 from desktop_launch import connect_game_window
 from desktop_runtime import GameWindowNotFound
 from desktop_session import SessionResult
-from desktop_state import Action, Board, Phase
+from desktop_state import Action, Board, PetSlot, Phase
 from desktop_vision import NumberTemplate, Perceptor, PhaseTemplate, Rect, SlotConfig, VisionProfile
 
 
@@ -290,6 +290,46 @@ def test_play_passes_bounded_run_configuration(tmp_path, cli_runtime, monkeypatc
     assert (kwargs["max_actions"], kwargs["max_polls"], kwargs["action_timeout"]) == (2, 20, 7)
     assert kwargs["should_stop"] is desktop.DesktopRuntime.call_args.kwargs["should_stop"]
     assert kwargs["phase_actions"] == runtime.phase_actions.return_value
+    assert kwargs["max_incomplete_shop_polls"] == 30 and callable(kwargs["shop_ready"])
+
+
+@pytest.mark.parametrize("field,value", [("gold", None), ("turn", None), ("turn", 0), ("shop", (PetSlot(None),))])
+def test_cli_waits_for_fresh_complete_shop_before_preview(tmp_path, cli_runtime, monkeypatch, field, value):
+    from dataclasses import replace
+    runtime, _ = cli_runtime
+    ready = Board(Phase.SHOP, gold=3, turn=1, shop=(PetSlot(True, attack=2, health=3),),
+                  team=(PetSlot(False),) * 5)
+    incomplete = replace(ready, **{field: value})
+    runtime.observe.side_effect = [incomplete, incomplete, ready, ready]
+    original = desktop.DesktopSession
+    monkeypatch.setattr(desktop, "DesktopSession", lambda *args, **kwargs: original(*args, poll_interval=0, **kwargs))
+    desktop.main(arguments(tmp_path) + ["--max-incomplete-shop-polls", "3"])
+    events = [json.loads(line) for line in (tmp_path / "session.jsonl").read_text().splitlines()]
+    assert events[0]["max_incomplete_shop_polls"] == 3
+    assert events[-1]["result"]["reason"] == "preview" and events[-1]["result"]["polls"] == 4
+    assert [row["poll"] for row in events if row["event"] == "proposed"] == [4]
+    assert events[-1]["result"]["proposed_action"] == Action("buy", 0, 0).to_dict()
+    runtime.act.assert_not_called()
+
+
+def test_cli_incomplete_shop_timeout_fails_without_input(tmp_path, cli_runtime, monkeypatch):
+    runtime, _ = cli_runtime
+    runtime.observe.return_value = Board(Phase.SHOP, gold=None, turn=1,
+        shop=(PetSlot(True, attack=2, health=3),), team=(PetSlot(False),) * 5)
+    original = desktop.DesktopSession
+    monkeypatch.setattr(desktop, "DesktopSession", lambda *args, **kwargs: original(*args, poll_interval=0, **kwargs))
+    with pytest.raises(RuntimeError, match="shop_observation_timeout"):
+        desktop.main(arguments(tmp_path) + ["--max-incomplete-shop-polls", "3"])
+    events = [json.loads(line) for line in (tmp_path / "session.jsonl").read_text().splitlines()]
+    assert (events[-1]["result"]["polls"], events[-1]["result"]["actions"]) == (3, 0)
+    assert events[-1]["result"]["pending_action"] is None
+    runtime.act.assert_not_called()
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "1.5"])
+def test_cli_rejects_invalid_incomplete_shop_budget(value):
+    with pytest.raises(SystemExit):
+        desktop.parse_args(["play", "--max-incomplete-shop-polls", value])
 
 
 def test_play_rejects_uncalibrated_profile_before_perception_or_window(tmp_path, cli_runtime):

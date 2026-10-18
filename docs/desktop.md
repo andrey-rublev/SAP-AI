@@ -170,6 +170,17 @@ It is not scored as an unreadable digit; frame studies report the error and fail
 their CLI invocation. Blank or invalid returned text can still become unknown.
 Use the project's Python environment so its OCR dependencies are available.
 
+`play.cmd` and `desktop.py run` wait for up to 30 consecutive incomplete SHOP
+observations before stopping with `shop_observation_timeout`. They require a
+readable positive turn, gold, slot occupancy and occupied-pet attack/health;
+unknown species, levels and optional food do not block this stat baseline.
+Set `--max-incomplete-shop-polls N` to choose another positive poll limit.
+Missing readings stay unknown, and policy decisions still need two fresh matching
+complete observations. Pending actions keep their original acknowledgment
+deadline without retries; phase, total-poll, time and stop limits still apply.
+Direct `DesktopSession` callers retain the prior behavior unless they explicitly
+supply a pure `shop_ready` predicate and a positive `max_incomplete_shop_polls`.
+
 Optional `numeric_templates` entries provide verified references for individual
 fields, for example `{"field": "gold", "value": 0, "template": "gold-zero.png",
 "max_distance": 0.006, "margin": 0.01}`. Fields include HUD names and
@@ -391,6 +402,9 @@ existing outputs and failed IO that saved Boards
 cannot reproduce. Review the resulting JSON before adding it to tests. Tests
 must configure session bounds and scripted choices deliberately: the fixture
 does not recreate capture latency, OCR, input errors or the strength of play.
+Replaying a `shop_observation_timeout` additionally requires the recorded
+readiness budget and a matching `shop_ready` predicate; the exporter does not
+recreate a caller's callback or silently enable observation waiting.
 
 For sustained controller stress tests without desktop access:
 

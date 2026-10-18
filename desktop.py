@@ -138,6 +138,8 @@ def add_session_arguments(command, *, play=False):
                          help="wall-clock budget checked before each observation and action")
     command.add_argument("--action-timeout", type=positive_seconds, default=30,
                          help="seconds allowed for observed action acknowledgment")
+    command.add_argument("--max-incomplete-shop-polls", type=positive_int, default=30,
+                         help="consecutive incomplete shop observations allowed before stopping; never retries input")
     command.add_argument("--sale-funded-rolls", action="store_true",
                          help="experimental: spend spare gold on a roll when supported sale income could still fund a replacement")
     command.add_argument("--log", default=".local/desktop/session.jsonl")
@@ -231,6 +233,9 @@ def run_desktop_session(args, profile, perceptor, window, should_stop, session_i
         session = DesktopSession(runtime.observe, runtime.act, policy,
                                  preview=not args.execute, max_actions=args.max_actions,
                                  max_polls=args.max_polls, action_timeout=args.action_timeout,
+                                 shop_ready=lambda board: (board.turn is not None and board.turn > 0
+                                                           and policy.observation_complete(board)),
+                                 max_incomplete_shop_polls=getattr(args, "max_incomplete_shop_polls", 30),
                                  max_initial_unknown_polls=args.startup_polls if args.command == "play" else None,
                                  event_callback=event,
                                  phase_actions=runtime.phase_actions(start_arena=args.start_arena),
@@ -254,7 +259,7 @@ def run_desktop_session(args, profile, perceptor, window, should_stop, session_i
 def session_failed(args, result):
     return bool(result.error or result.pending_action or result.reason in {
         "action_timeout", "unknown_timeout", "next_shop_timeout", "turn_unreadable",
-        "illegal_action", "transition_timeout", "repeated_transition"} or (
+        "illegal_action", "transition_timeout", "repeated_transition", "shop_observation_timeout"} or (
         args.command == "play" and result.reason == "transition_disabled"))
 
 

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from desktop_session import DesktopSession
-from desktop_state import Action, Board, BoardChangedBeforeInput, PetSlot, Phase
+from desktop_state import Action, Board, BoardChangedBeforeInput, DesktopPolicy, PetSlot, Phase
 from tools.export_desktop_replay import export_session, main
 
 
@@ -42,6 +42,19 @@ def recording(*, pending=False, deferred=False):
 
 def encode(events):
     return "\n".join(json.dumps(event) for event in events)
+
+
+def test_export_preserves_bounded_incomplete_shop_timeout_without_extra_event_types():
+    board = Board(Phase.SHOP, gold=None, turn=1, shop=(PetSlot(None),), team=(PetSlot(False),) * 5)
+    events = []
+    policy = DesktopPolicy()
+    result = DesktopSession(lambda: board, lambda _: pytest.fail("no input allowed"), policy,
+        event_callback=events.append, clock=lambda: 0., sleep=lambda _: None,
+        shop_ready=policy.observation_complete, max_incomplete_shop_polls=3).run()
+    replay = export_session(encode(events))
+    assert replay["expected"]["reason"] == result.reason == "shop_observation_timeout"
+    assert replay["expected"]["polls"] == 3 and replay["actions"] == []
+    assert replay["observation_runs"] == [[0, 3]] and replay["boards"] == [board.to_dict()]
 
 
 def test_export_matches_actual_recorded_opening_fixture():

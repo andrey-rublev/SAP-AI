@@ -314,11 +314,21 @@ class DesktopPolicy:
         self.minimum_upgrade_gain = minimum_upgrade_gain
         self.sale_funded_rolls = sale_funded_rolls
 
-    def choose_action(self, board: Board) -> Action | None:
+    def observation_complete(self, board: Board) -> bool:
+        """Whether the baseline has the readings it needs to choose an action.
+
+        Species, levels and food may remain unknown: they only limit which
+        optional actions the baseline can choose. This does not infer readings
+        or require a readable turn, which the session checks before End Turn.
+        """
         if not isinstance(board, Board) or not _known_shop(board):
-            return None
+            return False
         # Missing stats can change both the best purchase and the weakest pet.
-        if any(pet.occupied and pet.strength is None for pet in (*board.shop, *board.team)):
+        return not any(pet.occupied and pet.strength is None
+                       for pet in (*board.shop, *board.team))
+
+    def choose_action(self, board: Board) -> Action | None:
+        if not self.observation_complete(board):
             return None
         offers = [(index, pet) for index, pet in enumerate(board.shop) if pet.occupied]
         # The second key makes equal-strength choices deterministic by slot.
