@@ -1510,6 +1510,22 @@ strategy or live-gameplay evidence. The private report preserves source/profile
 hashes; no frames or calibration were committed. No game window was inspected,
 activated or controlled during this work window.
 
+## October 18: validate complete input sequences before selection
+
+The earlier food destination review exposed the same partial-selection risk in
+pet purchases, merges, sales and naming. The runtime now resolves and validates
+every portrait/button destination and freezes its coordinates before sending the
+first click. A missing later slot, malformed noun or out-of-bounds Sell point
+rejects the whole sequence without selecting anything. Portraits require typed
+in-bounds rectangles; points require two non-boolean integer client coordinates.
+
+The actual click loop keeps its previous order, pointer cleanup bookkeeping,
+per-click stop/focus/geometry guards and pending/no-retry behavior. Fresh changed
+Boards still defer before point validation. All 305 focused input/runtime/food
+execution tests pass, including a mutable button changed after selection and
+stop requests between clicks. This correction was tested entirely with mocked
+IO; native gameplay has not been repeated during this window.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

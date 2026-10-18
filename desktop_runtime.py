@@ -466,42 +466,51 @@ class DesktopRuntime:
             self._pointer_dirty = True
             self.window.click(point, size)
 
+        def portrait_point(slots, index, missing_message, kind):
+            if not isinstance(slots, (list, tuple)) or index >= len(slots):
+                raise ValueError(missing_message)
+            region = getattr(slots[index], "portrait", None)
+            if not isinstance(region, Rect):
+                raise ValueError(f"{kind} input needs calibrated Rect regions")
+            region.validate(size)
+            return region.center
+
         if action.kind in ("buy", "merge"):
-            # The desktop client selects a shop pet, then places it with a
-            # second click. Each click rechecks focus and client geometry;
-            # any failure propagates without retrying or selecting again.
-            click(self.profile.shop[action.slot].portrait.center)
-            click(self.profile.team[action.target].portrait.center)
+            missing = "profile needs calibrated shop source and team target"
+            points = (portrait_point(getattr(self.profile, "shop", ()), action.slot, missing, "pet"),
+                      portrait_point(getattr(self.profile, "team", ()), action.target, missing, "pet"))
         elif action.kind == "buy_food":
-            food = getattr(self.profile, "food", ())
-            if action.slot >= len(food) or action.target >= len(self.profile.team):
-                raise ValueError("profile needs calibrated food source and team target")
-            # Resolve the complete sequence before selecting food. Each click
-            # retains the ordinary stop/focus/geometry checks; partial input
-            # remains pending and is never automatically retried.
-            regions = (food[action.slot].portrait, self.profile.team[action.target].portrait)
-            for region in regions:
-                if not isinstance(region, Rect):
-                    raise ValueError("food input needs calibrated Rect regions")
-                region.validate(size)
-            points = tuple(region.center for region in regions)
-            for point in points:
-                click(point)
+            missing = "profile needs calibrated food source and team target"
+            points = (portrait_point(getattr(self.profile, "food", ()), action.slot, missing, "food"),
+                      portrait_point(getattr(self.profile, "team", ()), action.target, missing, "food"))
         elif action.kind == "choose_name":
-            # Validate the whole sequence before selecting its first option.
             names = ("name_adjective", "name_noun")
             if any(name not in self.profile.buttons for name in names):
                 raise ValueError("profile needs both calibrated name options")
-            for name in names:
-                click(self.profile.buttons[name])
+            points = tuple(self.profile.buttons[name] for name in names)
         elif action.kind == "sell":
             if "sell" not in self.profile.buttons:
                 raise ValueError("profile has no calibrated sell point")
-            # Selecting a teammate reveals the client's Sell button. Validate
-            # that point before selection; each click checks focus/geometry.
-            click(self.profile.team[action.slot].portrait.center)
-            click(self.profile.buttons["sell"])
+            points = (portrait_point(getattr(self.profile, "team", ()), action.slot,
+                                     "profile needs a calibrated team source", "sell"),
+                      self.profile.buttons["sell"])
         else:
             if action.kind not in self.profile.buttons:
                 raise ValueError(f"profile has no calibrated {action.kind} button")
-            click(self.profile.buttons[action.kind])
+            points = (self.profile.buttons[action.kind],)
+        # Freeze and validate every destination before selecting anything.
+        # A later lookup, malformed point, or changed mutable button must not
+        # strand the client after the first click of a partial sequence.
+        plan = []
+        for point in points:
+            if (not isinstance(point, (list, tuple)) or len(point) != 2
+                    or any(type(value) is not int for value in point)):
+                raise ValueError("input point must contain two integer client coordinates")
+            x, y = point
+            if not 0 <= x < size[0] or not 0 <= y < size[1]:
+                raise ValueError("input point is outside the game client")
+            plan.append((x, y))
+        # Each native click retains focus/geometry and stop checks. Any partial
+        # input failure propagates; the pending session action is not retried.
+        for point in plan:
+            click(point)
