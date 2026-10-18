@@ -139,6 +139,20 @@ def test_plausible_panel_with_invalid_title_or_perimeter_is_unresolved(scene):
     assert (inspected.status, inspected.reason) == ("unresolved", "panel_perimeter")
 
 
+def test_a_narrow_clipped_beveled_panel_cannot_be_dismissed_as_a_small_hud_glyph():
+    image = np.full((120, 150, 3), 90, dtype=np.uint8)
+    image[20:95, 20:120] = 247
+    image[95:100, 30:110] = 247
+    # The full connected panel satisfies today's .8 edge gate. Its bottom
+    # strip is narrower than the minimum full width, so an orthogonal-width
+    # heuristic would wrongly report a clear search after clipping its top.
+    layout = TooltipLayout((0, 0, 150, 120), (95, 105), (75, 85), (10, 10, 60, 20))
+    assert inspect_tooltip_panel(image, layout).status == "unique"
+    clipped = image[95:110].copy()
+    result = inspect_tooltip_panel(clipped, replace(layout, search_rect=(0, 0, 150, 15)))
+    assert (result.status, result.reason, result.title) == ("unresolved", "search_boundary", None)
+
+
 def test_panel_cut_by_image_edge_is_not_completed_or_guessed(scene):
     image, (x, _, width, _), layout = scene
     cut = image[:, :x + width - 10].copy()

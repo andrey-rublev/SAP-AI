@@ -1526,6 +1526,23 @@ execution tests pass, including a mutable button changed after selection and
 stop requests between clicks. This correction was tested entirely with mocked
 IO; native gameplay has not been repeated during this window.
 
+## October 18: recorded tooltip calibration limitation
+
+The stricter panel inspection was checked against the two previously designated
+Tiger/Rhino development hover frames and their parked controls. The previous
+wide search returns unresolved boundary evidence on all of them, so that old
+layout cannot establish the new probe's clearance requirement. This is a real
+coverage limitation; the revised sequence is not yet demonstrated on native
+frames. No held-out evaluation data was opened or rescored.
+
+Review rejected a tempting shortcut that ignores small boundary components:
+a beveled panel satisfying the existing fill/edge gates can leave a narrow
+visible strip when clipped. Discarding that strip by minimum full-panel width
+would falsely establish absence. A synthetic regression now preserves this
+counterexample; all 49 layout tests pass. Keep unresolved evidence unknown.
+Further work needs justified calibration or a separately validated appearance
+method, rather than relaxing clearance merely to make these samples pass.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
