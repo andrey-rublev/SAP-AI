@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import time
 from math import isfinite
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Callable
 
 from desktop_state import (Action, Board, BoardChangedBeforeInput, Phase,
@@ -95,6 +95,48 @@ def _shop_purchase_observed(before, after, purchased: int) -> bool:
     return matches(with_gap) or matches(compacted)
 
 
+def _food_purchase_observed(before, after, purchased: int) -> bool:
+    """Match one known food removal, retaining exact survivor observations.
+
+    Unknown occupancy/identity cannot establish which food disappeared. Either
+    a preserved gap or left compaction is accepted, without inventing a newly
+    generated offer or accepting another item's disappearance as the receipt.
+    """
+    if (len(before) != len(after)
+            or any(item.occupied is None or (item.occupied and item.food_id is None)
+                   for item in (*before, *after))):
+        return False
+    gap = tuple(None if index == purchased or item.occupied is False else item
+                for index, item in enumerate(before))
+    compacted = tuple(item for index, item in enumerate(before)
+                      if index != purchased and item.occupied is True)
+    compacted += (None,) * (len(before) - len(compacted))
+    observed = tuple(item if item.occupied else None for item in after)
+    return observed == gap or observed == compacted
+
+
+def _food_acknowledged(before: Board, after: Board, action: Action) -> bool:
+    """Receipt for the explicit flat-stat food protocol, not inferred balance.
+
+    Exact target gains deliberately abstain at stat caps or on ability effects.
+    No other teammate, pet offer, counter, or surviving food may change. The
+    native perceptor does not currently establish a food effect contract, and
+    the default policy never proposes food; this path is for explicit adapters.
+    """
+    if (not legal_action(before, action) or before.turn is None
+            or after.phase != Phase.SHOP or before.turn != after.turn
+            or after.gold != before.gold - before.food[action.slot].cost
+            or before.wins != after.wins or before.lives != after.lives
+            or before.shop != after.shop or len(before.team) != len(after.team)
+            or not _food_purchase_observed(before.food, after.food, action.slot)):
+        return False
+    source, target = before.food[action.slot], before.team[action.target]
+    expected = replace(target, attack=target.attack + source.attack_bonus,
+                       health=target.health + source.health_bonus)
+    return all(new == (expected if index == action.target else old)
+               for index, (old, new) in enumerate(zip(before.team, after.team)))
+
+
 def action_acknowledged(before: Board, after: Board, action: Action,
                         *, previous_shop_turn: int | None = None) -> bool:
     """Recognize only action-specific evidence, never arbitrary screen changes."""
@@ -144,6 +186,8 @@ def action_acknowledged(before: Board, after: Board, action: Action,
         if before.turn is not None:
             return after.turn == before.turn
         return previous_shop_turn is None or after.turn > previous_shop_turn
+    if action.kind == "buy_food":
+        return _food_acknowledged(before, after, action)
     if after.phase != Phase.SHOP or not _same_turn(before, after):
         return False
     if before.gold is None or after.gold is None:

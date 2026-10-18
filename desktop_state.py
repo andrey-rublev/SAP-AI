@@ -252,8 +252,13 @@ def legal_action(board: Board, action: Action) -> bool:
     if not _known_shop(board):
         return False
     if action.kind == "buy_food":
-        if (action.slot is None or action.target is None
+        if (board.turn is None or board.turn < 1
+                or action.slot is None or action.target is None
                 or action.slot >= len(board.food) or action.target >= len(board.team)):
+            return False
+        # The receipt needs to distinguish the consumed item from survivors.
+        if any(item.occupied is None or (item.occupied and item.food_id is None)
+               for item in board.food):
             return False
         source, target = board.food[action.slot], board.team[action.target]
         return (

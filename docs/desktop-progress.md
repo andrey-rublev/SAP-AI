@@ -1439,6 +1439,31 @@ default desktop policy is unchanged. All 404 focused food/vision/state/CLI tests
 pass using synthetic images; no private calibration or artwork was committed
 and no live food validation has occurred.
 
+## October 18: explicit food input and acknowledgment contract
+
+The runtime can dispatch a `buy_food` action supplied by an explicit adapter:
+select its calibrated food source, then its selected teammate. Both rectangles
+are revalidated before the first click, and each click keeps the normal stop,
+focus and geometry guards. A partial failure stays pending without retry. Food
+legality now also requires a known positive turn and enough food occupancy/
+identity evidence to distinguish the selected removal from surviving offers.
+
+Acknowledgment requires the explicitly observed price, source removal (gap or
+left compaction), exact configured target stat gains, and unchanged teammates,
+pet offers, surviving food and other counters. It abstains on capped/extra
+ability effects rather than guessing their rules. Review found a mutable-profile
+geometry gap; malformed or out-of-bounds destinations now reject before source
+selection. All 587 focused food/state/runtime/session tests pass, including
+full mocked sessions, failed receipts, preflight price changes, stop-between-
+clicks and partial input failures.
+
+This is a tested adapter protocol, not native food gameplay evidence. Prices and
+bonuses in tests are deliberately arbitrary. The native perceptor still provides
+no food effect/bonus contract and the default policy never selects food, so
+normal `play.cmd` behavior remains unchanged. Current food mechanics, stat caps,
+ability interactions, calibrated regions and the physical native sequence still
+need direct validation before enabling food in normal play.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

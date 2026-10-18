@@ -14,6 +14,7 @@ import time
 import numpy as np
 
 from desktop_state import Action, BoardChangedBeforeInput, Phase, legal_action
+from desktop_vision import Rect
 
 
 OCR_TIMEOUT_SECONDS = 3.0
@@ -471,6 +472,21 @@ class DesktopRuntime:
             # any failure propagates without retrying or selecting again.
             click(self.profile.shop[action.slot].portrait.center)
             click(self.profile.team[action.target].portrait.center)
+        elif action.kind == "buy_food":
+            food = getattr(self.profile, "food", ())
+            if action.slot >= len(food) or action.target >= len(self.profile.team):
+                raise ValueError("profile needs calibrated food source and team target")
+            # Resolve the complete sequence before selecting food. Each click
+            # retains the ordinary stop/focus/geometry checks; partial input
+            # remains pending and is never automatically retried.
+            regions = (food[action.slot].portrait, self.profile.team[action.target].portrait)
+            for region in regions:
+                if not isinstance(region, Rect):
+                    raise ValueError("food input needs calibrated Rect regions")
+                region.validate(size)
+            points = tuple(region.center for region in regions)
+            for point in points:
+                click(point)
         elif action.kind == "choose_name":
             # Validate the whole sequence before selecting its first option.
             names = ("name_adjective", "name_noun")
