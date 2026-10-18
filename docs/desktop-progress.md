@@ -1464,6 +1464,26 @@ normal `play.cmd` behavior remains unchanged. Current food mechanics, stat caps,
 ability interactions, calibrated regions and the physical native sequence still
 need direct validation before enabling food in normal play.
 
+## October 18: bounded tooltip appearance sequence diagnostic
+
+The hover development probe now requires explicit private tooltip calibration
+matching the profile size and records the exact layout hash before capture.
+Each target uses six bounded frames: two parked clear SHOP observations, two
+settled tooltip frames, and two parked clear SHOP observations again. The panel
+and title pixels/positions must agree between hover samples; full typed Boards
+must agree across both clear pairs and the target must remain known occupied.
+Tooltip-covered frames never enter Board perception, avoiding OCR over occluded
+stats. Captures are copied so reused camera buffers cannot hide a change.
+
+Stale, ambiguous, unresolved, disappearing or changing panels and changed clear
+Boards reject the sequence. The report calls success `appearance_sequence_verified`,
+keeps unknown fields unknown, and explicitly limits this to development evidence
+within the calibrated search; it does not prove target identity or causation.
+No species text is interpreted or promoted into gameplay. All 166 focused
+probe/association/title/layout tests pass with injected IO, including stop and
+private-output checks. New captures remain development diagnostics; the revised
+sequence has not yet been run live.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

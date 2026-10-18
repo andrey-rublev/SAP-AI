@@ -1,5 +1,6 @@
 """Explicit development hover diagnostics with injected clocks, camera and mouse."""
-from dataclasses import replace
+from dataclasses import asdict, replace
+import hashlib
 import json
 from pathlib import Path
 import stat
@@ -11,6 +12,7 @@ import pytest
 
 from desktop_runtime import DesktopUnavailable, GameWindowNotFound
 from desktop_state import Board, PetSlot, Phase
+from desktop_tooltip_layout import TooltipLayout
 from desktop_vision import Rect, SlotConfig, VisionProfile
 from tools import probe_desktop_hover as probe
 
@@ -36,6 +38,12 @@ def environment(tmp_path, monkeypatch):
                   team=(PetSlot(True, None, 2, 3, 1),) * 5)
     order, state = [], {"tooltip": True, "stopped": False}
     output = tmp_path / ".local" / "probe"
+    layout = TooltipLayout((0, 0, 100, 100), (28, 32), (38, 42), (3, 3, 20, 10),
+                           dark_perimeter_max_channel=60)
+    layout_path = tmp_path / ".local" / "tooltip-layout.json"
+    layout_path.parent.mkdir()
+    layout_path.write_text(json.dumps({"version": 1, "calibrated": True, "image_size": [100, 100],
+                                       "layout": asdict(layout)}))
     window = Mock()
     window.stop_requested.side_effect = lambda: state["stopped"]
     def hover(point, size):
@@ -46,10 +54,14 @@ def environment(tmp_path, monkeypatch):
         manifest = json.loads((output / "manifest.json").read_text())
         assert manifest["data_usage"] == "development_diagnostic" and manifest["held_out_evaluation"] is False
         order.append(("capture", state["tooltip"]))
-        return np.full((100, 100, 3), int(state["tooltip"]), dtype=np.uint8)
+        frame = np.full((100, 100, 3), 90, dtype=np.uint8)
+        if state["tooltip"]:
+            frame[34:76, 54:86] = 0
+            frame[35:75, 55:85] = (247, 247, 245)
+            frame[40:45, 60:74] = (190, 100, 15)
+        return frame
     def observe(frame):
-        if frame[0, 0, 0]:
-            return replace(board, team=(PetSlot(True, None, None, None, 1),) * 5)
+        assert not state["tooltip"], "tooltip-covered frames must not enter Board perception"
         return board
     window.hover.side_effect, window.capture.side_effect = hover, capture
     perceptor = SimpleNamespace(observe=Mock(side_effect=observe))
@@ -64,11 +76,13 @@ def environment(tmp_path, monkeypatch):
     monkeypatch.setattr(probe, "WindowsGameWindow", factory)
     return SimpleNamespace(root=tmp_path, output=output, profile=profile, board=board, window=window,
                            perceptor=perceptor, load=load, assets=assets, dependencies=dependencies,
-                           factory=factory, order=order, state=state, clock=Clock())
+                           factory=factory, order=order, state=state, clock=Clock(), layout=layout,
+                           layout_path=layout_path)
 
 
 def arguments(*flags):
-    return probe.parse_args(["--target", "shop:0", "--output-dir", ".local/probe", *flags])
+    return probe.parse_args(["--target", "shop:0", "--output-dir", ".local/probe",
+                             "--tooltip-layout", ".local/tooltip-layout.json", *flags])
 
 
 def run(environment, *flags):
@@ -77,24 +91,34 @@ def run(environment, *flags):
 
 def test_probe_uses_only_calibrated_centers_and_parks_between_targets(environment):
     report = run(environment, "--target", "team:1")
-    assert (report["reason"], report["captures"], report["pointer_moves"]) == ("completed", 6, 5)
+    assert (report["reason"], report["captures"], report["pointer_moves"]) == ("completed", 12, 6)
     assert report["pointer_restored"] is True and report["data_usage"] == "development_diagnostic"
     assert environment.window.hover.call_args_list == [
         call((50, 95), (100, 100)), call((15, 65), (100, 100)),
-        call((50, 95), (100, 100)), call((30, 25), (100, 100)), call((50, 95), (100, 100)),
+        call((50, 95), (100, 100)), call((50, 95), (100, 100)),
+        call((30, 25), (100, 100)), call((50, 95), (100, 100)),
     ]
     assert [kind for kind, value in environment.order[:4]] == ["profile", "assets", "dependencies", "window"]
-    assert [value for kind, value in environment.order if kind == "capture"] == [False, False, True] * 2
+    assert [value for kind, value in environment.order if kind == "capture"] == [False, False, True, True, False, False] * 2
     assert json.loads((environment.output / "report.json").read_text()) == report
-    assert len(list(environment.output.glob("*.png"))) == 4
+    assert len(list(environment.output.glob("*.png"))) == 16
     for target in report["targets"]:
         assert target["before"]["phase"] == target["after"]["phase"] == "shop"
         assert target["before"]["team"][0]["attack"] == 2
-        assert target["after"]["team"][0]["attack"] is None
+        assert target["after"]["team"][0]["attack"] == 2
+        assert target["appearance_sequence_verified"] is True
+        assert [sample["tooltip_status"] for sample in target["samples"]] == ["absent", "absent", "unique", "unique", "absent", "absent"]
+        assert all("board" not in sample for sample in target["samples"] if sample["stage"] == "hover")
         # Diagnostic captures do not manufacture tooltip identities.
         assert target["before"]["shop"][0]["species"] is None
         assert target["after"]["shop"][0]["species"] is None
         assert Path(target["before_frame"]).parent == Path(target["after_frame"]).parent == environment.output
+    assert environment.perceptor.observe.call_count == 8
+    manifest = json.loads((environment.output / "manifest.json").read_text())
+    assert manifest["max_captures"] == 12 and manifest["max_pointer_moves"] == 6
+    assert manifest["tooltip_layout"]["sha256"] == hashlib.sha256(environment.layout_path.read_bytes()).hexdigest()
+    assert "not proof of target identity" in report["association_limit"]
+    assert report["identity_interpretation"] == "none"
     for name in ("activate", "click", "drag", "close_for_restart"):
         getattr(environment.window, name).assert_not_called()
     assert environment.window.mouse.mock_calls == []
@@ -107,7 +131,7 @@ def test_non_shop_frames_never_receive_a_target_hover(environment, phase):
     report = run(environment)
     assert report["reason"] == "error" and "freshly observed SHOP" in report["error"]
     environment.window.hover.assert_called_once_with((50, 95), (100, 100))
-    assert report["targets"] == []
+    assert report["targets"][0]["hover_attempted"] is False
 
 
 def test_changing_shop_is_not_retried_or_hovered(environment):
@@ -299,13 +323,76 @@ def test_linked_or_junction_output_paths_are_rejected(environment, monkeypatch, 
 
 def test_new_development_captures_do_not_reclassify_historic_data(environment):
     baseline = environment.root / ".local" / "historic-held-out.json"
-    baseline.parent.mkdir()
+    baseline.parent.mkdir(exist_ok=True)
     baseline.write_text('{"usage":"held_out","frames":["baseline.png"]}')
     original = baseline.read_bytes()
     assert run(environment)["reason"] == "completed"
     assert baseline.read_bytes() == original
     manifest = json.loads((environment.output / "manifest.json").read_text())
     assert manifest["identity_interpretation"] == "none" and "baseline" not in json.dumps(manifest)
+
+
+@pytest.mark.parametrize("change", ["uncalibrated", "size", "search", "extra", "missing"])
+def test_private_layout_requires_explicit_calibration_and_matching_geometry_before_native_io(environment, change):
+    data = json.loads(environment.layout_path.read_text())
+    if change == "uncalibrated":
+        data["calibrated"] = False
+    elif change == "size":
+        data["image_size"] = [101, 100]
+    elif change == "search":
+        data["layout"]["search_rect"] = [0, 0, 101, 100]
+    elif change == "extra":
+        data["layout"]["guessed_coordinates"] = True
+    else:
+        del data["layout"]
+    environment.layout_path.write_text(json.dumps(data))
+    with pytest.raises(ValueError):
+        run(environment)
+    environment.factory.assert_not_called()
+    environment.assets.assert_not_called()
+    assert not environment.output.exists()
+
+
+def test_layout_source_must_also_stay_private(environment):
+    with pytest.raises(ValueError, match="private .local"):
+        run(environment, "--tooltip-layout", "public-layout.json")
+    environment.factory.assert_not_called()
+
+
+def test_explicit_caller_layout_needs_no_mutable_path_fallback(environment):
+    environment.layout_path.unlink()
+    result = probe.run_probe(arguments(), clock=environment.clock, sleep=environment.clock.sleep,
+                             tooltip_layout=environment.layout)
+    assert result["reason"] == "completed"
+    manifest = json.loads((environment.output / "manifest.json").read_text())
+    assert manifest["tooltip_layout"]["source"] == "explicit_caller"
+    assert "path" not in manifest["tooltip_layout"]
+
+
+def test_stale_panel_after_parking_is_saved_as_rejected_evidence_without_reading_stats(environment):
+    environment.window.hover.side_effect = lambda point, size: None
+    result = run(environment)
+    assert result["reason"] == "error" and "absence not established" in result["error"]
+    environment.perceptor.observe.assert_not_called()
+    assert result["captures"] == result["pointer_moves"] == 1
+    target = result["targets"][0]
+    assert target["appearance_sequence_verified"] is False and target["hover_attempted"] is False
+    assert target["samples"][0]["tooltip_status"] == "unique"
+    assert Path(target["samples"][0]["frame"]).is_file()
+
+
+def test_changed_clear_board_rejects_target_and_prevents_the_next_target(environment):
+    environment.perceptor.observe.side_effect = [environment.board, environment.board,
+                                                replace(environment.board, gold=9), replace(environment.board, gold=9)]
+    result = run(environment, "--target", "team:1")
+    assert result["reason"] == "error" and "underlying shop changed" in result["error"]
+    assert len(result["targets"]) == 1 and result["targets"][0]["appearance_sequence_verified"] is False
+    assert result["captures"] == 6 and result["pointer_moves"] == 3
+
+
+def test_cli_refuses_to_guess_a_tooltip_layout():
+    with pytest.raises(SystemExit):
+        probe.parse_args(["--target", "shop:0"])
 
 
 @pytest.mark.parametrize("flags", [
