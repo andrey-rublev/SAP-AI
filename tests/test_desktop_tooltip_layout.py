@@ -5,7 +5,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import pytest
 
-from desktop_tooltip_layout import TooltipLayout, find_tooltip_title
+import desktop_tooltip_layout as detector
+from desktop_tooltip_layout import TooltipLayout, find_tooltip_title, inspect_tooltip_panel
 
 
 def panel(image, rect, text="Fish"):
@@ -89,6 +90,53 @@ def test_multiple_eligible_panels_are_ambiguous():
     layout = TooltipLayout((0, 0, 300, 150), (90, 100), (75, 85), (8, 7, 65, 15),
                            dark_perimeter_max_channel=60)
     assert find_tooltip_title(image, layout) is None
+    inspected = inspect_tooltip_panel(image, layout)
+    assert inspected.status == "ambiguous" and inspected.title is None
+
+
+def test_clear_and_unique_evidence_have_distinct_inspection_results(scene):
+    image, bounds, layout = scene
+    inspected = inspect_tooltip_panel(image, layout)
+    assert inspected.status == "unique" and inspected.reason is None
+    assert inspected.title.panel_rect == bounds
+    inspected.title.title_crop[:] = 0
+    assert find_tooltip_title(image, layout).title_crop.any()
+    image[:] = (90, 110, 130)
+    inspected = inspect_tooltip_panel(image, layout)
+    assert inspected.status == "absent" and inspected.title is inspected.reason is None
+
+
+@pytest.mark.parametrize("edge", ["left", "right", "top", "bottom"])
+def test_boundary_white_evidence_cannot_establish_clear_search_or_unique_panel(scene, edge):
+    image, _, layout = scene
+    x, y, width, height = layout.search_rect
+    point = {"left": (y + 2, x), "right": (y + 2, x + width - 1),
+             "top": (y, x + 2), "bottom": (y + height - 1, x + 2)}[edge]
+    image[point] = 255
+    inspected = inspect_tooltip_panel(image, layout)
+    assert (inspected.status, inspected.reason) == ("unresolved", "search_boundary")
+    assert inspected.title is None and find_tooltip_title(image, layout) is None
+    image[:] = (90, 110, 130)
+    image[point] = 255
+    assert inspect_tooltip_panel(image, layout).status == "unresolved"
+
+
+def test_fragmentation_budget_decline_is_never_a_negative_observation(scene, monkeypatch):
+    image, _, layout = scene
+    monkeypatch.setattr(detector, "MAX_WHITE_RUNS", 1)
+    inspected = inspect_tooltip_panel(image, layout)
+    assert (inspected.status, inspected.reason, inspected.title) == (
+        "unresolved", "fragmentation_limit", None,
+    )
+
+
+def test_plausible_panel_with_invalid_title_or_perimeter_is_unresolved(scene):
+    image, (x, y, width, _), layout = scene
+    invalid = replace(layout, title_offset_rect=(width - 3, 8, 15, 12))
+    assert inspect_tooltip_panel(image, invalid).reason == "title_geometry"
+    image[y - 1, x:x + width] = (140, 140, 140)
+    inspected = inspect_tooltip_panel(image, layout)
+    assert (inspected.status, inspected.reason) == ("unresolved", "panel_perimeter")
 
 
 def test_panel_cut_by_image_edge_is_not_completed_or_guessed(scene):

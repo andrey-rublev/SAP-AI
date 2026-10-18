@@ -1403,6 +1403,24 @@ disabled. Further work should validate tooltip/target association and readable
 shop levels before enabling identity-dependent decisions, then implement food
 observation, execution and receipts with current-game evidence.
 
+## October 18: distinguish clear tooltip evidence from detector uncertainty
+
+The pure calibrated panel detector now exposes separate `absent`, `unique`,
+`ambiguous` and `unresolved` results. A fragmented search that exceeds its work
+bound, white evidence clipped by the search boundary, and a plausible panel with
+insufficient edges, perimeter or title geometry cannot masquerade as a cleared
+tooltip. Only a unique resolved panel returns a detached title crop. The existing
+title-only helper remains available and abstains for every other result.
+
+This supports the next hover association diagnostic: parked-pointer clearance
+must be established before accepting a subsequent tooltip appearance. Absence
+is relative to the caller's calibrated geometry/color search, not a claim about
+the whole screen or the identity of a hovered pet. Search edges must be clear;
+the stricter unresolved result may reduce recognition coverage. Synthetic tests
+cover the four outcomes, all four clipped edges, work limits and detached crops;
+95 tooltip/layout tests pass. No live screen or input was used for this change,
+and native identity recognition and policy remain unchanged.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
