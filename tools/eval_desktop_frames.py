@@ -34,7 +34,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from desktop_runtime import CachedOCR, tesseract_ocr
-from desktop_state import PetSlot, Phase
+from desktop_state import FoodSlot, PetSlot, Phase
 from desktop_vision import Perceptor, VisionProfile
 from evaluation import positive_int
 
@@ -80,18 +80,20 @@ def validate_labels(labels):
         if field == "phase":
             Phase(value)
             continue
-        match = re.fullmatch(r"(shop|team)\.([0-4])\.(occupied|species|attack|health|level)", field)
+        match = (re.fullmatch(r"(shop|team)\.([0-4])\.(occupied|species|attack|health|level)", field)
+                 or re.fullmatch(r"(food)\.([0-4])\.(occupied|food_id|cost)", field))
         if field not in {"gold", "turn", "wins", "lives"} and not match:
             raise ValueError(f"unsupported label field: {field}")
         stat = match[3] if match else field
         if stat == "occupied":
             if type(value) is not bool:
                 raise ValueError("occupancy labels must be known booleans")
-        elif stat == "species":
+        elif stat in {"species", "food_id"}:
             if (type(value) is not str or not value
-                    or value != PetSlot(True, species=value).species):
-                raise ValueError("species labels must be nonempty canonical text")
-        elif type(value) is not int or not (1 if stat in {"turn", "health", "level"} else 0) <= value <= (3 if stat == "level" else 99):
+                    or value != (PetSlot(True, species=value).species if stat == "species"
+                                 else FoodSlot(True, food_id=value).food_id)):
+                raise ValueError(f"{stat} labels must be nonempty canonical text")
+        elif type(value) is not int or not (1 if stat in {"turn", "health", "level", "cost"} else 0) <= value <= (3 if stat == "level" else 99):
             raise ValueError(f"label must be a known integer in range: {field}")
         if match and stat != "occupied" and labels.get(f"{match[1]}.{match[2]}.occupied") is not True:
             raise ValueError("slot stat labels require occupied=true")
@@ -132,6 +134,10 @@ def snapshot_profile(path, directory):
     names = {item.template for item in (*profile.phase_templates, *profile.numeric_templates)}
     for slot in (*profile.shop, *profile.team):
         names.update(path for _, path in slot.species_references())
+        if slot.empty_template:
+            names.add(slot.empty_template)
+    for slot in profile.food:
+        names.update(path for _, path in slot.food_references())
         if slot.empty_template:
             names.add(slot.empty_template)
     directory.mkdir()

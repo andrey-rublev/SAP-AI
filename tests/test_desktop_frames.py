@@ -330,3 +330,106 @@ def test_repeated_runs_get_unique_output_paths(source):
     first, _ = run(source, max_cases=1)
     second, _ = run(source, max_cases=1)
     assert first != second and first.exists() and second.exists()
+
+
+def food_source(source, *, portrait=100, expected="apple", cost=False):
+    with Image.open(source / "frame.png") as image:
+        frame = np.asarray(image.convert("RGB")).copy()
+    frame[4:8, 8:12] = portrait
+    Image.fromarray(frame).save(source / "frame.png")
+    for name, color in (("apple.png", 100), ("empty-food.png", 0)):
+        Image.new("RGB", (4, 4), (color,) * 3).save(source / name)
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text())
+    profile["food"] = [{"portrait": [8, 4, 4, 4], "empty_template": "empty-food.png",
+                        "food_templates": {"apple": "apple.png"}}]
+    labels = {"phase": "shop", "food.0.occupied": True, "food.0.food_id": expected}
+    if cost:
+        profile["food"][0]["cost"] = [12, 8, 1, 1]
+        labels["food.0.cost"] = 3
+    profile_path.write_text(json.dumps(profile))
+    manifest_path = source / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["frames"][0]["labels"] = labels
+    manifest_path.write_text(json.dumps(manifest))
+
+
+@pytest.mark.parametrize("labels", [
+    {"food.0.occupied": True, "food.0.food_id": "apple", "food.0.cost": 1},
+    {"food.4.occupied": True, "food.4.food_id": "green apple", "food.4.cost": 99},
+    {"food.0.occupied": False},
+])
+def test_food_labels_accept_only_explicit_observed_fields(labels):
+    study.validate_labels({"phase": "shop", **labels})
+
+
+@pytest.mark.parametrize("labels", [
+    {"food.0.occupied": None}, {"food.0.occupied": 1}, {"food.5.occupied": True},
+    {"food.0.food_id": "apple"}, {"food.0.cost": 3},
+    {"food.0.occupied": False, "food.0.food_id": "apple"},
+    {"food.0.occupied": False, "food.0.cost": 3},
+    *[{"food.0.occupied": True, "food.0.food_id": value} for value in (None, 1, True, "", "Apple", " apple", "green  apple")],
+    *[{"food.0.occupied": True, "food.0.cost": value} for value in (None, True, 0, 100, 3.0, "3")],
+    {"food.0.occupied": True, "food.0.effect": "single_target_stats"},
+    {"food.0.occupied": True, "food.0.attack_bonus": 1},
+    {"food.0.occupied": True, "food.0.health_bonus": 1},
+    {"food.0.occupied": True, "food.0.species": "apple"},
+])
+def test_food_unknown_noncanonical_inferred_or_unoccupied_metadata_labels_are_rejected(labels):
+    with pytest.raises(ValueError):
+        study.validate_labels({"phase": "shop", **labels})
+
+
+def test_food_labels_are_not_permitted_outside_shop_phase():
+    with pytest.raises(ValueError, match="non-shop"):
+        study.validate_labels({"phase": "battle", "food.0.occupied": True})
+
+
+@pytest.mark.parametrize("expected,portrait,occupied,identity,counts", [
+    ("apple", 100, True, "apple", {"correct": 3, "unknown": 0, "incorrect": 0, "unsafe_false_empty": 0}),
+    ("pear", 160, None, None, {"correct": 1, "unknown": 2, "incorrect": 0, "unsafe_false_empty": 0}),
+    ("pear", 100, True, "apple", {"correct": 2, "unknown": 0, "incorrect": 1, "unsafe_false_empty": 0}),
+    ("pear", 0, False, None, {"correct": 1, "unknown": 1, "incorrect": 1, "unsafe_false_empty": 1}),
+])
+def test_food_perception_scoring_separates_match_unknown_wrong_identity_and_false_empty(
+        source, expected, portrait, occupied, identity, counts):
+    food_source(source, portrait=portrait, expected=expected)
+    _, report = run(source, max_cases=1, max_examples=0)
+    observed = report["cases"][0]["observed"]["food"][0]
+    assert observed["occupied"] is occupied and observed["food_id"] == identity
+    assert report["counts"] == counts and report["observation_errors"] == 0
+    assert "food.0.food_id" in report["per_field"]
+    assert report["species_confusion"] == {}  # Existing species report meaning is unchanged.
+
+
+def test_snapshot_freezes_all_food_variants_and_empty_before_originals_change_or_disappear(source):
+    food_source(source, portrait=140, cost=True)
+    Image.new("RGB", (4, 4), (140,) * 3).save(source / "apple-alternate.png")
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text())
+    profile["food"][0]["food_templates"]["apple"] = ["apple.png", "apple-alternate.png"]
+    profile_path.write_text(json.dumps(profile))
+    original = {name: (source / name).read_bytes() for name in ("apple.png", "apple-alternate.png", "empty-food.png")}
+    def changing_ocr(crop):
+        (source / "apple.png").write_bytes(b"changed after freezing")
+        (source / "apple-alternate.png").unlink(missing_ok=True)
+        (source / "empty-food.png").unlink(missing_ok=True)
+        return "3"
+    path, report = run(source, ocr=changing_ocr, max_cases=2, max_examples=0)
+    assert report["counts"] == {"correct": 8, "unknown": 0, "incorrect": 0, "unsafe_false_empty": 0}
+    assert report["observation_errors"] == 0
+    for name, data in original.items():
+        assert (path.parent / "profile" / name).read_bytes() == data
+        assert report["profile"]["templates"][name] == study.digest(data)
+
+
+def test_complete_food_reports_remain_compatible_with_paired_frame_comparison(source):
+    from tools.compare_desktop_frames import compare
+    food_source(source, cost=True)
+    _, baseline = run(source, ocr=lambda crop: "3", max_examples=0)
+    _, candidate = run(source, ocr=lambda crop: "?", max_examples=0)
+    assert baseline["status"] == candidate["status"] == "complete"
+    result = compare(baseline, candidate)
+    assert result["cases"] == 7 and result["regressed"] == 7
+    assert result["per_field"]["food.0.cost"] == {"correct->unknown": 7}
+    assert result["new_incorrect"] == result["new_false_empty"] == 0

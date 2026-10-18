@@ -1589,6 +1589,31 @@ and optional policy, and contains no private assets. No project CPU/controller
 job remains running. Work stayed in the background; renewed desktop permission
 was requested because the previous October 17 control window expired.
 
+## October 18: freeze food references in recorded-frame evaluation
+
+Final integration review found that recorded-frame studies rebased the optional
+food profile without copying its food images. The evaluator now freezes every
+food identity variant and empty reference alongside its existing references.
+It accepts only explicit `food.N.occupied`, `food_id` and `cost` labels, with
+canonical identity, known occupancy for metadata and prices from one through
+99. Unknown, wrong and false-empty outcomes remain distinct. Paired comparison
+uses the same validated labels and keeps its existing report shape. Synthetic
+tests verify evaluation still uses frozen bytes after originals change or
+disappear. All 128 focused evaluation/comparison tests pass.
+
+A separate bounded study manually labeled 93 HUD/occupancy/stat/level fields
+across three previously recorded development frames: opening, night and late
+shops. Seven fixed brightness/contrast/JPEG variants produced 21 cases and 651
+field checks in 48.31 seconds: 508 correct, 143 unknown, zero wrong readings,
+zero false-empty readings and zero observation errors. Original opening/night
+frames supplied all 53 labeled readings; the original late frame left 12 of
+40 readings unknown. One perturbed phase also became unknown. These limitations
+need follow-up; the results do not establish unseen-scene accuracy. Species
+and native food actions were not evaluated. No held-out final data was reused.
+
+The final repository suite now passes 2,190 tests with one expected Windows
+symlink skip in 36.00 seconds. No live game or new model training was involved.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
