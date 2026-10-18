@@ -432,6 +432,16 @@ gain even when the controller acknowledgment check is bypassed. Reports checkpoi
 Ctrl+C retains the next unfinished seed. This is a controller contract test,
 not a combat simulator, OCR evaluation, model training, or measured win rate.
 
+The appended `transient_incomplete_shop` scenario supplies two to four incomplete
+shop observations, then requires fresh complete frames before normal play.
+`persistent_incomplete_shop` changes the missing readings every poll and must
+stop within eight polls without input. These two scenarios explicitly enable
+readiness waiting; an independent input check verifies observed fields without
+calling the production readiness predicate. Legacy scenarios keep their prior
+contracts. The scenario list now has 20 entries, changing default seed assignment;
+replay older cases with their explicit scenario names. Older configuration/source
+hashes cannot resume into a changed harness.
+
 `python tools/eval_desktop_economy.py --pairs 50000` compares experimental
 shopping policies on identical initial boards and indexed future offers.
 It reports paired stat gains and gold efficiency, with deterministic replay

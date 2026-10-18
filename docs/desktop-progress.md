@@ -1735,6 +1735,29 @@ no game screen was inspected and no native gameplay was performed. The working
 agreement above now reflects today's background-only continuation and the
 expired October 17 live-control deadline.
 
+## October 18, morning: stress incomplete-shop recovery
+
+The CPU controller harness now includes transient and persistent incomplete-shop
+scenarios. Seeded missing gold, stats or occupancy persist for two to four frames
+before recovery, or change every poll until an eight-poll refusal. Only these
+new scenarios enable the readiness guard. The fixture independently rejects
+premature callbacks against unreadable or queued observations, including when
+production readiness is deliberately bypassed. Existing scenario order and
+explicit replay behavior are retained; default assignment changes with the
+expanded 20-scenario list, and old reports cannot resume with changed sources.
+
+A bounded 120-second CPU run passed all 44,304 synthetic cases, including 2,215
+cases of each new scenario, with no unexpected outcomes or invariant failures.
+The 108 explicit legacy scenario/seed comparisons reproduced identical full
+traces under the current session implementation. These checks exercise controller
+contracts, not OCR, mouse IO, combat, training or native win rates.
+
+Final integration passes 2,412 tests with one expected Windows symlink skip in
+39.06 seconds. The final offline wheel contains 26 files, imports the desktop
+and tooltip modules in isolation, accepts the new preflight flag, and contains
+no private image/model/log assets. Background resource preflight passed; no
+October 18 screen inspection, gameplay input or new model training occurred.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

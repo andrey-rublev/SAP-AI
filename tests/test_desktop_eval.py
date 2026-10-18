@@ -6,7 +6,7 @@ import pytest
 
 import desktop_session
 from desktop_session import action_acknowledged
-from desktop_state import Action, DesktopPolicy, PetSlot, legal_action
+from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
 from tools import eval_desktop as evaluation
 
 
@@ -16,7 +16,7 @@ def test_each_scenario_exercises_its_expected_bounded_outcome(scenario):
     assert case["passed"], case
     assert case["reason"] == evaluation.EXPECTED[scenario]
     assert case["polls"] <= 700
-    if scenario in evaluation.SCENARIOS[:5]:
+    if scenario in evaluation.HEALTHY_SCENARIOS:
         assert case["shop_rounds"] == 3
         assert case["actions"] == case["acknowledgments"]
 
@@ -25,6 +25,108 @@ def test_seed_replay_has_identical_actions_observations_and_trace_hash():
     first = evaluation.run_case(123, scenario="transient", turns=3, trace=True)
     assert evaluation.run_case(123, scenario="transient", turns=3, trace=True) == first
     assert evaluation.run_case(124, scenario="transient", turns=3)["trace_sha256"] != first["trace_sha256"]
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_transient_incomplete_shop_waits_for_readings_then_finishes_normal_round(seed):
+    case = evaluation.run_case(seed, scenario="transient_incomplete_shop", turns=1, trace=True)
+    assert case["passed"], case
+    assert case["shop_rounds"] == 1 and case["actions"] == case["acknowledgments"] > 0
+    initial = case["initial_board"]
+    if seed == 0:
+        assert initial["gold"] is None
+    elif seed == 1:
+        assert initial["shop"][0]["health"] is None
+    else:
+        assert initial["team"][2]["occupied"] is None
+    first_input = next(row for row in case["trace"] if row["event"] == "acted")
+    # The 2--4 initial unreadable frames do not count toward the two complete
+    # observations required before dispatch.
+    assert first_input["poll"] == 2 + seed % 3 + 2
+    assert case["result"]["pending_action"] is None
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_persistent_incomplete_shop_changes_without_input_and_exhausts_its_bound(seed):
+    case = evaluation.run_case(seed, scenario="persistent_incomplete_shop", turns=1, trace=True)
+    assert case["passed"], case
+    assert (case["reason"], case["polls"], case["actions"], case["acknowledgments"]) == (
+        "shop_observation_timeout", evaluation.INCOMPLETE_SHOP_POLL_LIMIT, 0, 0)
+    observations = [Board.from_dict(row["board"]) for row in case["trace"] if row["event"] == "observed"]
+    assert all(board.phase == Phase.SHOP for board in observations)
+    assert all(first.fingerprint() != second.fingerprint()
+               for first, second in zip(observations, observations[1:]))
+    assert not any(row["event"] in {"proposed", "acted", "acknowledged"} for row in case["trace"])
+    assert case["result"]["pending_action"] is None
+
+
+@pytest.mark.parametrize("scenario", sorted(evaluation.READINESS_SCENARIOS))
+def test_new_readiness_scenarios_have_deterministic_full_replays(scenario):
+    first = evaluation.run_case(71, scenario=scenario, turns=1, trace=True)
+    assert evaluation.run_case(71, scenario=scenario, turns=1, trace=True) == first
+
+
+def test_only_appended_scenarios_enable_session_readiness(monkeypatch):
+    assert evaluation.SCENARIOS[18:] == ("transient_incomplete_shop", "persistent_incomplete_shop")
+    original, configurations = evaluation.DesktopSession, []
+
+    def session(*args, **kwargs):
+        configurations.append(kwargs)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(evaluation, "DesktopSession", session)
+    for scenario in evaluation.SCENARIOS:
+        evaluation.run_case(3, scenario=scenario, turns=1)
+        configuration = configurations[-1]
+        if scenario in evaluation.READINESS_SCENARIOS:
+            assert configuration["max_incomplete_shop_polls"] == evaluation.INCOMPLETE_SHOP_POLL_LIMIT
+            ready = configuration["shop_ready"]
+            board = Board(Phase.SHOP, gold=3, turn=1, shop=(PetSlot(True, attack=2, health=3),),
+                          team=(PetSlot(False),) * 5)
+            assert ready(board) is True
+            assert ready(replace(board, turn=None)) is False
+            assert ready(replace(board, turn=0)) is False
+        else:
+            assert "max_incomplete_shop_polls" not in configuration and "shop_ready" not in configuration
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_independent_input_oracle_rejects_stable_unreadable_initial_shop(seed):
+    fixture = evaluation.SyntheticDesktop(seed, "transient_incomplete_shop", 1)
+    fixture.observe()
+    fixture.observe()
+    before, copies, queue = fixture.board, list(fixture.copies), list(fixture.frames)
+    with pytest.raises(AssertionError, match="^input against incomplete observation$"):
+        fixture.act(Action("buy", 0, 0))
+    assert fixture.board == before and fixture.copies == copies and list(fixture.frames) == queue
+    assert fixture.violations == ["input against incomplete observation"]
+
+
+def test_independent_input_oracle_rejects_queued_incomplete_frame_after_clear_observations():
+    fixture = evaluation.SyntheticDesktop(0, "transient_incomplete_shop", 1)
+    fixture.frames.clear()
+    fixture.observe()
+    fixture.observe()
+    fixture.frames.append(fixture.incomplete(fixture.board))
+    before = fixture.board
+    with pytest.raises(AssertionError, match="^input against stale/queued observation$"):
+        fixture.act(Action("buy", 0, 0))
+    assert fixture.board == before and len(fixture.frames) == 1
+
+
+def test_independent_oracle_catches_input_if_production_readiness_is_bypassed(monkeypatch):
+    class PrematureEndPolicy:
+        def choose_action(self, board):
+            return Action("end_turn")
+
+    # A stat-incomplete shop remains mechanically legal to end; a permissive
+    # readiness bug must still fail this fixture's independent observed-data check.
+    monkeypatch.setattr(DesktopPolicy, "observation_complete", lambda self, board: True)
+    case = evaluation.run_case(1, scenario="transient_incomplete_shop", turns=1,
+                               policy=PrematureEndPolicy(), trace=True)
+    assert not case["passed"] and case["reason"] == "action_error"
+    assert (case["actions"], case["acknowledgments"]) == (1, 0)
+    assert "input against incomplete observation" in case["violations"]
 
 
 def test_unknown_identity_never_authorizes_merge_or_stat_only_sale():
@@ -272,6 +374,16 @@ def test_existing_report_needs_explicit_resume_and_compatible_sources(tmp_path, 
         evaluation.evaluate(output=path, cases=1, resume=True, turns=7)
     monkeypatch.setattr(evaluation, "source_signature", lambda: {"changed": "source"})
     with pytest.raises(ValueError, match="source"):
+        evaluation.evaluate(output=path, cases=1, resume=True)
+
+
+def test_report_from_previous_scenario_assignment_cannot_resume(tmp_path):
+    path = tmp_path / "previous-scenarios.json"
+    evaluation.evaluate(output=path, cases=1)
+    report = json.loads(path.read_text())
+    report["config"]["scenarios"] = list(evaluation.SCENARIOS[:18])
+    path.write_text(json.dumps(report))
+    with pytest.raises(ValueError, match="matching report schema, seed/configuration, and source files"):
         evaluation.evaluate(output=path, cases=1, resume=True)
 
 

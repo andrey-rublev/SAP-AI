@@ -12,6 +12,9 @@ one-gold rolls, observed sale income, duplicate combines, and shop/battle phases
 Other abilities, food, combat, freezes, OCR accuracy, and mouse IO are excluded.
 No toy DQN is loaded: its scalar observations and six actions cannot represent
 Board uncertainty, pet identities, or explicit source/destination actions.
+Appending scenarios changes default seed-to-scenario assignment through the
+scenario-count modulus; explicit scenario replays retain their meaning. Resume
+requires the exact scenario configuration and source hashes from the report.
 """
 from __future__ import annotations
 
@@ -43,16 +46,21 @@ SCENARIOS = (
     "ocr_timeout", "ocr_timeout_after_input", "unknown_phase",
     "unknown_slot", "missing_stat", "missing_gold", "capped_merge",
     "wrong_stats", "contradictory_merge",
+    "transient_incomplete_shop", "persistent_incomplete_shop",
 )
+HEALTHY_SCENARIOS = SCENARIOS[:5] + ("transient_incomplete_shop",)
+READINESS_SCENARIOS = frozenset({"transient_incomplete_shop", "persistent_incomplete_shop"})
+INCOMPLETE_SHOP_POLL_LIMIT = 8
 EMPTY = PetSlot(False)
 SPECIES = ("ant", "fish", "beaver", "duck", "pig", "otter")
 EXPECTED = {
-    **{name: "result" for name in SCENARIOS[:5]},
+    **{name: "result" for name in HEALTHY_SCENARIOS},
     **{name: "action_timeout" for name in ("ignored_input", "wrong_price", "wrong_target", "capped_merge",
                                          "wrong_stats", "contradictory_merge")},
     "input_error": "action_error", "ocr_timeout": "observation_error",
     "ocr_timeout_after_input": "observation_error", "unknown_phase": "unknown_timeout",
     **{name: "policy_stopped" for name in ("unknown_slot", "missing_stat", "missing_gold")},
+    "persistent_incomplete_shop": "shop_observation_timeout",
 }
 
 
@@ -69,6 +77,9 @@ class SyntheticDesktop:
         self.rng = random.Random(seed)
         self.scenario, self.turns = scenario, turns
         self.fault_stat = ("attack", "health")[seed % 2]
+        self.incomplete_kind, self.incomplete_slot = seed % 3, seed % 5
+        self.initial_incomplete_polls = 2 + seed % 3
+        self.observations = 0
         self.now = 0.0
         self.rounds = 0
         self.actions = []
@@ -80,7 +91,7 @@ class SyntheticDesktop:
         team = [self.pet(level=self.rng.randint(1, 3)) if self.rng.random() < 0.65 else EMPTY for _ in range(5)]
         self.board = Board(Phase.SHOP, gold=10, turn=self.rng.randint(1, 12),
                            shop=self.offers(), team=team)
-        if scenario not in SCENARIOS[:5]:
+        if scenario not in HEALTHY_SCENARIOS:
             # Faults all begin with a guaranteed purchase, independent of RNG.
             self.board = replace(self.board, team=(EMPTY,) * 5)
         if scenario == "capped_merge":
@@ -102,7 +113,10 @@ class SyntheticDesktop:
             self.copies[0] = 1  # No visible stat or level change on this combine.
         elif scenario == "contradictory_merge":
             self.copies[0] = 3  # Stay at level two; isolate the conflicting stat evidence.
-        self.initial = self.project(self.board)
+        if scenario == "transient_incomplete_shop":
+            self.frames.extend([self.incomplete(self.board)] * self.initial_incomplete_polls)
+        self.initial = (self.incomplete(self.board) if scenario == "persistent_incomplete_shop"
+                        else self.project(self.frames[0] if self.frames else self.board))
 
     def pet(self, level=1):
         return PetSlot(True, self.rng.choice(SPECIES), self.rng.randint(1, 20), self.rng.randint(1, 20), level)
@@ -118,11 +132,24 @@ class SyntheticDesktop:
             return replace(board, shop=hide(board.shop), team=hide(board.team))
         return board
 
+    def incomplete(self, board, variation=0):
+        """Erase readings; never change the hidden shop or infer substitutes."""
+        kind = (self.incomplete_kind + variation) % 3
+        if kind == 0:
+            return replace(board, gold=None)
+        if kind == 1:
+            source = replace(board.shop[0], **{self.fault_stat: None})
+            return replace(board, shop=(source, *board.shop[1:]))
+        team = list(board.team)
+        team[self.incomplete_slot] = PetSlot(None)
+        return replace(board, team=tuple(team))
+
     def sleep(self, seconds):
         self.now += seconds  # Virtual time exercises deadlines without real waiting.
 
     def observe(self):
         self.now += 0.05
+        self.observations += 1
         if self.scenario == "ocr_timeout" or (self.scenario == "ocr_timeout_after_input" and self.actions):
             raise TimeoutError("injected OCR subprocess timeout")
         current = self.frames.popleft() if self.frames else self.board
@@ -135,6 +162,9 @@ class SyntheticDesktop:
             current = replace(current, shop=(replace(current.shop[0], health=None), *current.shop[1:]))
         elif self.scenario == "missing_gold":
             current = replace(current, gold=None)
+        elif self.scenario == "persistent_incomplete_shop":
+            # Distinct incomplete fingerprints cannot renew the waiting budget.
+            current = self.incomplete(current, self.observations - 1)
         self.stable = self.stable + 1 if current == self.last_observed else 1
         self.last_observed = current
         return current
@@ -149,6 +179,17 @@ class SyntheticDesktop:
         before = self.board
         self.actions.append(action)
         self.require(self.stable >= 2, "input before two identical observations")
+        if self.scenario in READINESS_SCENARIOS:
+            observed = self.last_observed
+            self.require(
+                observed is not None and observed.phase == Phase.SHOP
+                and observed.gold is not None and observed.turn is not None and observed.turn > 0
+                and 1 <= len(observed.shop) <= 5 and len(observed.team) == 5
+                and all(pet.occupied is not None and (not pet.occupied or (
+                    pet.attack is not None and pet.health is not None))
+                    for pet in (*observed.shop, *observed.team)),
+                "input against incomplete observation",
+            )
         self.require(not self.frames and self.last_observed == self.project(before), "input against stale/queued observation")
         self.require(before.phase == Phase.SHOP and before.gold is not None, "input outside known shop")
         self.require(isinstance(action, Action), "policy did not produce Action")
@@ -268,10 +309,17 @@ def run_case(seed: int, *, scenario: str | None = None, turns: int = 5,
             fixture.require(verified, "acknowledged stale or incorrect action effect")
             proposed_before = proposed_action = expected_effect = None
 
+    readiness = {}
+    if scenario in READINESS_SCENARIOS:
+        baseline = DesktopPolicy(minimum_upgrade_gain=minimum_upgrade_gain)
+        readiness = {"shop_ready": lambda board: (board.turn is not None and board.turn > 0
+                                                  and baseline.observation_complete(board)),
+                     "max_incomplete_shop_polls": INCOMPLETE_SHOP_POLL_LIMIT}
     result = DesktopSession(fixture.observe, fixture.act, policy or DesktopPolicy(minimum_upgrade_gain=minimum_upgrade_gain),
                             max_actions=turns * 20 + 10, max_polls=turns * 200 + 100,
                             action_max_polls=20, max_unknown_polls=8,
-                            clock=lambda: fixture.now, sleep=fixture.sleep, event_callback=event).run()
+                            clock=lambda: fixture.now, sleep=fixture.sleep, event_callback=event,
+                            **readiness).run()
     # The controller catches Ctrl+C to release a real session cleanly. This
     # harness has no stop callback, so "stopped" means its case was interrupted,
     # not completed. Let evaluate retain that seed for the next invocation.
@@ -280,13 +328,14 @@ def run_case(seed: int, *, scenario: str | None = None, turns: int = 5,
     violations = list(fixture.violations)
     if result.reason != EXPECTED[scenario]:
         violations.append(f"expected {EXPECTED[scenario]}, got {result.reason}")
-    if scenario in SCENARIOS[:5]:
+    if scenario in HEALTHY_SCENARIOS:
         if result.actions != result.acknowledgments:
             violations.append("healthy run has unacknowledged actions")
         if fixture.rounds != turns:
             violations.append("healthy run did not finish the requested shop rounds")
     else:
-        expected_actions = 0 if scenario in ("ocr_timeout", "unknown_phase", "unknown_slot", "missing_stat", "missing_gold") else 1
+        expected_actions = 0 if scenario in ("ocr_timeout", "unknown_phase", "unknown_slot", "missing_stat", "missing_gold",
+                                           "persistent_incomplete_shop") else 1
         if result.actions != expected_actions or result.acknowledgments != 0:
             violations.append("fault scenario retried input or acknowledged an unverified effect")
     outcome = {"seed": seed, "scenario": scenario, "passed": not violations, "violations": violations,
