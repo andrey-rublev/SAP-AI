@@ -68,6 +68,11 @@ species still need the configured margin, and missing stats or competing empty
 evidence remain unknown. Validate alternate portraits against other occupied
 pets and empty slots before enabling them in a live profile.
 
+Pet-slot and numeric-reference objects reject unsupported fields instead of
+silently using defaults for misspelled keys. For example, use `level`,
+`available_from_turn` and `max_distance` exactly; malformed entries fail before
+assets or desktop dependencies are loaded.
+
 Optional `food` entries accept only these keys:
 
 | Key | Contents |

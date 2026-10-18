@@ -27,9 +27,8 @@ meaningful commits per day. Work on `main`, pushing to `origin/main`; never
 force-push. Preserve unrelated edits. Test each coherent change before its
 commit, then push immediately. Do not manufacture commits to fill a quota.
 
-There is no recurring development schedule. Today's 8:30 a.m. one-shot was
-deleted after firing; the previously requested 1:15 p.m. continuation remains
-one-shot and must be deleted after it fires. Create no further wakeups. Read the
+There is no recurring development schedule. Today's 8:30 a.m. and 1:15 p.m.
+one-shots were both deleted after firing. Create no further wakeups. Read the
 latest private October 18 handoff before resuming. Stop routine development once
 the requested live objective is verified complete.
 
@@ -1757,6 +1756,22 @@ Final integration passes 2,412 tests with one expected Windows symlink skip in
 and tooltip modules in isolation, accepts the new preflight flag, and contains
 no private image/model/log assets. Background resource preflight passed; no
 October 18 screen inspection, gameplay input or new model training occurred.
+
+## October 18, afternoon: reject discarded calibration options
+
+Pet-slot and numeric-reference parsing now reject unsupported keys and nonobject
+entries, matching the existing phase/food/profile schemas. Previously a typo
+such as `available_from_tun`, `level_region` or `max_distnce` was silently
+discarded: the active-turn gate or matching threshold fell back to its default,
+and resource preflight could still succeed. Invalid options now fail before
+perception, reference loading or native dependencies. Valid version 1 defaults,
+optional null regions and serialized fields are unchanged. All 288 focused
+schema/preflight/vision tests pass. The native profile still passes the actual
+background `play.cmd --check`; no calibration changed.
+
+The afternoon continuation waited for the reported ordinary allowance reset
+before substantial work. Both requested one-shot wakeups are now removed. Work
+continues in the background; no new live-control authorization has been received.
 
 ## Remaining milestones
 

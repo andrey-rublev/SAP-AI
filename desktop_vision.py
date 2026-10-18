@@ -145,6 +145,10 @@ class SlotConfig:
 
     @classmethod
     def from_dict(cls, data):
+        allowed = {"portrait", "attack", "health", "level", "empty_template", "species_templates",
+                   "max_distance", "margin", "available_from_turn"}
+        if not isinstance(data, dict) or set(data) - allowed:
+            raise ValueError("pet slot must contain only supported observation fields")
         regions = {name: Rect.from_list(data[name]) if data.get(name) is not None else None for name in ("attack", "health", "level")}
         return cls(portrait=Rect.from_list(data["portrait"]), **regions, empty_template=data.get("empty_template"), species_templates=data.get("species_templates", {}), max_distance=data.get("max_distance", 0.06), margin=data.get("margin", 0.015), available_from_turn=data.get("available_from_turn", 1))
 
@@ -208,6 +212,9 @@ class NumberTemplate:
 
     @classmethod
     def from_dict(cls, data):
+        allowed = {"field", "value", "template", "max_distance", "margin"}
+        if not isinstance(data, dict) or set(data) - allowed:
+            raise ValueError("numeric template must contain only supported fields")
         return cls(data["field"], data["value"], data["template"], data.get("max_distance", 0.01), data.get("margin", 0.01))
 
     def to_dict(self):
