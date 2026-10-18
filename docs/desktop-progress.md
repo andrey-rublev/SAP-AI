@@ -1572,6 +1572,17 @@ of the existing allocation candidate would not resolve the native recognition
 blocker. No model was promoted and the frozen failed final study was unchanged.
 Native validation of the new optional search remains outstanding.
 
+A bounded CPU development study then compared the fixed option with the baseline
+on 25,000 paired synthetic shops, masking shop species/levels and team species
+from both policies. It completed in 9.33 seconds with no illegal proposals,
+truncations or unexpected stops. The option increased immediate attack+health
+utility on 780 seeds, tied on 24,220 and decreased it on none: mean stat gain
+rose from 7.58380 to 7.73468. It also spent more gold (mean leftover fell from
+1.68896 to 1.28772), with lower stat gain per net gold. This synthetic objective
+excludes food, abilities, combat and real opponents; it does not justify a win
+rate claim or changing the default. Private reports retain the observation mask,
+fixed source hashes and runner provenance. No weights were trained or promoted.
+
 Final integration passes all 2,156 tests with one expected Windows symlink skip
 in 30.99 seconds. The final wheel builds offline, includes the controller lease
 and optional policy, and contains no private assets. No project CPU/controller
