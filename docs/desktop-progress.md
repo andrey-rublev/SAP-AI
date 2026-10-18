@@ -3,11 +3,11 @@
 ## Working agreement
 
 **Current continuation, 2026-10-18:** the human explicitly authorized a bounded
-desktop test this afternoon. The first installed-game launch exposed Steam's
-sign-in window without a game window; the human must complete authentication
-and open the game before the test can continue. No gameplay input was sent.
-Use source edits, mocked IO, recorded development frames and bounded CPU jobs
-while waiting. The requested deliverable remains a PowerShell command
+desktop test this afternoon and completed Steam sign-in/game launch themselves.
+The standalone bot then completed a 25-action bounded test through turn three,
+with all 25 actions acknowledged. No game input is currently running. Continue
+source edits, mocked IO and recorded development work within the ordinary
+allowance. The requested deliverable remains a PowerShell command
 that runs the standalone bot, which itself observes, decides, acts and verifies.
 Check ordinary Plus usage first and reserve enough to test, review, push and
 write a handoff. Do not spend paid/reset credits or change account settings.
@@ -36,8 +36,8 @@ the requested live objective is verified complete.
 Normal start is `.\play.cmd`; hold Escape, move to a screen corner or create
 `.local/desktop/STOP` to stop. Eleven earlier uninterrupted fresh native runs
 are evidence for the earlier conservative baseline; no October 18 native run
-has occurred. A bounded native test now has authorization but awaits manual
-Steam sign-in and a fresh observed game state. Current blockers include
+has completed a full arena. Today's bounded run reached turn three with two
+wins; it does not establish full-game reliability. Current blockers include
 tooltip/target binding, readable shop levels and directly validated food
 effects. No learned recognizer is enabled;
 the consumed duplicate-refused final species study must not be rescored or
@@ -1873,6 +1873,29 @@ the human. No bot session, gameplay clicks, screenshot capture, new training or
 native validation occurred. The test can resume after manual sign-in and game
 launch, following a fresh state observation. Existing Escape/STOP safeguards and
 the requirement that the bot itself perform gameplay actions remain in force.
+
+## October 18, afternoon: bounded standalone native test passed
+
+After the human reported the game ready, a fresh Computer Use screenshot showed
+the main menu. The first CLI attempt stopped before any session/input because
+Windows did not grant foreground focus. Computer Use then activated the game as
+explicit setup, without gameplay clicks. The second standalone command used
+`--no-restart-completed --no-launch --max-seconds 120 --max-actions 25
+--max-polls 500`, with private logs and changed-board frames.
+
+The bot itself navigated menus, bought pets, rolled, named the team, ended turns,
+continued battle results and dismissed a tier unlock. The recorded timeline
+validated 25 dispatches and 25 acknowledgments, zero deferrals, across 166 polls
+in 103.26 seconds. It stopped at `max_actions`, with no pending action or error.
+The final fresh screenshot independently confirmed the turn-three shop, two
+wins, five lives and five gold. All gameplay input came from SAP-AI; agent input
+was limited to pre-run window activation. No authentication was automated.
+
+This is one short native run, not an arena completion, a competitive benchmark,
+or validation of species, higher levels or food effects. The unchanged baseline
+still reported unknown species/shop levels. Private captures remain development
+data, outside frozen evaluation. No product source or calibration was changed;
+the log validator checked the executed timeline without rescoring images.
 
 ## Remaining milestones
 
