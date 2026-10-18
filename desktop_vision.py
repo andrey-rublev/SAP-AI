@@ -18,6 +18,31 @@ import numpy as np
 from desktop_state import Board, FoodSlot, PetSlot, Phase
 
 
+def decode_profile_json(payload):
+    """Decode captured UTF-8 profile text without discarding duplicate keys.
+
+    This checks JSON syntax only. Offline tools may intentionally consume
+    partial profiles; full perception configuration still uses ``from_dict``.
+    Callers retain their original bytes for snapshots and provenance hashes.
+    """
+    if isinstance(payload, bytes):
+        payload = payload.decode("utf-8-sig")
+    elif isinstance(payload, str):
+        payload = payload.removeprefix("\ufeff")
+    else:
+        raise TypeError("profile JSON must be UTF-8 text or bytes")
+
+    def unique_fields(pairs):
+        result = {}
+        for name, value in pairs:
+            if name in result:
+                raise ValueError(f"duplicate JSON key in vision profile: {name!r}")
+            result[name] = value
+        return result
+
+    return json.loads(payload, object_pairs_hook=unique_fields)
+
+
 def _coordinates(value, count, name):
     if not isinstance(value, (list, tuple)) or len(value) != count or any(type(v) is not int for v in value):
         raise ValueError(f"{name} must contain {count} integer coordinates")
@@ -412,16 +437,8 @@ class VisionProfile:
 
     @classmethod
     def load(cls, path):
-        def unique_fields(pairs):
-            result = {}
-            for name, value in pairs:
-                if name in result:
-                    raise ValueError(f"duplicate JSON key in vision profile: {name!r}")
-                result[name] = value
-            return result
-
         path = Path(path)
-        data = json.loads(path.read_text(encoding="utf-8-sig"), object_pairs_hook=unique_fields)
+        data = decode_profile_json(path.read_bytes())
         return cls.from_dict(data, base_dir=path.parent)
 
     def save(self, path):

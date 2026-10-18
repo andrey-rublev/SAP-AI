@@ -43,6 +43,9 @@ the monitor size. Rectangles use `[x, y, width, height]`; button points use
 Use UTF-8 JSON; a UTF-8 byte-order mark from PowerShell is accepted. Repeated
 keys in any object are rejected, including equal values or escaped spellings,
 so later entries cannot silently replace calibration settings.
+Frame snapshots and species fitting/report tools use the same decoder. They
+retain original profile bytes for hashes; the older crop-only species readers
+still accept their existing partial profile format.
 
 Fields:
 

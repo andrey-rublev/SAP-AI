@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from desktop_vision import SlotConfig
+from desktop_vision import SlotConfig, decode_profile_json
 
 UNKNOWN = "__unknown__"
 EMPTY = "__empty__"
@@ -136,7 +136,7 @@ def prepare(profile_path, assets_path, negatives_path, output):
     if output.exists():
         raise ValueError("prepare requires a new output directory")
     profile_bytes = profile_path.read_bytes()
-    profile = json.loads(profile_bytes)
+    profile = decode_profile_json(profile_bytes)
     backgrounds = sorted({str((profile_path.parent / slot["empty_template"]).resolve())
                           for row in ("shop", "team") for slot in profile[row] if slot.get("empty_template")})
     # Equal-pixel aliases must not cross the background split.
@@ -267,7 +267,7 @@ def real_results(model, plan, labels_path, threshold=.95):
     labels_bytes = labels_path.read_bytes()
     ground_truth = json.loads(labels_bytes)
     profile_bytes = Path(plan["profile"]).read_bytes()
-    profile = json.loads(profile_bytes)
+    profile = decode_profile_json(profile_bytes)
     if hashlib.sha256(profile_bytes).hexdigest() != plan["profile_sha256"]:
         raise ValueError("profile changed since fitting")
     if not 0 <= threshold <= 1:

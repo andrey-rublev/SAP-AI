@@ -35,7 +35,7 @@ if str(ROOT) not in sys.path:
 
 from desktop_runtime import CachedOCR, tesseract_ocr
 from desktop_state import FoodSlot, PetSlot, Phase
-from desktop_vision import Perceptor, VisionProfile
+from desktop_vision import Perceptor, VisionProfile, decode_profile_json
 from evaluation import positive_int
 
 
@@ -130,7 +130,7 @@ def snapshot_profile(path, directory):
     """Freeze profile and every referenced template before live calibration changes."""
     path = Path(path).resolve()
     raw = path.read_bytes()
-    profile = VisionProfile.from_dict(json.loads(raw), base_dir=path.parent)
+    profile = VisionProfile.from_dict(decode_profile_json(raw), base_dir=path.parent)
     names = {item.template for item in (*profile.phase_templates, *profile.numeric_templates)}
     for slot in (*profile.shop, *profile.team):
         names.update(path for _, path in slot.species_references())

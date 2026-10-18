@@ -1842,6 +1842,24 @@ its 26 files contain no private image/model/log assets. The actual PowerShell
 `live_validation: false`. No October 18 desktop inspection or game input
 occurred. No new model was trained or promoted from these development studies.
 
+## October 18, afternoon: consistent offline calibration decoding
+
+An integration audit found that species preparation/reporting still decoded raw
+profiles with last-key-wins behavior, while the native loader refused them.
+These readers now share duplicate-key decoding without imposing the complete
+vision schema on their existing partial crop profiles. Frame snapshots also
+reject ambiguity before reading templates or creating the snapshot directory,
+rather than at their later strict reload. Original source bytes are read once,
+retained unchanged and used for existing provenance hashes. Unicode and one
+optional UTF-8 BOM remain supported; malformed double BOMs fail consistently.
+All 140 focused JSON/consumer/frame and mocked species-prepare checks pass.
+No training, frozen-data scoring or model promotion was performed.
+
+Final integration after the shared decoder passes 2,573 tests with one expected
+Windows symlink skip in 34.81 seconds. The rebuilt 26-file wheel imports in
+isolation with the current source bytes and no private assets. The actual
+PowerShell resource preflight passes again; the native calibration is unchanged.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

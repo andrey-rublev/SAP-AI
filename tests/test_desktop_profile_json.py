@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from desktop_vision import VisionProfile
+from desktop_vision import VisionProfile, decode_profile_json
 
 
 def raw_profile(fields):
@@ -84,5 +84,45 @@ def test_unicode_and_legacy_defaults_load_and_roundtrip_with_optional_bom(tmp_pa
 def test_invalid_json_syntax_remains_rejected(tmp_path, text):
     path = tmp_path / "invalid-profile.json"
     path.write_text(text, encoding="utf-8-sig")
+    with pytest.raises(json.JSONDecodeError):
+        VisionProfile.load(path)
+
+
+@pytest.mark.parametrize("as_bytes", [False, True])
+@pytest.mark.parametrize("bom", [False, True])
+def test_shared_decoder_preserves_partial_unicode_profiles(as_bytes, bom):
+    data = {"shop": [{"species_templates": {"猫": "é.png"}}]}
+    text = ("\ufeff" if bom else "") + json.dumps(data, ensure_ascii=False)
+    payload = text.encode("utf-8") if as_bytes else text
+    assert decode_profile_json(payload) == data
+
+
+@pytest.mark.parametrize("as_bytes", [False, True])
+@pytest.mark.parametrize("text", [
+    '{"shop":[{"portrait":null,"portrait":null}]}',
+    r'{"shop":[{"portrait":null,"portrai\u0074":null}]}',
+])
+def test_shared_decoder_rejects_nested_equal_and_escaped_duplicates(as_bytes, text):
+    payload = text.encode("utf-8") if as_bytes else text
+    with pytest.raises(ValueError, match="duplicate JSON key.*portrait"):
+        decode_profile_json(payload)
+
+
+@pytest.mark.parametrize("payload", [None, {}, [], 1, True])
+def test_shared_decoder_requires_text_or_bytes(payload):
+    with pytest.raises(TypeError, match="profile JSON must be UTF-8 text or bytes"):
+        decode_profile_json(payload)
+
+
+@pytest.mark.parametrize("as_bytes", [False, True])
+def test_shared_decoder_rejects_two_leading_boms(as_bytes):
+    text = "\ufeff\ufeff" + '{"shop":[]}'
+    with pytest.raises(json.JSONDecodeError):
+        decode_profile_json(text.encode("utf-8") if as_bytes else text)
+
+
+def test_file_loader_does_not_strip_a_second_bom(tmp_path):
+    path = tmp_path / "double-bom-profile.json"
+    path.write_bytes(("\ufeff\ufeff" + raw_profile('"calibrated":true')).encode("utf-8"))
     with pytest.raises(json.JSONDecodeError):
         VisionProfile.load(path)
