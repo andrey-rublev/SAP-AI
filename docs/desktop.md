@@ -204,6 +204,22 @@ values must be integers from 1 through 99. They use the field's existing
 region. A match can resolve blank OCR, but conflicting OCR or ambiguous
 references remain unknown. Keep reference images beside the private profile.
 Shop dice show tier, not pet level.
+
+An optional `numeric_colors` list can isolate explicitly calibrated colored
+numerals from neutral badge borders. Each record contains exactly `field`,
+`min_rgb` and `max_rgb`: an existing numeric-region path and inclusive three-byte
+RGB bounds. Fields must be unique and have a configured region. No game color
+or coordinate is supplied by the program. The selected ink becomes white on
+black for the existing OCR preprocessing; blank or at-least-half-filled masks
+decline before OCR, and substantial clipped glyphs still refuse. This changes
+only the OCR crop: original RGB reference matching and reference/OCR conflict
+handling remain intact. No number is inferred from a color match.
+
+Omitting this list keeps prior serialization and observation behavior. Validate
+each intended digit, other text/icons, empty regions, clipping and background
+variations before using a filter in a live profile. The current development
+evidence covers level 1 only; it does not establish level 2/3 or shop-level
+recognition. The private native profile has no color filters enabled.
 OCR fallback is allowed only when no numeric reference meets its threshold.
 An eligible reference hidden by a closer ineligible variant still blocks
 fallback, just as ambiguous or contradictory reference evidence does.

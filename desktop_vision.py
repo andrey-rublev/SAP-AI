@@ -222,6 +222,45 @@ class NumberTemplate:
 
 
 @dataclass(frozen=True)
+class NumericColor:
+    """Explicit inclusive RGB ink bounds for one calibrated numeric field."""
+    field: str
+    min_rgb: tuple[int, int, int]
+    max_rgb: tuple[int, int, int]
+
+    def __post_init__(self):
+        if not isinstance(self.field, str) or not self.field:
+            raise ValueError("numeric color field must name a numeric region")
+        for name in ("min_rgb", "max_rgb"):
+            values = _coordinates(getattr(self, name), 3, f"numeric color {name}")
+            if any(not 0 <= value <= 255 for value in values):
+                raise ValueError("numeric color RGB bounds must be between 0 and 255")
+            object.__setattr__(self, name, values)
+        if any(low > high for low, high in zip(self.min_rgb, self.max_rgb)):
+            raise ValueError("numeric color min_rgb must not exceed max_rgb")
+
+    @classmethod
+    def from_dict(cls, data):
+        if not isinstance(data, dict) or set(data) != {"field", "min_rgb", "max_rgb"}:
+            raise ValueError("numeric color needs exactly field, min_rgb and max_rgb")
+        return cls(data["field"], data["min_rgb"], data["max_rgb"])
+
+    def to_dict(self):
+        return {"field": self.field, "min_rgb": list(self.min_rgb), "max_rgb": list(self.max_rgb)}
+
+    def ocr_crop(self, image):
+        mask = np.all((image >= self.min_rgb) & (image <= self.max_rgb), axis=2)
+        ink = int(np.count_nonzero(mask))
+        # Keep the OCR preprocessor's white-ink polarity unambiguous. Dense
+        # masks could invert into dark holes and hide clipped foreground.
+        if ink == 0 or ink * 2 >= mask.size:
+            return None
+        result = np.zeros_like(image)
+        result[mask] = 255
+        return result
+
+
+@dataclass(frozen=True)
 class VisionProfile:
     image_size: tuple[int, int]
     phase_templates: tuple[PhaseTemplate, ...] = ()
@@ -234,6 +273,7 @@ class VisionProfile:
     numeric_templates: tuple[NumberTemplate, ...] = ()
     pointer_rest: tuple[int, int] | None = None
     food: tuple[FoodSlotConfig, ...] = ()
+    numeric_colors: tuple[NumericColor, ...] = ()
 
     def numeric_region(self, name):
         """Resolve an explicit HUD/slot field and its allowed integer range."""
@@ -321,6 +361,18 @@ class VisionProfile:
                 raise ValueError(f"numeric reference value is outside the field range: {item.field}")
             self.template_path(item.template)
             _thresholds(item.max_distance, item.margin)
+        if not isinstance(self.numeric_colors, (list, tuple)):
+            raise ValueError("numeric_colors must contain NumericColor values")
+        colored_fields = set()
+        for item in self.numeric_colors:
+            if not isinstance(item, NumericColor):
+                raise ValueError("numeric_colors must contain NumericColor values")
+            if item.field in colored_fields:
+                raise ValueError(f"duplicate numeric color field: {item.field}")
+            colored_fields.add(item.field)
+            region, _, _ = self.numeric_region(item.field)
+            if region is None:
+                raise ValueError(f"numeric color requires a calibrated region: {item.field}")
         return self
 
     def template_path(self, name):
@@ -336,13 +388,15 @@ class VisionProfile:
     def from_dict(cls, data, *, base_dir=Path(".")):
         if not isinstance(data, dict) or type(data.get("version")) is not int or data["version"] != 1:
             raise ValueError("unsupported vision profile format; expected version 1")
-        allowed = {"version", "image_size", "phase_templates", "hud", "shop", "team", "food", "buttons", "calibrated", "numeric_templates", "pointer_rest"}
+        allowed = {"version", "image_size", "phase_templates", "hud", "shop", "team", "food", "buttons", "calibrated", "numeric_templates", "pointer_rest", "numeric_colors"}
         if set(data) - allowed:
             raise ValueError(f"unknown vision profile fields: {sorted(set(data) - allowed)}")
         if not isinstance(data.get("food", ()), (list, tuple)):
             raise ValueError("food must contain food slot mappings")
+        if "numeric_colors" in data and not isinstance(data["numeric_colors"], list):
+            raise ValueError("numeric_colors must be a list of color records")
         try:
-            return cls(image_size=_coordinates(data["image_size"], 2, "image_size"), phase_templates=tuple(PhaseTemplate.from_dict(item) for item in data.get("phase_templates", [])), hud={name: Rect.from_list(value) for name, value in data.get("hud", {}).items()}, shop=tuple(SlotConfig.from_dict(item) for item in data.get("shop", [])), team=tuple(SlotConfig.from_dict(item) for item in data.get("team", [])), buttons={name: _coordinates(value, 2, "button") for name, value in data.get("buttons", {}).items()}, calibrated=data.get("calibrated", False), base_dir=Path(base_dir), numeric_templates=tuple(NumberTemplate.from_dict(item) for item in data.get("numeric_templates", [])), pointer_rest=_coordinates(data["pointer_rest"], 2, "pointer_rest") if data.get("pointer_rest") is not None else None, food=tuple(FoodSlotConfig.from_dict(item) for item in data.get("food", []))).validate()
+            return cls(image_size=_coordinates(data["image_size"], 2, "image_size"), phase_templates=tuple(PhaseTemplate.from_dict(item) for item in data.get("phase_templates", [])), hud={name: Rect.from_list(value) for name, value in data.get("hud", {}).items()}, shop=tuple(SlotConfig.from_dict(item) for item in data.get("shop", [])), team=tuple(SlotConfig.from_dict(item) for item in data.get("team", [])), buttons={name: _coordinates(value, 2, "button") for name, value in data.get("buttons", {}).items()}, calibrated=data.get("calibrated", False), base_dir=Path(base_dir), numeric_templates=tuple(NumberTemplate.from_dict(item) for item in data.get("numeric_templates", [])), pointer_rest=_coordinates(data["pointer_rest"], 2, "pointer_rest") if data.get("pointer_rest") is not None else None, food=tuple(FoodSlotConfig.from_dict(item) for item in data.get("food", [])), numeric_colors=tuple(NumericColor.from_dict(item) for item in data.get("numeric_colors", []))).validate()
         except (KeyError, TypeError, AttributeError) as exc:
             raise ValueError(f"invalid vision profile: {exc}") from exc
 
@@ -352,6 +406,8 @@ class VisionProfile:
             result["pointer_rest"] = list(self.pointer_rest)
         if self.food:
             result["food"] = [slot.to_dict() for slot in self.food]
+        if self.numeric_colors:
+            result["numeric_colors"] = [item.to_dict() for item in self.numeric_colors]
         return result
 
     @classmethod
@@ -422,6 +478,7 @@ class Perceptor:
         self._numeric_templates = {}
         for item in profile.numeric_templates:
             self._numeric_templates.setdefault(item.field, []).append(item)
+        self._numeric_colors = {item.field: item for item in profile.numeric_colors}
 
     def _template(self, name, region):
         if name not in self._templates:
@@ -466,7 +523,11 @@ class Perceptor:
             return reference
         # Engine failures invalidate the observation; only unreadable raw text
         # may become unknown or use a calibrated numeric reference.
-        value = read_number(self.ocr(region.crop(frame)), minimum, maximum)
+        crop = region.crop(frame)
+        color = self._numeric_colors.get(field_name)
+        if color is not None:
+            crop = color.ocr_crop(crop)
+        value = None if crop is None else read_number(self.ocr(crop), minimum, maximum)
         if matched:
             return reference if value is None or value == reference else None
         return value

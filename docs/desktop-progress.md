@@ -1773,6 +1773,35 @@ The afternoon continuation waited for the reported ordinary allowance reset
 before substantial work. Both requested one-shot wakeups are now removed. Work
 continues in the background; no new live-control authorization has been received.
 
+## October 18, afternoon: optional colored numeric ink
+
+An offline examination of seven designated development images found 30 explicit
+team `Lvl 1` badges and five empty-opening controls. The generic numeric path
+rejects their level crops because separate tall white badge borders touch the
+crop edges, despite complete central numerals. Existing verified RGB references
+already recover many level-1 observations; neither shop dice nor ability-body
+phrases independently establish a pet's level. No real level 2/3 examples were
+available.
+
+Profiles can now opt into strict per-field `numeric_colors` records, specifying
+inclusive RGB ink bounds. Only the OCR crop is masked; original RGB reference
+matching, ambiguity, disagreement and fallback semantics are preserved. Blank
+or dense masks decline rather than invert into dark holes, and the existing
+whole-glyph clipping checks remain. The absent configuration preserves legacy
+serialization/readings; the native profile and game defaults remain unchanged.
+All 535 focused color/vision/runtime/preflight tests pass with synthetic pixels
+and mocked OCR processes.
+
+A fixed development-only comparison removed level references from both observers
+and evaluated 35 manually labeled crops across seven fixed perturbations. Of
+245 readings, the baseline retained 35 correct absent controls and 210 unknowns;
+the color candidate returned 245 correct readings with no unknowns or errors.
+Original unperturbed cases changed from five correct/30 unknown to 35 correct.
+The bounded run used 47 OCR subprocesses in 8.96 seconds. These correlated,
+level-1-only development results do not measure unseen accuracy or improve the
+reference-assisted live baseline by the same amount. No filter/model was
+promoted; real higher-level and broader negative validation remain necessary.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
