@@ -43,10 +43,12 @@ Fields:
 | `phase_templates` | Objects containing `phase`, `region`, and a relative `template` image path |
 | `shop` | One configuration for each currently visible pet shop slot (up to five) |
 | `team` | Exactly five team slot configurations |
+| `food` | Optional array of up to five food observation configurations, in slot order |
+| `numeric_templates` | Optional verified numeric references for HUD, pet stats/levels, and food costs |
 | `buttons` | Calibrated `roll`, `end_turn`, optional `sell` points |
 | `pointer_rest` | Optional `[x, y]` neutral point, verified not to cover observation regions |
 
-Each slot contains `portrait`, `attack`, `health`, and optional `level`
+Each pet slot contains `portrait`, `attack`, `health`, and optional `level`
 rectangles. `empty_template` references an image of that exact portrait region
 when empty. `species_templates` optionally maps species names to a portrait
 image path or a nonempty list of paths, for example
@@ -56,6 +58,49 @@ alternate images of one species do not compete with each other. Different
 species still need the configured margin, and missing stats or competing empty
 evidence remain unknown. Validate alternate portraits against other occupied
 pets and empty slots before enabling them in a live profile.
+
+Optional `food` entries accept only these keys:
+
+| Key | Contents |
+| --- | --- |
+| `portrait` | Required `[x, y, width, height]` food appearance region |
+| `cost` | Optional separate price rectangle; omitted or `null` leaves cost unknown |
+| `empty_template` | Optional relative image path for that portrait region when empty |
+| `food_templates` | Identity names mapped to one relative image path or a nonempty list of variants; defaults to `{}` |
+| `max_distance` | Normalized pixel-distance limit, default `0.06` |
+| `margin` | Required separation from competing evidence, default `0.015` |
+
+For example, merge this fragment into a profile after replacing the illustrative
+coordinates, reference paths and price with verified observations:
+
+```json
+{
+  "food": [{
+    "portrait": [1000, 800, 80, 60],
+    "cost": [1020, 870, 35, 40],
+    "empty_template": "templates/food-empty.png",
+    "food_templates": {"apple": ["templates/apple-day.png", "templates/apple-night.png"]}
+  }],
+  "numeric_templates": [{
+    "field": "food.0.cost", "value": 2,
+    "template": "templates/food-cost-two.png"
+  }]
+}
+```
+
+Food reference images must match the portrait crop's dimensions; numeric
+references must match the cost crop. All paths stay inside the profile
+directory. Alternate images share one identity competitor, as with pet
+references. A readable price alone cannot establish occupancy. Empty evidence
+must beat food evidence and have no readable price; unresolved evidence stays
+unknown. An identity tie can retain occupied status and cost without a food ID.
+Omitting `food`, or using `[]`, leaves food observation unconfigured.
+
+The native perceptor reads food occupancy, optional identity and cost only.
+It supplies no effect or stat-bonus contract: `effect`, `attack_bonus` and
+`health_bonus` are not food profile keys. The default policy does not buy food.
+Synthetic recognition and mocked execution tests do not establish native food
+accuracy, effects or successful purchases.
 
 Extract template crops from a screenshot using observed coordinates:
 
@@ -99,8 +144,11 @@ python desktop.py inspect --profile .local/desktop/profile.json --image .local/d
 
 This command is entirely offline. Inspect its board readings and proposed
 action, then view the overlay to confirm every region. Blank OCR is unknown,
-not empty. Occupied slots require both attack and health. Merging additionally
+not empty. Occupied pet slots require both attack and health. Merging additionally
 requires identified species and known compatible levels.
+With `food` configured, inspect also prints `board.food`; its overlay marks
+food portraits and configured cost regions. This checks saved pixels without
+capturing a window or sending input.
 
 Numeric regions must include a clear margin around every digit, including
 two-digit values. OCR isolates contrasting glyphs, removes frame lines, and
@@ -125,7 +173,9 @@ Use the project's Python environment so its OCR dependencies are available.
 Optional `numeric_templates` entries provide verified references for individual
 fields, for example `{"field": "gold", "value": 0, "template": "gold-zero.png",
 "max_distance": 0.006, "margin": 0.01}`. Fields include HUD names and
-`team.0.level`/`shop.0.attack` style slot paths. They use the field's existing
+`team.0.level`/`shop.0.attack` style slot paths, plus `food.0.cost` through
+`food.4.cost` for configured food slots with a cost rectangle. Food reference
+values must be integers from 1 through 99. They use the field's existing
 region. A match can resolve blank OCR, but conflicting OCR or ambiguous
 references remain unknown. Keep reference images beside the private profile.
 Shop dice show tier, not pet level.
