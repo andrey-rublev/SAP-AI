@@ -1,5 +1,6 @@
 """One explicit completed-client bootstrap with shared budgets and mocked IO."""
 import json
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -173,6 +174,7 @@ def test_default_and_cmd_override_keep_bootstrap_opt_in():
 
 
 def test_cli_bootstrap_retains_two_exportable_receipts_and_runs_real_session(tmp_path, monkeypatch):
+    monkeypatch.setattr(desktop, "desktop_control_lease", Mock(side_effect=nullcontext))
     profile = Mock(image_size=(100, 100))
     perceptor = Mock()
     perceptor.observe.return_value = Board(Phase.RESULT)

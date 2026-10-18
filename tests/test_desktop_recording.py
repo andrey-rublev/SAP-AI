@@ -1,5 +1,6 @@
 """Private frame recording contracts, using only synthetic frames and fake IO."""
 import json
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -132,6 +133,7 @@ def test_failed_write_propagates_and_does_not_report_success(tmp_path, frame, wr
 
 
 def fake_runtime(monkeypatch, frame):
+    monkeypatch.setattr(desktop, "desktop_control_lease", Mock(side_effect=nullcontext))
     board = Board(Phase.SHOP, gold=10, turn=1,
                   shop=(PetSlot(True, attack=2, health=3),), team=(PetSlot(False),) * 5)
     runtime = SimpleNamespace(observe=Mock(return_value=board), act=Mock(),

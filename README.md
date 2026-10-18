@@ -177,6 +177,11 @@ stops control. Hold Escape until the bot stops, move the pointer to a screen cor
 `.local/desktop/STOP` to stop; the launcher never removes a stop file. It requires
 the verified local window size and private profile, which is not included in Git.
 
+Only one SAP-AI input controller can run in a Windows session. Starting a second
+launcher or hover probe reports a conflict before touching the game. Stop the
+first controller before retrying; the lease is released automatically when its
+process exits. Passive preview and snapshot commands remain available.
+
 For a shorter run, use `.\play.cmd --max-actions 40 --max-seconds 600`.
 With an already verified profile, the separate preview interface remains:
 

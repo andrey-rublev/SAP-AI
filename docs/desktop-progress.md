@@ -1484,6 +1484,32 @@ probe/association/title/layout tests pass with injected IO, including stop and
 private-output checks. New captures remain development diagnostics; the revised
 sequence has not yet been run live.
 
+## October 18: one input controller and recorded compatibility check
+
+`play.cmd`, `run --execute` and the hover probe now share a Windows session
+input lease. A competing or nested controller fails immediately before window
+construction, launch, focus, capture or input. One outer lease covers startup,
+completed-client bootstrap, every arena and restart. Normal exit, exceptions
+and process exit release ownership without PID files or deleting stale locks.
+Passive preview, snapshot capture and offline inspection need no input lease.
+
+Review verified the full lease scope and clarified the passive-capture exception.
+Mocked tests cover ownership, pointer-sized handles, conflicts, thread/nested
+calls and cleanup. A separate background Win32 synchronization check confirmed
+real cross-process rejection and reacquisition after normal release and owner
+process exit. That check loaded no game IO and sent no capture or input.
+All 2,045 repository tests pass with one expected Windows symlink skip. An
+offline wheel build includes the new module and no private assets.
+
+A bounded CPU regression reread all 856 saved changed frames from the six-arena
+October 17 soak through the current observer and unchanged private profile.
+All 856 typed Boards exactly match their original recorded observations across
+all six arenas, in 168.11 seconds with no errors. These are compatibility checks
+against previous observer outputs, not independent labels or new accuracy,
+strategy or live-gameplay evidence. The private report preserves source/profile
+hashes; no frames or calibration were committed. No game window was inspected,
+activated or controlled during this work window.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

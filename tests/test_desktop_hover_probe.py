@@ -1,5 +1,6 @@
 """Explicit development hover diagnostics with injected clocks, camera and mouse."""
 from dataclasses import asdict, replace
+from contextlib import contextmanager, nullcontext
 import hashlib
 import json
 from pathlib import Path
@@ -11,6 +12,7 @@ import numpy as np
 import pytest
 
 from desktop_runtime import DesktopUnavailable, GameWindowNotFound
+from desktop_control import DesktopControlConflict
 from desktop_state import Board, PetSlot, Phase
 from desktop_tooltip_layout import TooltipLayout
 from desktop_vision import Rect, SlotConfig, VisionProfile
@@ -28,6 +30,7 @@ class Clock:
 
 @pytest.fixture
 def environment(tmp_path, monkeypatch):
+    monkeypatch.setattr(probe, "desktop_control_lease", Mock(side_effect=nullcontext))
     monkeypatch.setattr(probe, "ROOT", tmp_path)
     monkeypatch.setattr(probe, "PRIVATE_ROOT", tmp_path / ".local")
     profile = VisionProfile(image_size=(100, 100), calibrated=True, pointer_rest=(50, 95),
@@ -87,6 +90,44 @@ def arguments(*flags):
 
 def run(environment, *flags):
     return probe.run_probe(arguments(*flags), clock=environment.clock, sleep=environment.clock.sleep)
+
+
+def test_competing_controller_rejects_probe_before_window_or_pointer(environment, monkeypatch):
+    monkeypatch.setattr(probe, "desktop_control_lease", Mock(side_effect=DesktopControlConflict("another controller")))
+    report = run(environment)
+    assert report["reason"] == "error" and "another controller" in report["error"]
+    assert report["captures"] == report["pointer_moves"] == 0
+    environment.factory.assert_not_called()
+    environment.window.hover.assert_not_called()
+    environment.window.capture.assert_not_called()
+
+
+@pytest.mark.parametrize("fail", [False, True])
+def test_probe_lease_covers_window_and_all_moves_then_releases(environment, monkeypatch, fail):
+    held, exited = [False], []
+    @contextmanager
+    def claim():
+        held[0] = True
+        try:
+            yield
+        finally:
+            held[0] = False
+            exited.append(True)
+    monkeypatch.setattr(probe, "desktop_control_lease", claim)
+    construct, hover = environment.factory.side_effect, environment.window.hover.side_effect
+    def guarded_construct(*args):
+        assert held[0]
+        return construct(*args)
+    def guarded_hover(*args):
+        assert held[0]
+        if fail:
+            raise DesktopUnavailable("movement failure")
+        return hover(*args)
+    environment.factory.side_effect = guarded_construct
+    environment.window.hover.side_effect = guarded_hover
+    report = run(environment)
+    assert report["reason"] == ("error" if fail else "completed")
+    assert exited == [True] and not held[0]
 
 
 def test_probe_uses_only_calibrated_centers_and_parks_between_targets(environment):

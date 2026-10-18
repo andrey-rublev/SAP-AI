@@ -1,4 +1,5 @@
 """CLI integration with injected observation and input; no desktop access."""
+from contextlib import contextmanager, nullcontext
 from types import SimpleNamespace
 from unittest.mock import Mock, call
 import json
@@ -11,6 +12,7 @@ import numpy as np
 import pytest
 
 import desktop
+from desktop_control import DesktopControlConflict
 from desktop_launch import connect_game_window
 from desktop_runtime import GameWindowNotFound
 from desktop_session import SessionResult
@@ -20,6 +22,7 @@ from desktop_vision import NumberTemplate, Perceptor, PhaseTemplate, Rect, SlotC
 
 @pytest.fixture
 def cli_runtime(monkeypatch):
+    monkeypatch.setattr(desktop, "desktop_control_lease", Mock(side_effect=nullcontext))
     profile = Mock()
     monkeypatch.setattr(desktop.VisionProfile, "load", Mock(return_value=profile))
     monkeypatch.setattr(desktop, "Perceptor", Mock())
@@ -42,6 +45,80 @@ def arguments(tmp_path):
 def play_arguments(tmp_path):
     return ["play", "--log", str(tmp_path / "session.jsonl"),
             "--stop-file", str(tmp_path / "STOP"), "--last-frame", str(tmp_path / "last.png")]
+
+
+@pytest.mark.parametrize("play", [False, True])
+def test_input_lease_spans_window_construction_and_session(tmp_path, cli_runtime, monkeypatch, play):
+    runtime, window = cli_runtime
+    held, trace = [False], []
+    @contextmanager
+    def claim():
+        held[0] = True
+        trace.append("enter")
+        try:
+            yield
+        finally:
+            held[0] = False
+            trace.append("exit")
+    monkeypatch.setattr(desktop, "desktop_control_lease", Mock(side_effect=claim))
+    def construct(*args):
+        assert held[0]
+        trace.append("window")
+        return window.return_value
+    def observe():
+        assert held[0]
+        trace.append("observe")
+        return Board(Phase.RESULT)
+    window.side_effect, runtime.observe.side_effect = construct, observe
+    args = play_arguments(tmp_path) if play else arguments(tmp_path) + ["--execute"]
+    desktop.main(args)
+    assert trace == ["enter", "window", "observe", "exit"]
+    assert not held[0]
+
+
+@pytest.mark.parametrize("play", [False, True])
+def test_controller_conflict_rejects_before_any_window_or_dependencies(tmp_path, cli_runtime, monkeypatch, play):
+    runtime, window = cli_runtime
+    monkeypatch.setattr(desktop, "desktop_control_lease", Mock(side_effect=DesktopControlConflict("another controller")))
+    args = play_arguments(tmp_path) if play else arguments(tmp_path) + ["--execute"]
+    with pytest.raises(DesktopControlConflict, match="another controller"):
+        desktop.main(args)
+    window.assert_not_called()
+    runtime.observe.assert_not_called()
+    runtime.act.assert_not_called()
+    desktop.validate_live_dependencies.assert_not_called()
+
+
+def test_preview_does_not_claim_an_input_lease(tmp_path, cli_runtime):
+    runtime, _ = cli_runtime
+    runtime.observe.return_value = Board(Phase.RESULT)
+    desktop.main(arguments(tmp_path))
+    desktop.desktop_control_lease.assert_not_called()
+
+
+def test_passive_capture_does_not_claim_an_input_lease(tmp_path, cli_runtime, monkeypatch):
+    _, window = cli_runtime
+    writer = Mock()
+    monkeypatch.setattr(desktop, "save_image", writer)
+    desktop.main(["capture", "--output", str(tmp_path / "snapshot.png")])
+    desktop.desktop_control_lease.assert_not_called()
+    window.return_value.capture.assert_called_once_with()
+    writer.assert_called_once()
+
+
+def test_controller_error_exits_lease_before_propagating(tmp_path, cli_runtime, monkeypatch):
+    exited = []
+    @contextmanager
+    def claim():
+        try:
+            yield
+        finally:
+            exited.append(True)
+    monkeypatch.setattr(desktop, "desktop_control_lease", claim)
+    desktop.validate_live_dependencies.side_effect = RuntimeError("dependency failure")
+    with pytest.raises(RuntimeError, match="dependency failure"):
+        desktop.main(play_arguments(tmp_path))
+    assert exited == [True]
 
 
 def test_existing_stop_file_prevents_observation_and_input(tmp_path, cli_runtime):

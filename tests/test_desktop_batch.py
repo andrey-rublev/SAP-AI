@@ -1,5 +1,6 @@
 """Bounded multi-arena collection without native desktop access."""
 import json
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -201,6 +202,7 @@ def test_stopping_between_arenas_never_relaunches(batch, stage):
 
 @pytest.fixture
 def cli(tmp_path, monkeypatch):
+    monkeypatch.setattr(desktop, "desktop_control_lease", Mock(side_effect=nullcontext))
     profile = Mock(image_size=(2, 2))
     perceptor = Mock()
     perceptor.observe.return_value = Board(Phase.RESULT)

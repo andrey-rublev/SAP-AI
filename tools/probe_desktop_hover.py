@@ -30,6 +30,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from desktop import validate_profile_assets
+from desktop_control import desktop_control_lease
 from desktop_runtime import (CachedOCR, DesktopUnavailable, OCR_TIMEOUT_SECONDS,
                              WindowsGameWindow, tesseract_ocr, validate_live_dependencies)
 from desktop_state import Board, Phase
@@ -329,39 +330,40 @@ def run_probe(args, *, clock=None, sleep=None, tooltip_layout=None):
         "association_limit": ASSOCIATION_LIMIT,
     })
     try:
-        require_running()
-        window = WindowsGameWindow(args.window)
-        escape_requested = window.stop_requested
-        window.should_stop = stopped
-        def move(point):
+        with desktop_control_lease():
             require_running()
-            report["pointer_moves"] += 1
-            window.hover(point, profile.image_size)
-            require_running()
-        def capture():
-            require_running()
-            frame = window.capture()
-            report["captures"] += 1
-            require_running()
-            return frame
-        for number, target in enumerate(args.target, 1):
-            prefix = f"{number:02d}-{target.row}-{target.index}"
-            entry = {}
-            report["targets"].append(entry)
-            def record_frame(stage, index, frame):
-                path = output / f"{prefix}-{stage}-{index}.png"
-                write_image(path, frame)
-                return str(path)
-            def record_title(stage, index, title):
-                path = output / f"{prefix}-{stage}-{index}-title.png"
-                write_image(path, title)
-                return str(path)
-            collect_association(profile, target, tooltip_layout, capture=capture, hover=move,
-                                observe=perceptor.observe, wait=wait, require_running=require_running,
-                                settle_seconds=args.settle_seconds, evidence=entry,
-                                record_frame=record_frame, record_title=record_title)
-            report["pointer_restored"] = entry["pointer_restored"]
-        report["reason"] = "completed"
+            window = WindowsGameWindow(args.window)
+            escape_requested = window.stop_requested
+            window.should_stop = stopped
+            def move(point):
+                require_running()
+                report["pointer_moves"] += 1
+                window.hover(point, profile.image_size)
+                require_running()
+            def capture():
+                require_running()
+                frame = window.capture()
+                report["captures"] += 1
+                require_running()
+                return frame
+            for number, target in enumerate(args.target, 1):
+                prefix = f"{number:02d}-{target.row}-{target.index}"
+                entry = {}
+                report["targets"].append(entry)
+                def record_frame(stage, index, frame):
+                    path = output / f"{prefix}-{stage}-{index}.png"
+                    write_image(path, frame)
+                    return str(path)
+                def record_title(stage, index, title):
+                    path = output / f"{prefix}-{stage}-{index}-title.png"
+                    write_image(path, title)
+                    return str(path)
+                collect_association(profile, target, tooltip_layout, capture=capture, hover=move,
+                                    observe=perceptor.observe, wait=wait, require_running=require_running,
+                                    settle_seconds=args.settle_seconds, evidence=entry,
+                                    record_frame=record_frame, record_title=record_title)
+                report["pointer_restored"] = entry["pointer_restored"]
+            report["reason"] = "completed"
     except (ProbeStopped, KeyboardInterrupt):
         report["reason"] = "stopped"
     except Exception as exc:

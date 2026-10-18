@@ -15,6 +15,7 @@ import numpy as np
 from desktop_runtime import (CachedOCR, DesktopRuntime, WindowsGameWindow,
                              tesseract_ocr, validate_live_dependencies)
 from desktop_launch import GAME_TITLE, connect_game_window
+from desktop_control import desktop_control_lease
 from desktop_session import DesktopSession, SessionResult
 from desktop_state import DesktopPolicy, Phase
 from desktop_vision import Perceptor, Rect, VisionProfile
@@ -487,6 +488,14 @@ def main(argv=None):
         if args.overlay:
             save_image(annotate(frame, profile), args.overlay)
         return
+    if args.execute:
+        with desktop_control_lease():
+            return run_controller(args, profile, perceptor)
+    return run_controller(args, profile, perceptor)
+
+
+def run_controller(args, profile, perceptor):
+    """Run startup and all arenas; the caller holds a lease when input is enabled."""
     deadline = time.monotonic() + args.max_seconds
     escape_requested = lambda: False
     def should_stop():
