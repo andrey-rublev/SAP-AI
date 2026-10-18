@@ -453,6 +453,38 @@ duplicate or internally inconsistent reports are rejected. Regressions return
 a failing exit status; the comparison never changes a live profile. Keep its
 JSON output private because it includes study provenance.
 
+Tooltip appearance sequences can be checked without opening or capturing the
+game, running OCR, or moving the pointer:
+
+```powershell
+.\.venv\Scripts\python.exe tools/check_desktop_tooltip_reveal.py --manifest .local/desktop/tooltip-development/sequence.json --output .local/desktop/tooltip-check
+```
+
+The output directory must be new. The private JSON manifest accepts exactly
+`version: 1`, `data_usage: "development_diagnostic"`,
+`held_out_evaluation: false`, `image_size`, `layout`, `change_limits`, `target`,
+`frames` and `clear_boards`. `layout` supplies `TooltipLayout` fields;
+`change_limits` supplies explicit `min_channel_change`, `min_changed_fraction`
+and `min_new_white_fraction`. These limits need calibration; none is inferred.
+`target` contains `row` (`shop` or `team`) and a zero-based `index`.
+
+`frames` contains six records in clear, clear, hover, hover, clear, clear order.
+Each has `stage`, a distinct relative PNG `image` path inside the manifest
+directory, and the file's lowercase `sha256`. All images must be single RGB PNGs
+with the declared dimensions, at most four million pixels and 16 MiB each.
+`clear_boards` contains four records corresponding to frame indices 0, 1, 4, 5;
+each has `frame_sha256`, a typed `board` mapping and a nonempty `label_source`.
+Those Boards are caller annotations, not verified perception. Reopening or
+duplicating old images cannot establish a new capture sequence.
+
+The report retains supplied provenance and limits, explicitly sets global
+clearance false and interprets no identity. Only a successful bounded appearance
+check saves a detached `title.png`. Exit status is zero on success, one on an
+observation refusal and two on invalid input. Unchanged boundary components may
+remain unresolved outside the panel; this protocol never weakens the strict
+tooltip-clearance check used by native diagnostics. Neither title text nor a
+successful sequence authorizes species enrichment or gameplay actions.
+
 `tools/extract_desktop_assets.py` can extract selected named textures from an
 installed Unity 6000.3 Windows client for private recognition experiments.
 It supports only the explicitly checked version-22 layout and DXT1/DXT5 formats,

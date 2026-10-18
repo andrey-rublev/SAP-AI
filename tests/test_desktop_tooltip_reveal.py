@@ -209,6 +209,22 @@ def test_verification_uses_snapshots_after_accepting_independent_storage(sequenc
     assert all(not frame.any() for frame in sequence["frames"])
 
 
+def test_full_frame_budget_is_checked_before_copying(sequence, monkeypatch):
+    shape = sequence["frames"][0].shape
+    monkeypatch.setattr(verifier, "MAX_FRAME_PIXELS", shape[0] * shape[1] - 1)
+    with pytest.raises(ValueError, match="bounded pixel budget"):
+        verify_revealed_tooltip(**sequence)
+
+
+def test_interleaved_storage_is_conservatively_refused_without_exact_overlap_search(sequence):
+    shape = sequence["frames"][0].shape
+    buffer = np.empty((shape[0] * 2, *shape[1:]), dtype=np.uint8)
+    buffer[::2] = sequence["frames"][0]
+    buffer[1::2] = sequence["frames"][1]
+    sequence["frames"][:2] = (buffer[::2], buffer[1::2])
+    assert verify_revealed_tooltip(**sequence).reason == "shared_frame_storage"
+
+
 @pytest.mark.parametrize("field,value", [("min_channel_change", True), ("min_channel_change", 0),
                                          ("min_channel_change", 256), ("min_changed_fraction", 0),
                                          ("min_changed_fraction", float("nan")),

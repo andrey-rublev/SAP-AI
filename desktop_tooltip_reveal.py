@@ -15,7 +15,10 @@ from typing import Literal
 import numpy as np
 
 from desktop_state import Board, Phase
-from desktop_tooltip_layout import TooltipLayout, TooltipTitle, inventory_tooltip_panels
+from desktop_tooltip_layout import MAX_SEARCH_PIXELS, TooltipLayout, TooltipTitle, inventory_tooltip_panels
+
+
+MAX_FRAME_PIXELS = MAX_SEARCH_PIXELS
 
 
 REVEAL_LIMIT = (
@@ -103,9 +106,13 @@ def verify_revealed_tooltip(*, frames, clear_boards, layout: TooltipLayout,
         if (frame.dtype != np.uint8 or frame.ndim != 3 or frame.shape[2] != 3
                 or min(frame.shape[:2]) <= 0 or frame.shape != arrays[0].shape):
             raise ValueError("six equally sized nonempty uint8 RGB frames are required")
+        if frame.shape[0] * frame.shape[1] > MAX_FRAME_PIXELS:
+            raise ValueError("tooltip frames exceed the bounded pixel budget")
     # Reused capture storage loses history before this pure verifier can see it.
     # Never count six aliases of the latest buffer as independent observations.
-    if any(np.shares_memory(frame, earlier) for index, frame in enumerate(arrays) for earlier in arrays[:index]):
+    # The conservative bounds check also avoids unbounded exact overlap work
+    # on unusually strided arrays. Suspected sharing is not fresh evidence.
+    if any(np.may_share_memory(frame, earlier) for index, frame in enumerate(arrays) for earlier in arrays[:index]):
         return TooltipRevealInspection("refused", "shared_frame_storage")
     arrays = tuple(frame.copy() for frame in arrays)
     if any(board.phase != Phase.SHOP for board in clear_boards):

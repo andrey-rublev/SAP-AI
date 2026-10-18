@@ -1658,6 +1658,29 @@ and separate edge fragments leave occupancy unknown and authorize no purchase;
 fresh stable pixels recover the proposal with zero native input. No numeric
 thresholds, calibration or production stat behavior were changed.
 
+## October 18, morning: private tooltip replay command
+
+`tools/check_desktop_tooltip_reveal.py` checks an explicitly declared private
+six-frame development manifest, with four caller-annotated Boards tied to clear
+frame hashes. It validates all declarations before frame reads, checks all file
+hashes before decoding, bounds PNG bytes/pixels and refuses existing outputs.
+Reports retain limits and provenance, mark caller Boards unverified, and make
+no clearance or identity claim. Only success saves a title crop. No window,
+capture, perception, OCR or input call is involved. The pure verifier now also
+bounds full-frame copying and conservatively refuses potentially shared array
+storage without an expensive exact-overlap search.
+
+A separate static development check reproduced the old strict status/reason
+on all seven supplied frames and found bounded candidates only in the two
+known hover images. Both before/hover pairs fail boundary invariance: one has
+changed pixels and the other changed geometry. They are not complete six-frame
+sequences. A conservative search expansion fitted strict absent/unique results
+to one pair, while the other expanded to an image boundary and stayed unresolved.
+This is calibration exploration on development images, not unseen validation;
+no native profile, threshold, species model or gameplay default was changed.
+All 264 focused tooltip/inventory/replay/native-probe mock tests pass; runtime
+package versions and private IO helper hashes are retained in replay reports.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
