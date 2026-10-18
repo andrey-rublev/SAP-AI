@@ -117,6 +117,8 @@ def add_session_arguments(command, *, play=False):
     command.add_argument("--window", default="Super Auto Pets")
     if play:
         command.set_defaults(execute=True, start_arena=True)
+        command.add_argument("--check", action="store_true",
+                             help="validate profile, assets and OCR dependencies, then exit without desktop access")
         command.add_argument("--no-launch", action="store_true",
                              help="require an already open game instead of launching it through Steam")
         command.add_argument("--launch-timeout", type=positive_seconds, default=90,
@@ -477,7 +479,7 @@ def main(argv=None):
         save_image(rect.crop(frame), args.output)
         print(f"Saved local template to {args.output}")
         return
-    if args.command == "play" and Path(args.stop_file).exists():
+    if args.command == "play" and not args.check and Path(args.stop_file).exists():
         stopped_before_start(args)
         return
     try:
@@ -490,6 +492,16 @@ def main(argv=None):
         # Validate before constructing a desktop dependency or taking any screenshot.
         profile.validate(require_calibrated=True)
     perceptor = Perceptor(profile, ocr=CachedOCR(tesseract_ocr))
+    if args.command == "play" and args.check:
+        validate_profile_assets(perceptor)
+        executable = validate_live_dependencies()
+        print(json.dumps({"status": "checks_passed", "live_validation": False,
+                          "profile": str(Path(args.profile).resolve()),
+                          "expected_client_size": list(profile.image_size),
+                          "tesseract_path": executable,
+                          "stop_file": str(Path(args.stop_file).resolve()),
+                          "stop_present": Path(args.stop_file).exists()}, indent=2))
+        return
     if args.command == "inspect":
         frame = read_image(args.image)
         board = perceptor.observe(frame)

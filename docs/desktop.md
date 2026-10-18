@@ -15,6 +15,15 @@ game client image -> calibrated Perceptor -> typed Board
 
 ## Install and capture
 
+For the existing project environment and private native profile, run
+`.\play.cmd --check` before taking control. This checks calibration structure,
+reference images, Python dependencies and the bounded Tesseract version query.
+It reports `checks_passed` with `live_validation: false`, expected client size
+and STOP-file status. It never constructs a window/controller, acquires input
+ownership, launches Steam, captures, moves the pointer, or writes session/frame
+outputs. An existing STOP remains in place. These resource checks do not prove
+current screen geometry, recognition or gameplay behavior.
+
 ```powershell
 python -m pip install -e ".[live,dev]"
 python desktop.py capture --output .local/desktop/shop.png

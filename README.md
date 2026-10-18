@@ -31,6 +31,11 @@ completed game untouched.
 See [Desktop controller](docs/desktop.md) for dependencies, calibration and
 other stop controls.
 
+Use `.\play.cmd --check` to check the calibrated profile, reference images and
+OCR installation in the background. It reports the expected client size and
+STOP-file status without opening, capturing or controlling the game. Passing
+these checks does not validate the current game screen or gameplay reliability.
+
 For offline training and evaluation:
 
 ```bash

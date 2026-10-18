@@ -2,14 +2,15 @@
 
 ## Working agreement
 
-**Latest user instruction, 2026-10-04:** the user renewed full laptop control,
-requested work now and a one-time continuation at 7:30 a.m. Indianapolis time,
-and specified a PowerShell workflow: change to this folder and run one command
-so the standalone bot takes over and plays. Controlled live validation may
-resume; the October 3 background-only restriction is superseded. Check ordinary
-Plus usage and stop before paid credits; do not use reset credits. Keep captures
-and calibration private. The previous recurring development schedule was
-removed through the app.
+**Current continuation, 2026-10-18:** work in the background using source edits,
+mocked IO, recorded development frames and bounded CPU jobs. The October 17 live
+control window expired at 5 p.m.; live inspection/control needs renewed human
+authorization for today in this chat. Do not launch, focus, capture or control
+desktop apps until then. The requested deliverable remains a PowerShell command
+that runs the standalone bot, which itself observes, decides, acts and verifies.
+Check ordinary Plus usage first and reserve enough to test, review, push and
+write a handoff. Do not spend paid/reset credits or change account settings.
+Keep captures, account data, calibration, artwork and trained models private.
 
 **Next-demo requirement, explicitly clarified by the user:** SAP-AI itself
 must both decide and physically execute game actions. The running program must
@@ -26,10 +27,19 @@ meaningful commits per day. Work on `main`, pushing to `origin/main`; never
 force-push. Preserve unrelated edits. Test each coherent change before its
 commit, then push immediately. Do not manufacture commits to fill a quota.
 
-There is no recurring development schedule. The October 4, 7:30 a.m.
-continuation is a single run in this chat. Continue work here and keep these
-notes current. Stop routine development once the requested live objective is
-verified complete.
+There is no recurring development schedule. Today's 8:30 a.m. one-shot was
+deleted after firing; the previously requested 1:15 p.m. continuation remains
+one-shot and must be deleted after it fires. Create no further wakeups. Read the
+latest private October 18 handoff before resuming. Stop routine development once
+the requested live objective is verified complete.
+
+Normal start is `.\play.cmd`; hold Escape, move to a screen corner or create
+`.local/desktop/STOP` to stop. Eleven earlier uninterrupted fresh native runs
+are evidence for the earlier conservative baseline; no October 18 native run
+has occurred. Current blockers include tooltip/target binding, readable shop
+levels and directly validated food effects. No learned recognizer is enabled;
+the consumed duplicate-refused final species study must not be rescored or
+described as unseen data. Keep the toy DQN separate from real-game decisions.
 
 ## Implemented, 2026-09-26
 
@@ -1708,6 +1718,22 @@ The full repository suite passes 2,381 tests with one expected Windows symlink
 skip in 38.69 seconds. An offline wheel builds successfully, contains the new
 tooltip module and controller lease, and includes no private image/model/log
 assets. No native application was opened or controlled.
+
+## October 18, morning: background launcher preflight
+
+`.\play.cmd --check` now validates the calibrated profile, every configured
+reference image, Python dependencies and the bounded hidden Tesseract version
+query, then reports expected client size and STOP-file status. It returns before
+input ownership, window/controller construction, Steam startup, capture or input.
+It preserves STOP, session receipts, last-frame images and recording directories.
+Passing checks is explicitly separate from live validation. Mocked failure and
+preservation cases pass with the existing launcher tests (110 focused tests).
+
+The actual PowerShell wrapper passed on this laptop using the private native
+profile and installed OCR executable. This was a background resource check;
+no game screen was inspected and no native gameplay was performed. The working
+agreement above now reflects today's background-only continuation and the
+expired October 17 live-control deadline.
 
 ## Remaining milestones
 
