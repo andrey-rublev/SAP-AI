@@ -1421,6 +1421,24 @@ cover the four outcomes, all four clipped edges, work limits and detached crops;
 95 tooltip/layout tests pass. No live screen or input was used for this change,
 and native identity recognition and policy remain unchanged.
 
+## October 18: optional calibrated food observations
+
+Profiles can now declare separate food portrait/price regions, explicit empty
+references and food identity image variants. A known food template must beat
+empty evidence to establish occupancy; a price or empty-template mismatch alone
+cannot establish an unfamiliar item. Competing food identities retain known
+occupancy while leaving identity unknown. Prices come only from bounded numeric
+OCR or an explicitly verified `food.N.cost` reference, never from identity.
+
+Food observations remain optional and legacy profiles/boards keep their old
+serialization when no food is configured. Calibration overlays show the new
+regions, and every food image variant and price reference is checked before
+window activation. No effect, stat bonus, game balance or native geometry is
+inferred, so these observations alone cannot authorize a food purchase. The
+default desktop policy is unchanged. All 404 focused food/vision/state/CLI tests
+pass using synthetic images; no private calibration or artwork was committed
+and no live food validation has occurred.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.

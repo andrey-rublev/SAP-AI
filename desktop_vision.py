@@ -15,7 +15,7 @@ from typing import Callable, Iterator
 
 import numpy as np
 
-from desktop_state import Board, PetSlot, Phase
+from desktop_state import Board, FoodSlot, PetSlot, Phase
 
 
 def _coordinates(value, count, name):
@@ -153,6 +153,51 @@ class SlotConfig:
 
 
 @dataclass(frozen=True)
+class FoodSlotConfig:
+    """Optional food image evidence and an explicitly observed price region.
+
+    Identity never supplies a cost, effect, or stat bonus. A nonmatching empty
+    reference is insufficient evidence that an unfamiliar food is present.
+    """
+    portrait: Rect
+    cost: Rect | None = None
+    empty_template: str | None = None
+    food_templates: dict[str, str | list[str]] = field(default_factory=dict)
+    max_distance: float = 0.06
+    margin: float = 0.015
+
+    def food_references(self) -> Iterator[tuple[str, str]]:
+        if not isinstance(self.food_templates, dict):
+            raise ValueError("food_templates must map food identities to local images")
+        for food_id, references in self.food_templates.items():
+            if not isinstance(food_id, str) or not food_id.strip():
+                raise ValueError("food identities must be nonempty strings")
+            if isinstance(references, str):
+                references = [references]
+            elif not isinstance(references, list) or not references:
+                raise ValueError("food references must be a path or a nonempty list of paths")
+            for path in references:
+                if not isinstance(path, str) or not path.strip():
+                    raise ValueError("food reference paths must be nonempty strings")
+                yield " ".join(food_id.split()).casefold(), path
+
+    @classmethod
+    def from_dict(cls, data):
+        allowed = {"portrait", "cost", "empty_template", "food_templates", "max_distance", "margin"}
+        if not isinstance(data, dict) or set(data) - allowed:
+            raise ValueError("food slot must contain only supported observation fields")
+        return cls(portrait=Rect.from_list(data["portrait"]),
+                   cost=Rect.from_list(data["cost"]) if data.get("cost") is not None else None,
+                   empty_template=data.get("empty_template"), food_templates=data.get("food_templates", {}),
+                   max_distance=data.get("max_distance", 0.06), margin=data.get("margin", 0.015))
+
+    def to_dict(self):
+        return {"portrait": self.portrait.to_list(), "cost": self.cost.to_list() if self.cost else None,
+                "empty_template": self.empty_template, "food_templates": self.food_templates,
+                "max_distance": self.max_distance, "margin": self.margin}
+
+
+@dataclass(frozen=True)
 class NumberTemplate:
     """One manually verified numeric crop, never a default for unreadable text."""
     field: str
@@ -181,11 +226,18 @@ class VisionProfile:
     base_dir: Path = field(default_factory=lambda: Path("."), repr=False, compare=False)
     numeric_templates: tuple[NumberTemplate, ...] = ()
     pointer_rest: tuple[int, int] | None = None
+    food: tuple[FoodSlotConfig, ...] = ()
 
     def numeric_region(self, name):
         """Resolve an explicit HUD/slot field and its allowed integer range."""
         if name in {"gold", "turn", "wins", "lives"}:
             return self.hud.get(name), 1 if name == "turn" else 0, 99
+        food = re.fullmatch(r"food\.([0-4])\.cost", name) if isinstance(name, str) else None
+        if food is not None:
+            index = int(food[1])
+            if index >= len(self.food):
+                raise ValueError(f"numeric field refers to missing food slot: {name!r}")
+            return self.food[index].cost, 1, 99
         match = re.fullmatch(r"(shop|team)\.([0-4])\.(attack|health|level)", name) if isinstance(name, str) else None
         if match is None:
             raise ValueError(f"unknown numeric field: {name!r}")
@@ -236,6 +288,19 @@ class VisionProfile:
                 self.template_path(slot.empty_template)
             for _, path in slot.species_references():
                 self.template_path(path)
+        if not isinstance(self.food, (list, tuple)) or len(self.food) > 5:
+            raise ValueError("food must contain at most five FoodSlotConfig values")
+        for slot in self.food:
+            if not isinstance(slot, FoodSlotConfig):
+                raise ValueError("food must contain FoodSlotConfig values")
+            slot.portrait.validate(self.image_size)
+            if slot.cost is not None:
+                slot.cost.validate(self.image_size)
+            _thresholds(slot.max_distance, slot.margin)
+            if slot.empty_template is not None:
+                self.template_path(slot.empty_template)
+            for _, path in slot.food_references():
+                self.template_path(path)
         if any(slot.available_from_turn != 1 for slot in self.team):
             raise ValueError("team slots must be available from turn 1")
         if any(left.available_from_turn > right.available_from_turn
@@ -264,11 +329,13 @@ class VisionProfile:
     def from_dict(cls, data, *, base_dir=Path(".")):
         if not isinstance(data, dict) or type(data.get("version")) is not int or data["version"] != 1:
             raise ValueError("unsupported vision profile format; expected version 1")
-        allowed = {"version", "image_size", "phase_templates", "hud", "shop", "team", "buttons", "calibrated", "numeric_templates", "pointer_rest"}
+        allowed = {"version", "image_size", "phase_templates", "hud", "shop", "team", "food", "buttons", "calibrated", "numeric_templates", "pointer_rest"}
         if set(data) - allowed:
             raise ValueError(f"unknown vision profile fields: {sorted(set(data) - allowed)}")
+        if not isinstance(data.get("food", ()), (list, tuple)):
+            raise ValueError("food must contain food slot mappings")
         try:
-            return cls(image_size=_coordinates(data["image_size"], 2, "image_size"), phase_templates=tuple(PhaseTemplate.from_dict(item) for item in data.get("phase_templates", [])), hud={name: Rect.from_list(value) for name, value in data.get("hud", {}).items()}, shop=tuple(SlotConfig.from_dict(item) for item in data.get("shop", [])), team=tuple(SlotConfig.from_dict(item) for item in data.get("team", [])), buttons={name: _coordinates(value, 2, "button") for name, value in data.get("buttons", {}).items()}, calibrated=data.get("calibrated", False), base_dir=Path(base_dir), numeric_templates=tuple(NumberTemplate.from_dict(item) for item in data.get("numeric_templates", [])), pointer_rest=_coordinates(data["pointer_rest"], 2, "pointer_rest") if data.get("pointer_rest") is not None else None).validate()
+            return cls(image_size=_coordinates(data["image_size"], 2, "image_size"), phase_templates=tuple(PhaseTemplate.from_dict(item) for item in data.get("phase_templates", [])), hud={name: Rect.from_list(value) for name, value in data.get("hud", {}).items()}, shop=tuple(SlotConfig.from_dict(item) for item in data.get("shop", [])), team=tuple(SlotConfig.from_dict(item) for item in data.get("team", [])), buttons={name: _coordinates(value, 2, "button") for name, value in data.get("buttons", {}).items()}, calibrated=data.get("calibrated", False), base_dir=Path(base_dir), numeric_templates=tuple(NumberTemplate.from_dict(item) for item in data.get("numeric_templates", [])), pointer_rest=_coordinates(data["pointer_rest"], 2, "pointer_rest") if data.get("pointer_rest") is not None else None, food=tuple(FoodSlotConfig.from_dict(item) for item in data.get("food", []))).validate()
         except (KeyError, TypeError, AttributeError) as exc:
             raise ValueError(f"invalid vision profile: {exc}") from exc
 
@@ -276,6 +343,8 @@ class VisionProfile:
         result = {"version": 1, "image_size": list(self.image_size), "calibrated": self.calibrated, "phase_templates": [item.to_dict() for item in self.phase_templates], "hud": {name: value.to_list() for name, value in self.hud.items()}, "shop": [slot.to_dict() for slot in self.shop], "team": [slot.to_dict() for slot in self.team], "buttons": {name: list(point) for name, point in self.buttons.items()}, "numeric_templates": [item.to_dict() for item in self.numeric_templates]}
         if self.pointer_rest is not None:
             result["pointer_rest"] = list(self.pointer_rest)
+        if self.food:
+            result["food"] = [slot.to_dict() for slot in self.food]
         return result
 
     @classmethod
@@ -446,6 +515,22 @@ class Perceptor:
             species = scores[0][1]
         return PetSlot(occupied=True, species=species, attack=attack, health=health, level=self._number(frame, slot.level, 1, 3, f"{field_prefix}.level"))
 
+    def _food_slot(self, frame, slot, field_prefix):
+        cost = self._number(frame, slot.cost, 1, 99, f"{field_prefix}.cost")
+        food_scores = {}
+        for name, path in slot.food_references():
+            distance = self._distance(frame, slot.portrait, path)
+            food_scores[name] = min(distance, food_scores.get(name, float("inf")))
+        scores = sorted((distance, name) for name, distance in food_scores.items())
+        best_food = scores[0][0] if scores else float("inf")
+        empty = self._distance(frame, slot.portrait, slot.empty_template) if slot.empty_template is not None else float("inf")
+        if empty <= slot.max_distance and best_food - empty > slot.margin:
+            return FoodSlot(occupied=False) if cost is None else FoodSlot(occupied=None)
+        if best_food > slot.max_distance or empty - best_food <= slot.margin:
+            return FoodSlot(occupied=None)
+        food_id = scores[0][1] if len(scores) == 1 or scores[1][0] - best_food > slot.margin else None
+        return FoodSlot(occupied=True, food_id=food_id, cost=cost)
+
     def observe(self, frame):
         frame = np.asarray(frame)
         width, height = self.profile.image_size
@@ -465,4 +550,5 @@ class Perceptor:
             shop = tuple(self._slot(frame, slot, f"shop.{i}")
                          for i, slot in enumerate(self.profile.shop)
                          if turn is None or slot.available_from_turn <= turn)
-        return Board(phase=phase, **hud, shop=shop, team=tuple(self._slot(frame, slot, f"team.{i}") for i, slot in enumerate(self.profile.team)))
+        return Board(phase=phase, **hud, shop=shop, team=tuple(self._slot(frame, slot, f"team.{i}") for i, slot in enumerate(self.profile.team)),
+                     food=tuple(self._food_slot(frame, slot, f"food.{i}") for i, slot in enumerate(self.profile.food)))

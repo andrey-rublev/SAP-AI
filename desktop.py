@@ -96,6 +96,10 @@ def annotate(frame, profile):
                 rect = getattr(slot, field)
                 if rect is not None:
                     regions.append((f"{row_name}{index} {field}", rect))
+    for index, slot in enumerate(profile.food):
+        regions.append((f"food{index} portrait", slot.portrait))
+        if slot.cost is not None:
+            regions.append((f"food{index} cost", slot.cost))
     for label, rect in regions:
         x, y, w, h = rect.to_list()
         draw.rectangle((x, y, x + w - 1, y + h - 1), outline="#ff40bb", width=2)
@@ -152,6 +156,11 @@ def validate_profile_assets(perceptor):
         if slot.empty_template is not None:
             perceptor._template(slot.empty_template, slot.portrait)
         for _, path in slot.species_references():
+            perceptor._template(path, slot.portrait)
+    for slot in profile.food:
+        if slot.empty_template is not None:
+            perceptor._template(slot.empty_template, slot.portrait)
+        for _, path in slot.food_references():
             perceptor._template(path, slot.portrait)
     for item in profile.numeric_templates:
         region, _, _ = profile.numeric_region(item.field)
