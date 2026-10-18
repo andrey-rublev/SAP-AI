@@ -88,6 +88,20 @@ class TooltipPanelInspection:
     reason: str | None = None
 
 
+@dataclass(frozen=True)
+class TooltipPanelInventory:
+    """Separate bounded candidates from evidence that prevents strict clearance.
+
+    Candidates are detached crops, not established target identities. Boundary
+    rectangles may belong to clipped panels, even when they are very small.
+    An inventory with unresolved reasons never proves tooltip absence.
+    """
+
+    candidates: tuple[TooltipTitle, ...] = ()
+    boundary_rects: tuple[tuple[int, int, int, int], ...] = ()
+    unresolved_reasons: tuple[str, ...] = ()
+
+
 def _white_components(mask):
     """Exact four-connected components using white row runs, without pixel BFS."""
     parents, runs, previous = [], [], []
@@ -131,15 +145,15 @@ def _white_components(mask):
     return components.values()
 
 
-def inspect_tooltip_panel(image, layout: TooltipLayout) -> TooltipPanelInspection:
-    """Distinguish absence, a unique panel, ambiguity and unresolved evidence.
+def inventory_tooltip_panels(image, layout: TooltipLayout) -> TooltipPanelInventory:
+    """Inventory every calibrated bounded candidate and unresolved component.
 
     A panel must fit the calibrated dimensions, have dense white fill and all
     four white edges, and optionally have a dark one-pixel exterior perimeter.
-    Any white component touching the search boundary may be clipped; it makes
-    the inspection unresolved, even when another panel looks eligible. Keep
-    the calibrated search edges clear to establish absence. Invalid RGB/search
-    geometry raises ValueError rather than becoming a negative observation.
+    Every boundary-connected white component remains unresolved, regardless of
+    size. This inventory supports temporal diagnostics; use the strict inspector
+    below when a caller needs established clearance. Invalid RGB/search geometry
+    raises ValueError rather than becoming a negative observation.
     """
     if not isinstance(layout, TooltipLayout):
         raise TypeError("layout must be a TooltipLayout")
@@ -158,12 +172,13 @@ def inspect_tooltip_panel(image, layout: TooltipLayout) -> TooltipPanelInspectio
     eligible = []
     components = _white_components(white)
     if components is None:
-        return TooltipPanelInspection("unresolved", reason="fragmentation_limit")
-    unresolved = None
+        return TooltipPanelInventory(unresolved_reasons=("fragmentation_limit",))
+    unresolved, boundary = [], []
     for x0, y0, x1, y1, area in components:
         width, height = x1 - x0, y1 - y0
         if x0 == 0 or y0 == 0 or x1 == sw or y1 == sh:
-            unresolved = "search_boundary"
+            boundary.append((sx + x0, sy + y0, width, height))
+            unresolved.append("search_boundary")
             continue
         if (not layout.panel_width_range[0] <= width <= layout.panel_width_range[1]
                 or not layout.panel_height_range[0] <= height <= layout.panel_height_range[1]):
@@ -174,29 +189,44 @@ def inspect_tooltip_panel(image, layout: TooltipLayout) -> TooltipPanelInspectio
         if fraction < layout.min_white_fraction:
             continue
         if edge_fraction < layout.min_white_edge_fraction:
-            unresolved = unresolved or "panel_edges"
+            unresolved.append("panel_edges")
             continue
         perimeter_fraction = None
         if dark is not None:
             perimeter_fraction = min(float(edge.mean()) for edge in (dark[y0 - 1, x0:x1], dark[y1, x0:x1],
                                                                      dark[y0:y1, x0 - 1], dark[y0:y1, x1]))
             if perimeter_fraction < layout.min_dark_perimeter_fraction:
-                unresolved = unresolved or "panel_perimeter"
+                unresolved.append("panel_perimeter")
                 continue
         tx, ty, tw, th = layout.title_offset_rect
         if tx + tw > width or ty + th > height:
-            unresolved = unresolved or "title_geometry"
+            unresolved.append("title_geometry")
             continue
         absolute_x, absolute_y = sx + x0 + tx, sy + y0 + ty
         eligible.append(TooltipTitle(
             title_crop=frame[absolute_y:absolute_y + th, absolute_x:absolute_x + tw].copy(),
             panel_rect=(sx + x0, sy + y0, width, height), title_rect=(absolute_x, absolute_y, tw, th),
             white_fraction=fraction, white_edge_fraction=edge_fraction, dark_perimeter_fraction=perimeter_fraction))
-        if len(eligible) > 1:
-            return TooltipPanelInspection("ambiguous")
-    if unresolved is not None:
-        return TooltipPanelInspection("unresolved", reason=unresolved)
-    return TooltipPanelInspection("unique", eligible[0]) if eligible else TooltipPanelInspection("absent")
+    return TooltipPanelInventory(tuple(eligible), tuple(sorted(boundary)), tuple(dict.fromkeys(unresolved)))
+
+
+def inspect_tooltip_panel(image, layout: TooltipLayout) -> TooltipPanelInspection:
+    """Distinguish absence, a unique panel, ambiguity and unresolved evidence.
+
+    Any white component touching the search boundary may be clipped; it makes
+    this inspection unresolved even when another panel looks eligible. Keep
+    calibrated search edges clear to establish absence. Only unique, resolved
+    evidence supplies a title; inventory candidates do not weaken this contract.
+    """
+    inventory = inventory_tooltip_panels(image, layout)
+    if len(inventory.candidates) > 1:
+        return TooltipPanelInspection("ambiguous")
+    if inventory.unresolved_reasons:
+        reason = ("search_boundary" if "search_boundary" in inventory.unresolved_reasons
+                  else inventory.unresolved_reasons[0])
+        return TooltipPanelInspection("unresolved", reason=reason)
+    return (TooltipPanelInspection("unique", inventory.candidates[0]) if inventory.candidates
+            else TooltipPanelInspection("absent"))
 
 
 def find_tooltip_title(image, layout: TooltipLayout) -> TooltipTitle | None:

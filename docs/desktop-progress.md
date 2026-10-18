@@ -1614,6 +1614,50 @@ and native food actions were not evaluated. No held-out final data was reused.
 The final repository suite now passes 2,190 tests with one expected Windows
 symlink skip in 36.00 seconds. No live game or new model training was involved.
 
+## October 18, morning: bounded tooltip appearance evidence
+
+The strict tooltip inspector still refuses every white component touching the
+search boundary, including small HUD glyphs: size alone cannot rule out a
+clipped panel. A separate pure candidate inventory now retains all bounded
+panels, boundary rectangles and unresolved reasons without weakening that
+clearance contract.
+
+A new offline six-frame verifier accepts only supplied clear/clear/hover/hover/
+clear/clear snapshots with four matching typed SHOP Boards and a known occupied
+target. It requires no bounded panel in clear frames, one stable hover panel,
+exact clear restoration including its perimeter, and caller-declared substantial
+RGB change plus newly white area. Boundary components may remain unresolved
+only when their rectangles and RGB patches are identical across all six frames
+and outside the panel/perimeter. Interior ambiguity and work limits refuse.
+Shared capture storage refuses; accepted frames are copied before verification.
+
+This is detached development evidence, with no capture, input, OCR, identity
+enrichment or gameplay integration. A synchronized unrelated overlay and an
+unchanged clipped panel elsewhere remain possible. Existing Tiger/Rhino records
+do not contain six independent frames and cannot validate this protocol.
+Synthetic adversarial coverage and existing hover diagnostics pass 221 focused
+tests. The combined repository suite passes 2,294 tests with one expected Windows
+symlink skip in 43.02 seconds; a further synthetic case independently verifies
+that a large RGB change with little newly white area still refuses.
+Work remained in the background; no October 18 native game validation occurred.
+
+## October 18, morning: explain animated stat abstentions
+
+The original late-shop development frame's 12 unknown fields were traced to a
+tier-dismissal animation, not calibration drift. Six stat crops contain clipped
+numerals or tall bright badge-rim fragments; partial slot stats are deliberately
+withheld together. With identical source/profile hashes and no intervening
+action, the next saved frame 1.341 seconds later reads all ten shop stats. A
+further stable observation acknowledges the tier dismissal. Private diagnostics
+retain frame/crop hashes, masks and event provenance. This explains that selected
+development failure; it does not alter the frozen perturbation-study scores.
+
+Six synthetic integration regressions exercise the real clipping preprocessing,
+cached mocked OCR, perception, policy and preview session. Top/bottom clipping
+and separate edge fragments leave occupancy unknown and authorize no purchase;
+fresh stable pixels recover the proposal with zero native input. No numeric
+thresholds, calibration or production stat behavior were changed.
+
 ## Remaining milestones
 
 1. Continue the private 2560x1440 native profile validation as new states appear.
