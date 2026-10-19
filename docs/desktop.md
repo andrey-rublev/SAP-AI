@@ -407,7 +407,7 @@ readable gold. It then resumes policy decisions without clicking Start.
 The bot does not choose packs, dismiss account forms, or restart after a
 terminal result. Without the flag, menu phases stop without input. Preview
 the calibrated proposal before adding `--execute`. This menu flow has offline
-coverage; native validation is tracked in the progress document.
+coverage; native validation is summarized in the changelog.
 
 The legacy `play.py --live` bridge remains available, but this
 structured pipeline is the path for ongoing desktop development.
@@ -418,7 +418,7 @@ The state model, recognition logic, and session are tested with synthetic
 images and replayed observations. Native input is tested with mocks. These
 tests do not establish correct coordinates, template quality, OCR accuracy, or
 successful real-client play. Track observed game evidence and remaining work
-in [desktop-progress.md](desktop-progress.md).
+in the [changelog](../CHANGELOG.md).
 
 Recorded session logs can become typed replay fixtures without opening images
 or desktop dependencies:
