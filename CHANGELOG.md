@@ -13,7 +13,7 @@ and calibration stay private in `.local/` (Git-ignored).
 - Offline arena (`python -m sap_ai.sim.arena`) on the bot's own Board/Action
   types, scored in trophies. Over 1,000 runs vs. ghost teams: new strategy 4.14
   mean trophies (234 wins), old strategy 3.92 (194), old strategy without
-  species 1.77 (0 wins), matching the bot's real pre-identification results.
+  species 1.77 (0 wins), in line with the real bot's 1.0 before identification.
 - Batch summaries report trophies per arena and their mean.
 - Code moved into `sap_ai/desktop` (the bot) and `sap_ai/sim` (the lab); the
   launcher runs `python -m sap_ai.desktop.cli`. Tools rely on the editable install.
