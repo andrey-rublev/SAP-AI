@@ -17,14 +17,13 @@ main.py / dqn.py       agent.train(env)
 
 evaluation.py         seeded reset -> greedy policy -> EpisodeResult
 benchmark.py          isolated training -> common evaluation reset seeds -> JSON
-play.py               saved or heuristic policy -> simulator (default)
-                                            -> calibrated OCR bridge (--live)
+play.py               saved or heuristic policy -> simulator
 train.py              custom team-building shop -> optional sapai battle engine
 ```
 
 The core depends only on NumPy and Gymnasium. Optional modules import PyTorch,
 Matplotlib, and desktop libraries only when their functionality is needed.
-Importing the desktop bridge does not capture the screen or initialize control.
+Importing the desktop modules does not capture the screen or initialize control.
 
 ## Environment contract
 
@@ -108,9 +107,5 @@ The sapai drill delegates only battle resolution to the upstream engine. It has
 its own finite shop, gold accounting, and action set. It does not claim to
 reproduce the real purchase phase, buy abilities, all packs, or current balance.
 
-The desktop bridge models only scalar OCR. Equal numbers cannot identify equal
-species, so it buys into empty slots only. Ambiguous OCR fails before input,
-calibration must match resolution, preview disables control, and a live session
-ends after end-turn rather than guessing whether a battle finished. Robust
-species recognition, empty-slot detection, phase detection, and the real game's
-action semantics remain necessary for autonomous real-client play.
+The real game is played by the separate desktop controller; see
+[desktop.md](desktop.md). Toy-arena policies are never used against the real board.

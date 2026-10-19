@@ -409,9 +409,6 @@ terminal result. Without the flag, menu phases stop without input. Preview
 the calibrated proposal before adding `--execute`. This menu flow has offline
 coverage; native validation is summarized in the changelog.
 
-The legacy `play.py --live` bridge remains available, but this
-structured pipeline is the path for ongoing desktop development.
-
 ## Validation boundaries
 
 The state model, recognition logic, and session are tested with synthetic
