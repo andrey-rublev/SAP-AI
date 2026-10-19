@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import time
 from math import isfinite
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from typing import Callable
 
 from sap_ai.desktop.state import (Action, Board, BoardChangedBeforeInput, Phase,
@@ -234,6 +234,40 @@ def action_acknowledged(before: Board, after: Board, action: Action,
     return any(old is not None and new is not None and new > old for old, new in changes)
 
 
+_NEXT = object()  # a session stage asks for the next observation
+
+
+@dataclass
+class _RunState:
+    """Mutable bookkeeping for one DesktopSession.run call."""
+
+    started: float
+    pending_at: float = 0.0
+    stage: str = "event"
+    event_failed: bool = False
+    actions: int = 0
+    acknowledgments: int = 0
+    polls: int = 0
+    stable: int = 0
+    unknown: int = 0
+    pending_polls: int = 0
+    incomplete_shop_polls: int = 0
+    transition_polls: int = 0
+    board: Board | None = None
+    fingerprint: tuple | None = None
+    last_fingerprint: tuple | None = None
+    last_acted: tuple | None = None
+    proposal: Action | None = None
+    pending: Action | None = None
+    before: Board | None = None
+    waiting_turn: int | None = None
+    last_shop_turn: int | None = None
+    transition_active: bool = False
+    later_shop: bool = False
+    initial_unknown: bool = True
+    completed_transitions: set = field(default_factory=set)
+
+
 class DesktopSession:
     """Run one bounded session; every dependency is replaceable for replay tests.
 
@@ -296,194 +330,210 @@ class DesktopSession:
         self.max_transition_polls = max_transition_polls
 
     def run(self) -> SessionResult:
-        actions = acknowledgments = polls = stable = unknown = pending_polls = incomplete_shop_polls = 0
-        board = proposal = pending = before = last_fingerprint = last_acted = None
-        waiting_turn = last_shop_turn = None
-        transition_active, transition_polls = False, 0
-        completed_transitions = set()
-        initial_unknown = True
-        started = pending_at = self.clock()
-        reason, error, stage = "max_polls", None, "event"
-        event_failed = False
-
-        def emit(event, **fields):
-            nonlocal event_failed
-            if self.event_callback is not None:
-                try:
-                    self.event_callback({"event": event, "poll": polls,
-                                         "elapsed": max(0.0, self.clock() - started), **fields})
-                except Exception:
-                    event_failed = True
-                    raise
-
+        s = _RunState(started=self.clock())
+        s.pending_at = s.started
+        reason, error = "max_polls", None
         try:
             readiness_options = ({"max_incomplete_shop_polls": self.max_incomplete_shop_polls}
                                  if self.max_incomplete_shop_polls else {})
-            emit("started", preview=self.preview, **readiness_options)
-            while polls < self.max_polls:
-                stage = "stop_check"
-                if self.should_stop is not None and self.should_stop():
-                    reason = "stopped"
+            self._emit(s, "started", preview=self.preview, **readiness_options)
+            while s.polls < self.max_polls:
+                outcome = self._step(s)
+                if isinstance(outcome, str):
+                    reason = outcome
                     break
-                if polls:
-                    self.sleep(self.poll_interval)
-                    if self.should_stop is not None and self.should_stop():
-                        reason = "stopped"
-                        break
-                stage = "observation"
-                board = self.observe()
-                if not isinstance(board, Board):
-                    raise TypeError("observe must return Board")
-                polls += 1
-                fingerprint = board.fingerprint()
-                stable = stable + 1 if fingerprint == last_fingerprint else 1
-                last_fingerprint = fingerprint
-                emit("observed", board=board.to_dict(), stable_frames=stable)
-                unknown = unknown + 1 if board.phase == Phase.UNKNOWN else 0
-                if board.phase != Phase.UNKNOWN:
-                    initial_unknown = False
-                if board.phase == Phase.RESULT:
-                    reason = "result"
-                    break
-                unknown_limit = self.max_initial_unknown_polls if initial_unknown else self.max_unknown_polls
-                if unknown >= unknown_limit:
-                    reason = "unknown_timeout"
-                    break
-                if board.phase in PHASE_ACTION_KINDS or board.phase == Phase.BATTLE:
-                    if not transition_active:
-                        waiting_turn = last_shop_turn
-                    transition_active = True
-                later_shop = (board.phase == Phase.SHOP and stable >= self.stable_frames
-                              and board.turn is not None
-                              and (waiting_turn is None or board.turn > waiting_turn))
-                if transition_active and not later_shop:
-                    transition_polls += 1
-                    if transition_polls >= self.max_transition_polls:
-                        reason = "transition_timeout"
-                        break
-                if pending is not None:
-                    incomplete_shop_polls = 0
-                    pending_polls += 1
-                    # Battles animate constantly; their phase alone confirms End Turn.
-                    confirmed = action_acknowledged(before, board, pending,
-                                                     previous_shop_turn=last_shop_turn)
-                    if confirmed and (stable >= self.stable_frames or board.phase == Phase.BATTLE):
-                        acknowledgments += 1
-                        emit("acknowledged", action=asdict(pending), board=board.to_dict())
-                        pending = None
-                        continue
-                    if (pending_polls >= self.action_max_polls
-                            or self.clock() - pending_at >= self.action_timeout):
-                        reason = "action_timeout"
-                        break
-                    continue
-                if actions >= self.max_actions:
-                    reason = "max_actions"
-                    break
-                if self.max_incomplete_shop_polls:
-                    if board.phase == Phase.SHOP:
-                        stage = "policy"
-                        ready = self.shop_ready(board)
-                        if type(ready) is not bool:
-                            raise TypeError("shop_ready must return a boolean")
-                        if not ready:
-                            # Count observations, not matching fingerprints:
-                            # changing unreadable fields cannot renew the budget.
-                            incomplete_shop_polls += 1
-                            if incomplete_shop_polls >= self.max_incomplete_shop_polls:
-                                reason = "shop_observation_timeout"
-                                break
-                            # Readiness must earn fresh stable observations;
-                            # incomplete repeats cannot pause transition timeouts.
-                            stable, last_fingerprint = 0, None
-                            continue
-                    incomplete_shop_polls = 0
-                if stable < self.stable_frames:
-                    continue
-                if board.phase == Phase.SHOP:
-                    if transition_active and not later_shop:
-                        continue
-                    waiting_turn = None
-                    transition_active, transition_polls = False, 0
-                    completed_transitions.clear()
-                    last_shop_turn = board.turn
-                elif board.phase in PHASE_ACTION_KINDS:
-                    if board.phase not in self.phase_actions:
-                        reason = "transition_disabled"
-                        break
-                    if board.phase in completed_transitions:
-                        reason = "repeated_transition"
-                        break
-                else:
-                    continue
-                if fingerprint == last_acted:
-                    continue
-                stage = "policy"
-                proposal = (self.policy.choose_action(board) if board.phase == Phase.SHOP
-                            else self.phase_actions[board.phase])
-                if proposal is None:
-                    reason = "policy_stopped"
-                    break
-                if not legal_action(board, proposal):
-                    reason = "illegal_action"
-                    break
-                if proposal.kind == "end_turn" and board.turn is None:
-                    reason = "turn_unreadable"
-                    break
-                emit("proposed", action=asdict(proposal), board=board.to_dict())
-                if self.preview:
-                    reason = "preview"
-                    break
-                stage = "stop_check"
-                if self.should_stop is not None and self.should_stop():
-                    reason = "stopped"
-                    break
-                stage = "action"
-                # Record the attempt before IO: a failing callback may have clicked.
-                dispatch_state = (last_acted, waiting_turn, transition_active,
-                                  completed_transitions.copy(), before)
-                actions += 1
-                pending, before = proposal, board
-                pending_polls = 0
-                last_acted = fingerprint
-                if pending.kind == "end_turn":
-                    waiting_turn = board.turn
-                    transition_active = True
-                elif board.phase in PHASE_ACTION_KINDS:
-                    completed_transitions.add(board.phase)
-                try:
-                    self.act(pending)
-                except BoardChangedBeforeInput as exc:
-                    # This specific executor contract guarantees no input. Replan
-                    # from fresh stable observations, without spending an action.
-                    actions -= 1
-                    pending = None
-                    (last_acted, waiting_turn, transition_active,
-                     completed_transitions, before) = dispatch_state
-                    stable, last_fingerprint = 0, None
-                    evidence = ({"preflight_board": exc.preflight_board.to_dict()}
-                                if exc.preflight_board is not None else {})
-                    emit("deferred", action=asdict(proposal), reason="board_changed_before_input",
-                         **evidence)
-                    proposal = None
-                    continue
-                # The runtime may recheck the entire board before clicking.
-                # Give the resulting change its full observation budget.
-                pending_at = self.clock()
-                emit("acted", action=asdict(pending))
-                stable = 0
-            if reason == "max_polls" and waiting_turn is not None and pending is None:
+            if reason == "max_polls" and s.waiting_turn is not None and s.pending is None:
                 reason = "next_shop_timeout"
         except KeyboardInterrupt:
             reason = "stopped"
         except Exception as exc:
-            reason = "event_error" if event_failed else f"{stage}_error"
+            reason = "event_error" if s.event_failed else f"{s.stage}_error"
             error = f"{type(exc).__name__}: {exc}"
-        result = SessionResult(actions, acknowledgments, polls, reason, board, proposal, pending, error)
-        if not event_failed:
+        result = SessionResult(s.actions, s.acknowledgments, s.polls, reason, s.board, s.proposal, s.pending, error)
+        if not s.event_failed:
             try:
-                emit("finished", result=result.to_dict())
+                self._emit(s, "finished", result=result.to_dict())
             except Exception as exc:
-                result = SessionResult(actions, acknowledgments, polls, "event_error", board,
-                                       proposal, pending, f"{type(exc).__name__}: {exc}")
+                result = SessionResult(s.actions, s.acknowledgments, s.polls, "event_error", s.board,
+                                       s.proposal, s.pending, f"{type(exc).__name__}: {exc}")
         return result
+
+    # Each stage returns None to fall through, _NEXT to take the next
+    # observation, or a stop reason string that ends the session.
+    def _step(self, s: _RunState):
+        for stage in (self._observe_board, self._track_transition, self._await_receipt,
+                      self._check_readiness, self._gate_phase, self._decide_and_act):
+            outcome = stage(s)
+            if outcome is not None:
+                return outcome
+        return None
+
+    def _emit(self, s: _RunState, event, **fields):
+        if self.event_callback is not None:
+            try:
+                self.event_callback({"event": event, "poll": s.polls,
+                                     "elapsed": max(0.0, self.clock() - s.started), **fields})
+            except Exception:
+                s.event_failed = True
+                raise
+
+    def _stopped(self) -> bool:
+        return self.should_stop is not None and self.should_stop()
+
+    def _observe_board(self, s: _RunState):
+        s.stage = "stop_check"
+        if self._stopped():
+            return "stopped"
+        if s.polls:
+            self.sleep(self.poll_interval)
+            if self._stopped():
+                return "stopped"
+        s.stage = "observation"
+        board = self.observe()
+        if not isinstance(board, Board):
+            raise TypeError("observe must return Board")
+        s.board = board
+        s.polls += 1
+        s.fingerprint = board.fingerprint()
+        s.stable = s.stable + 1 if s.fingerprint == s.last_fingerprint else 1
+        s.last_fingerprint = s.fingerprint
+        self._emit(s, "observed", board=board.to_dict(), stable_frames=s.stable)
+        s.unknown = s.unknown + 1 if board.phase == Phase.UNKNOWN else 0
+        if board.phase != Phase.UNKNOWN:
+            s.initial_unknown = False
+        if board.phase == Phase.RESULT:
+            return "result"
+        unknown_limit = self.max_initial_unknown_polls if s.initial_unknown else self.max_unknown_polls
+        if s.unknown >= unknown_limit:
+            return "unknown_timeout"
+        return None
+
+    def _track_transition(self, s: _RunState):
+        board = s.board
+        if board.phase in PHASE_ACTION_KINDS or board.phase == Phase.BATTLE:
+            if not s.transition_active:
+                s.waiting_turn = s.last_shop_turn
+            s.transition_active = True
+        s.later_shop = (board.phase == Phase.SHOP and s.stable >= self.stable_frames
+                        and board.turn is not None
+                        and (s.waiting_turn is None or board.turn > s.waiting_turn))
+        if s.transition_active and not s.later_shop:
+            s.transition_polls += 1
+            if s.transition_polls >= self.max_transition_polls:
+                return "transition_timeout"
+        return None
+
+    def _await_receipt(self, s: _RunState):
+        if s.pending is None:
+            return None
+        s.incomplete_shop_polls = 0
+        s.pending_polls += 1
+        # Battles animate constantly; their phase alone confirms End Turn.
+        confirmed = action_acknowledged(s.before, s.board, s.pending,
+                                        previous_shop_turn=s.last_shop_turn)
+        if confirmed and (s.stable >= self.stable_frames or s.board.phase == Phase.BATTLE):
+            s.acknowledgments += 1
+            self._emit(s, "acknowledged", action=asdict(s.pending), board=s.board.to_dict())
+            s.pending = None
+            return _NEXT
+        if (s.pending_polls >= self.action_max_polls
+                or self.clock() - s.pending_at >= self.action_timeout):
+            return "action_timeout"
+        return _NEXT
+
+    def _check_readiness(self, s: _RunState):
+        if s.actions >= self.max_actions:
+            return "max_actions"
+        if self.max_incomplete_shop_polls:
+            if s.board.phase == Phase.SHOP:
+                s.stage = "policy"
+                ready = self.shop_ready(s.board)
+                if type(ready) is not bool:
+                    raise TypeError("shop_ready must return a boolean")
+                if not ready:
+                    # Count observations, not matching fingerprints:
+                    # changing unreadable fields cannot renew the budget.
+                    s.incomplete_shop_polls += 1
+                    if s.incomplete_shop_polls >= self.max_incomplete_shop_polls:
+                        return "shop_observation_timeout"
+                    # Readiness must earn fresh stable observations;
+                    # incomplete repeats cannot pause transition timeouts.
+                    s.stable, s.last_fingerprint = 0, None
+                    return _NEXT
+            s.incomplete_shop_polls = 0
+        if s.stable < self.stable_frames:
+            return _NEXT
+        return None
+
+    def _gate_phase(self, s: _RunState):
+        board = s.board
+        if board.phase == Phase.SHOP:
+            if s.transition_active and not s.later_shop:
+                return _NEXT
+            s.waiting_turn = None
+            s.transition_active, s.transition_polls = False, 0
+            s.completed_transitions.clear()
+            s.last_shop_turn = board.turn
+        elif board.phase in PHASE_ACTION_KINDS:
+            if board.phase not in self.phase_actions:
+                return "transition_disabled"
+            if board.phase in s.completed_transitions:
+                return "repeated_transition"
+        else:
+            return _NEXT
+        if s.fingerprint == s.last_acted:
+            return _NEXT
+        return None
+
+    def _decide_and_act(self, s: _RunState):
+        board = s.board
+        s.stage = "policy"
+        s.proposal = (self.policy.choose_action(board) if board.phase == Phase.SHOP
+                      else self.phase_actions[board.phase])
+        if s.proposal is None:
+            return "policy_stopped"
+        if not legal_action(board, s.proposal):
+            return "illegal_action"
+        if s.proposal.kind == "end_turn" and board.turn is None:
+            return "turn_unreadable"
+        self._emit(s, "proposed", action=asdict(s.proposal), board=board.to_dict())
+        if self.preview:
+            return "preview"
+        s.stage = "stop_check"
+        if self._stopped():
+            return "stopped"
+        s.stage = "action"
+        # Record the attempt before IO: a failing callback may have clicked.
+        dispatch_state = (s.last_acted, s.waiting_turn, s.transition_active,
+                          s.completed_transitions.copy(), s.before)
+        s.actions += 1
+        s.pending, s.before = s.proposal, board
+        s.pending_polls = 0
+        s.last_acted = s.fingerprint
+        if s.pending.kind == "end_turn":
+            s.waiting_turn = board.turn
+            s.transition_active = True
+        elif board.phase in PHASE_ACTION_KINDS:
+            s.completed_transitions.add(board.phase)
+        try:
+            self.act(s.pending)
+        except BoardChangedBeforeInput as exc:
+            # This specific executor contract guarantees no input. Replan
+            # from fresh stable observations, without spending an action.
+            s.actions -= 1
+            s.pending = None
+            (s.last_acted, s.waiting_turn, s.transition_active,
+             s.completed_transitions, s.before) = dispatch_state
+            s.stable, s.last_fingerprint = 0, None
+            evidence = ({"preflight_board": exc.preflight_board.to_dict()}
+                        if exc.preflight_board is not None else {})
+            self._emit(s, "deferred", action=asdict(s.proposal), reason="board_changed_before_input",
+                       **evidence)
+            s.proposal = None
+            return _NEXT
+        # The runtime may recheck the entire board before clicking.
+        # Give the resulting change its full observation budget.
+        s.pending_at = self.clock()
+        self._emit(s, "acted", action=asdict(s.pending))
+        s.stable = 0
+        return None
