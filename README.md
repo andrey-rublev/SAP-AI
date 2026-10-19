@@ -28,10 +28,20 @@ Before species identification and the merge-first strategy, a six-arena soak
 run acknowledged 490/490 actions but averaged 1.0 trophies (no merges at all).
 Trophies per arena are now the headline metric; see the [changelog](CHANGELOG.md).
 
+`python -m sap_ai.sim.arena` scores policies offline in a simplified arena that
+uses the bot's own board types (approximate stats, no abilities):
+
+| Policy (1,000 runs) | Mean trophies | Wins |
+| --- | ---: | ---: |
+| Current strategy | 4.14 | 234 |
+| Previous strategy | 3.92 | 194 |
+| Previous strategy, species unknown | 1.77 | 0 |
+
 ## Offline lab
 
-A separate Gymnasium toy arena where pets are single numbers. It is useful for
-RL experiments, but its policies are never used against the real game.
+A Gymnasium toy arena where pets are single numbers, for RL experiments. Its
+policies are never used against the real game; the arena simulator above is the
+bridge for evaluating real-game policies offline.
 
 ```bash
 python -m pip install -e ".[dev,plot]"          # add ,dqn for PyTorch

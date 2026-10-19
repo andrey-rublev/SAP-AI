@@ -107,5 +107,10 @@ The sapai drill delegates only battle resolution to the upstream engine. It has
 its own finite shop, gold accounting, and action set. It does not claim to
 reproduce the real purchase phase, buy abilities, all packs, or current balance.
 
+`sap_ai/sim/arena.py` is the bridge between the two halves: a small arena on the
+desktop bot's `Board`/`Action` types (shop tiers and slots by turn, merges and
+levels, lives lost by turn, ability-free front-to-back combat against ghost
+teams). Any desktop policy can be scored there in trophies before a live run.
+
 The real game is played by the separate desktop controller; see
 [desktop.md](desktop.md). Toy-arena policies are never used against the real board.

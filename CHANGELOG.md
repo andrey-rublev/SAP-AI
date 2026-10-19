@@ -3,6 +3,24 @@
 Milestones for the desktop bot and the offline lab. Detailed run logs, captures
 and calibration stay private in `.local/` (Git-ignored).
 
+## 2026-10-19 — playing to win, not just playing
+
+- Hover-based species identification: unknown pets are hovered once and their
+  tooltip title is read against a fixed pet-name list, so merges can fire live.
+  Verified offline on recorded native hover frames (Tiger, Rhino).
+- Strategy: merges are preferred once three pets are placed, unread shop levels
+  count as level one, and the last 3 gold of a turn buys any strict upgrade.
+- Offline arena (`python -m sap_ai.sim.arena`) on the bot's own Board/Action
+  types, scored in trophies. Over 1,000 runs vs. ghost teams: new strategy 4.14
+  mean trophies (234 wins), old strategy 3.92 (194), old strategy without
+  species 1.77 (0 wins), matching the bot's real pre-identification results.
+- Batch summaries report trophies per arena and their mean.
+- Code moved into `sap_ai/desktop` (the bot) and `sap_ai/sim` (the lab); the
+  launcher runs `python -m sap_ai.desktop.cli`. Tools rely on the editable install.
+- `DesktopSession.run` split into explicit run state and one method per stage.
+- Removed the legacy `autogui.py` / `play.py --live` bridge.
+- The agent work journal moved out of the public repo.
+
 ## 2026-10 — desktop bot plays whole arenas
 
 - One-command launcher (`play.cmd`): opens the game through Steam, plays, and
