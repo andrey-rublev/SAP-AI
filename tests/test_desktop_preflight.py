@@ -63,7 +63,7 @@ def test_check_reports_resources_and_stop_without_creating_or_changing_outputs(
     report = json.loads(capsys.readouterr().out)
     assert report == {"status": "checks_passed", "live_validation": False,
                       "profile": str(preflight.profile.resolve()), "expected_client_size": [80, 60],
-                      "tesseract_path": r"C:\OCR\tesseract.exe",
+                      "tesseract_path": r"C:\OCR\tesseract.exe", "species_hover": False,
                       "stop_file": str(preflight.stop.resolve()), "stop_present": stopped}
     preflight.assets.assert_called_once()
     preflight.dependencies.assert_called_once_with()
