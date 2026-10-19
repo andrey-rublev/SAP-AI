@@ -272,6 +272,17 @@ def test_batch_reports_resumed_shop_instead_of_claiming_a_fresh_menu_start(cli):
     assert [session["first_recognized_phase"] for session in summary["sessions"]] == ["shop", "shop"]
 
 
+def test_batch_reports_trophies_per_arena_and_their_mean(cli):
+    empty, fish = PetSlot(False), PetSlot(True, "fish", 2, 3)
+    before = Board(Phase.SHOP, gold=3, turn=6, wins=3, shop=(fish,), team=(empty,) * 5)
+    after = Board(Phase.SHOP, gold=0, turn=6, wins=3, shop=(empty,), team=(fish, empty, empty, empty, empty))
+    cli.frames[:] = [before, before, after, after, Board(Phase.RESULT)]
+    desktop.main(arguments(cli.tmp, "--arenas", "2"))
+    summary = json.loads(next(cli.tmp.glob("*-batch-*/summary.json")).read_text())
+    assert summary["trophies"] == [3, 3] and summary["mean_trophies"] == 3
+    assert [session["trophies"] for session in summary["sessions"]] == [3, 3]
+
+
 @pytest.mark.parametrize("stop", ["stop_file", "deadline", "escape"])
 @pytest.mark.parametrize("when", ["before_close", "after_close"])
 def test_cli_batch_keeps_one_global_stop_closure_across_restarts(cli, monkeypatch, stop, when):

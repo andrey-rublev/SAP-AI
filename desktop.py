@@ -265,6 +265,9 @@ def run_desktop_session(args, profile, perceptor, window, should_stop, session_i
                 phase = data["board"]["phase"]
                 if phase != Phase.UNKNOWN.value and session_info["first_recognized_phase"] is None:
                     session_info["first_recognized_phase"] = phase
+                # Trophies as last read on the HUD: a lost arena's final count.
+                if data["board"].get("wins") is not None:
+                    session_info["trophies"] = data["board"]["wins"]
             if recorder is not None:
                 data = recorder.record(data, runtime.last_frame)
             log.write(json.dumps(data) + "\n")
@@ -383,7 +386,8 @@ def run_arena_batch(args, profile, perceptor, open_window, should_stop):
     summary = {"requested_arenas": args.arenas, "completed_arenas": 0, "sessions": [],
                "actions": 0, "acknowledgments": 0, "polls": 0, "restart_polls": 0,
                "restart_attempts": 0, "max_restart_attempts": args.arenas - 1,
-               "reason": "stopped", "error": None, "directory": str(batch_dir.resolve())}
+               "reason": "stopped", "error": None, "directory": str(batch_dir.resolve()),
+               "trophies": [], "mean_trophies": None}
     if args.restart_completed:
         summary.update(bootstrap_attempts=0, max_bootstrap_attempts=1, bootstrap_polls=0)
     summary_path = batch_dir / "summary.json"
@@ -420,7 +424,7 @@ def run_arena_batch(args, profile, perceptor, open_window, should_stop):
                 session_args.max_actions = args.max_actions - summary["actions"]
                 session_args.max_polls = args.max_polls - summary["polls"]
                 stage = "session"
-                session_info = {"first_recognized_phase": None}
+                session_info = {"first_recognized_phase": None, "trophies": None}
                 if args.restart_completed and arena == 1:
                     result, window, bootstrap = run_with_completed_restart(
                         session_args, profile, perceptor, window, should_stop, open_window, session_info)
@@ -458,6 +462,9 @@ def run_arena_batch(args, profile, perceptor, open_window, should_stop):
                             else f"arena did not finish safely: {summary['reason']}")
                     break
                 summary["completed_arenas"] += 1
+                if session_info["trophies"] is not None:
+                    summary["trophies"].append(session_info["trophies"])
+                    summary["mean_trophies"] = round(sum(summary["trophies"]) / len(summary["trophies"]), 2)
                 if arena == args.arenas:
                     summary["reason"] = "completed"
                     break
