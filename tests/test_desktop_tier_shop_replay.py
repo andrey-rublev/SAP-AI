@@ -19,7 +19,7 @@ def recording(name="desktop_tier_shop_progress.json"):
 def replay(frames, **bounds):
     observations, clicks, events = iter(frames), [], []
     result = DesktopSession(
-        lambda: next(observations), clicks.append, DesktopPolicy(),
+        lambda: next(observations), clicks.append, DesktopPolicy.recorded_baseline(),
         phase_actions={Phase.TIER_UNLOCK: Action("dismiss_tier"),
                        Phase.END_TURN_CONFIRM: Action("confirm_end_turn"),
                        Phase.ROUND_RESULT: Action("continue_round")},

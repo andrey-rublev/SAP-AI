@@ -287,10 +287,11 @@ def legal_action(board: Board, action: Action) -> bool:
             return False
         if action.kind == "buy":
             return target.occupied is False
+        # Shop offers are level one, so an unread shop level is not a blocker.
         return (
             target.occupied is True
             and source.species is not None and source.species == target.species
-            and source.level == 1 and target.level is not None and target.level < 3
+            and source.level in (None, 1) and target.level is not None and target.level < 3
         )
     return False
 
@@ -298,21 +299,32 @@ def legal_action(board: Board, action: Action) -> bool:
 class DesktopPolicy:
     """A deterministic first desktop baseline using actual observed stats.
 
-    Fill empty spaces, combine identified duplicates, and replace only known
-    level-one pets for a substantial stat gain. This does not model abilities,
+    Combine identified duplicates (before filling once three pets are placed),
+    fill empty spaces, and replace known level-one pets: for a substantial stat
+    gain while gold remains, or any gain with the turn's last purchase. This does not model abilities,
     food, frozen shops, or positioning, and never invokes the toy DQN.
     ``sale_funded_rolls`` optionally searches with spare gold when a supported
     level-one sale could still fund a replacement after paying for the roll.
     """
 
-    def __init__(self, *, minimum_upgrade_gain: int = 4, sale_funded_rolls: bool = False) -> None:
+    def __init__(self, *, minimum_upgrade_gain: int = 4, sale_funded_rolls: bool = False,
+                 merge_first_team_size: int | None = 3, final_purchase_gain: int | None = 1) -> None:
         _integer(minimum_upgrade_gain, "minimum_upgrade_gain", minimum=1)
         if minimum_upgrade_gain is None:
             raise ValueError("minimum_upgrade_gain must be an integer")
         if type(sale_funded_rolls) is not bool:
             raise ValueError("sale_funded_rolls must be a boolean")
+        _integer(merge_first_team_size, "merge_first_team_size", minimum=0, maximum=5)
+        _integer(final_purchase_gain, "final_purchase_gain", minimum=1)
         self.minimum_upgrade_gain = minimum_upgrade_gain
         self.sale_funded_rolls = sale_funded_rolls
+        self.merge_first_team_size = merge_first_team_size
+        self.final_purchase_gain = final_purchase_gain
+
+    @classmethod
+    def recorded_baseline(cls, **options) -> DesktopPolicy:
+        """The pre-October-19 policy that produced the recorded native sessions."""
+        return cls(merge_first_team_size=None, final_purchase_gain=None, **options)
 
     def observation_complete(self, board: Board) -> bool:
         """Whether the baseline has the readings it needs to choose an action.
@@ -335,17 +347,19 @@ class DesktopPolicy:
         offers.sort(key=lambda pair: (-pair[1].strength, pair[0]))
         empty = next((index for index, pet in enumerate(board.team) if pet.occupied is False), None)
         if board.gold >= 3 and offers:
-            if empty is not None:
-                return Action("buy", offers[0][0], empty)
-
             merges = [
                 (index, target)
                 for index, _ in offers
                 for target in range(len(board.team))
                 if legal_action(board, Action("merge", index, target))
             ]
-            if merges:
+            team_size = sum(pet.occupied is True for pet in board.team)
+            # Early on a new body beats +1/+1; from three pets, levelling wins.
+            if merges and (empty is None or (self.merge_first_team_size is not None
+                                             and team_size >= self.merge_first_team_size)):
                 return Action("merge", *merges[0])
+            if empty is not None:
+                return Action("buy", offers[0][0], empty)
 
         if offers and empty is None:
             # Sell only an observed level-one pet whose receipt funds the offer.
@@ -357,7 +371,11 @@ class DesktopPolicy:
                     replaceable.append((index, pet))
             if replaceable:
                 weakest, pet = min(replaceable, key=lambda pair: (pair[1].strength, pair[0]))
-                if offers[0][1].strength - pet.strength >= self.minimum_upgrade_gain:
+                # Gold left at end of turn is lost, so the final purchase may
+                # take any strict improvement instead of a large one.
+                required = (self.minimum_upgrade_gain if board.gold >= 4 or self.final_purchase_gain is None
+                            else self.final_purchase_gain)
+                if offers[0][1].strength - pet.strength >= required:
                     return Action("sell", weakest)
 
         # Preserve enough gold to use the new shop after a refresh.

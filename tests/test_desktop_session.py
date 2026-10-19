@@ -241,7 +241,7 @@ def test_sale_funded_replacement_waits_for_stable_receipt_before_purchase(specie
         [before, before, sold, Board(Phase.UNKNOWN), sold, sold, sold, bought, bought, bought],
         max_actions=2,
     )
-    runner.policy = DesktopPolicy()
+    runner.policy = DesktopPolicy.recorded_baseline()
     result = runner.run()
     assert clicks == [Action("sell", 0), Action("buy", 0, 0)]
     assert (result.reason, result.actions, result.acknowledgments) == ("max_actions", 2, 2)

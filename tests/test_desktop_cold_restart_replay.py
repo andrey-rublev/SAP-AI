@@ -19,7 +19,7 @@ def recording():
 def replay(frames):
     observations, clicks, events = iter(frames), [], []
     result = DesktopSession(
-        lambda: next(observations), clicks.append, DesktopPolicy(),
+        lambda: next(observations), clicks.append, DesktopPolicy.recorded_baseline(),
         phase_actions={phase: Action(kind) for phase, kind in PHASE_ACTION_KINDS.items()},
         max_actions=300, max_polls=len(frames), max_initial_unknown_polls=300,
         clock=lambda: 0., sleep=lambda _: None, event_callback=events.append,

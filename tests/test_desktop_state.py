@@ -129,7 +129,6 @@ def test_merge_uses_known_species_and_level_and_respects_maximum_level():
 
 @pytest.mark.parametrize("source,target", [
     (pet(level=1), pet(level=1)),
-    (pet(species="fish"), pet(species="fish", level=1)),
     (pet(species="fish", level=1), pet(species="fish")),
     (pet(species="fish", level=2), pet(species="fish", level=1)),
     (pet(species="fish", level=1), EMPTY),
@@ -169,9 +168,9 @@ def test_policy_does_not_discard_unidentified_or_upgraded_pets(level):
 def test_replacement_margin_and_budget_keep_small_upgrades_from_churning():
     value = board(gold=3, shop=(pet(3, 4), EMPTY, EMPTY),
                   team=(pet(2, 3, level=1),) * 5)
-    assert DesktopPolicy().choose_action(value) == Action("end_turn")
-    assert DesktopPolicy(minimum_upgrade_gain=2).choose_action(value) == Action("sell", 0)
-    assert DesktopPolicy(minimum_upgrade_gain=2).choose_action(replace(value, gold=2)) == Action("sell", 0)
+    assert DesktopPolicy.recorded_baseline().choose_action(value) == Action("end_turn")
+    assert DesktopPolicy.recorded_baseline(minimum_upgrade_gain=2).choose_action(value) == Action("sell", 0)
+    assert DesktopPolicy.recorded_baseline(minimum_upgrade_gain=2).choose_action(replace(value, gold=2)) == Action("sell", 0)
 
 
 @pytest.mark.parametrize("value,income", [
@@ -202,15 +201,15 @@ def test_replacement_selects_weakest_affordable_pet_before_comparing_gain():
     value = board(gold=1, shop=(pet(4, 4),),
                   team=(pet(1, 1, "ant", 1), pet(2, 2, "pig", 1))
                   + (pet(8, 8, level=2),) * 3)
-    assert DesktopPolicy().choose_action(value) == Action("sell", 1)
-    assert DesktopPolicy().choose_action(replace(value, shop=(pet(4, 3),))) == Action("end_turn")
+    assert DesktopPolicy.recorded_baseline().choose_action(value) == Action("sell", 1)
+    assert DesktopPolicy.recorded_baseline().choose_action(replace(value, shop=(pet(4, 3),))) == Action("end_turn")
 
 
 def test_sale_funding_never_sells_when_team_already_has_empty_space():
     value = board(gold=2, shop=(pet(8, 8),),
                   team=(pet(1, 1, "pig", 1), EMPTY) + (pet(8, 8, level=2),) * 3)
-    assert DesktopPolicy().choose_action(value) == Action("end_turn")
-    assert DesktopPolicy().choose_action(replace(value, gold=3)) == Action("buy", 0, 1)
+    assert DesktopPolicy.recorded_baseline().choose_action(value) == Action("end_turn")
+    assert DesktopPolicy.recorded_baseline().choose_action(replace(value, gold=3)) == Action("buy", 0, 1)
 
 
 def test_funded_merge_keeps_priority_over_replacement():
@@ -295,3 +294,26 @@ def test_life_reward_phase_and_action_roundtrip():
     assert Board.from_dict(data) == value
     action = Action("dismiss_life_reward")
     assert Action.from_dict(json.loads(json.dumps(action.to_dict()))) == action
+
+
+def test_merge_accepts_unread_shop_level_because_offers_are_level_one():
+    value = board(shop=(pet(2, 3, "fish"), EMPTY, EMPTY), team=(pet(3, 4, "fish", 1),) + (EMPTY,) * 4)
+    assert legal_action(value, Action("merge", 0, 0))
+    assert not legal_action(replace(value, team=(pet(3, 4, "fish"),) + (EMPTY,) * 4), Action("merge", 0, 0))
+
+
+def test_merges_win_over_empty_slots_once_three_pets_are_placed():
+    three = (pet(3, 4, "fish", 1), pet(2, 2, "ant", 1), pet(2, 2, "pig", 1), EMPTY, EMPTY)
+    offers = (pet(5, 5, "otter"), pet(2, 3, "fish"), EMPTY)
+    assert DesktopPolicy().choose_action(board(shop=offers, team=three)) == Action("merge", 1, 0)
+    two = three[:2] + (EMPTY,) * 3
+    assert DesktopPolicy().choose_action(board(shop=offers, team=two)) == Action("buy", 0, 2)
+    assert DesktopPolicy.recorded_baseline().choose_action(board(shop=offers, team=three)) == Action("buy", 0, 3)
+
+
+def test_last_purchase_of_the_turn_accepts_any_strict_upgrade():
+    team = (pet(2, 3, level=1),) * 5
+    small = board(gold=3, shop=(pet(3, 4), EMPTY, EMPTY), team=team)
+    assert DesktopPolicy().choose_action(small) == Action("sell", 0)
+    assert DesktopPolicy().choose_action(replace(small, gold=5)) == Action("roll")  # still needs +4 mid-turn
+    assert DesktopPolicy().choose_action(replace(small, shop=(pet(2, 3), EMPTY, EMPTY))) == Action("end_turn")

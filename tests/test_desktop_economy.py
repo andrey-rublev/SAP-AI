@@ -122,7 +122,7 @@ def test_gain_ranking_picks_best_matching_merge_destination():
     fish = pet("fish", 8, 8)
     board = full_board(shop=(fish,))
     board = replace(board, team=(pet("fish", 12, 12, 2), pet("fish", 1, 1, 2), *(pet("pig", 8, 8, 3),) * 3))
-    assert DesktopPolicy().choose_action(board) == Action("merge", 0, 0)
+    assert DesktopPolicy.recorded_baseline().choose_action(board) == Action("merge", 0, 0)
     assert economy.EconomyPolicy(rank_gains=True).choose_action(board) == Action("merge", 0, 1)
 
 

@@ -52,7 +52,9 @@ class EconomyPolicy(DesktopPolicy):
     """
 
     def __init__(self, *, minimum_upgrade_gain=4, sale_funded=False, rank_gains=False):
-        super().__init__(minimum_upgrade_gain=minimum_upgrade_gain)
+        # The study compares economy variants of the recorded baseline policy.
+        super().__init__(minimum_upgrade_gain=minimum_upgrade_gain, merge_first_team_size=None,
+                         final_purchase_gain=None)
         self.sale_funded, self.rank_gains = sale_funded, rank_gains
 
     def choose_action(self, board):

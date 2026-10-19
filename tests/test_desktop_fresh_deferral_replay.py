@@ -36,7 +36,7 @@ def replay(data, frames, *, max_polls=None):
         clicks.append(action)
 
     result = DesktopSession(
-        lambda: next(observations), act, DesktopPolicy(), event_callback=emit,
+        lambda: next(observations), act, DesktopPolicy.recorded_baseline(), event_callback=emit,
         phase_actions={phase: Action(kind) for phase, kind in PHASE_ACTION_KINDS.items()},
         max_actions=300, max_polls=len(frames) if max_polls is None else max_polls,
         clock=lambda: 0., sleep=lambda _: None,

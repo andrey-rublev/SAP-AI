@@ -93,7 +93,7 @@ def test_candidate_keeps_parent_empty_fill_and_legal_identified_merge():
         study.apply_visible_action(board, Action("merge", 0, 0))
 
 
-@pytest.mark.parametrize("source", [pet("fish", 3, 3, None), pet(None, 3, 3, 1), pet("fish", 3, 3, 2)])
+@pytest.mark.parametrize("source", [pet(None, 3, 3, 1), pet("fish", 3, 3, 2)])
 def test_unidentified_or_non_level_one_shop_pet_cannot_manufacture_merge(source):
     board = replace(competing_board(), gold=3, shop=(source,),
                     team=(pet("fish", 10, 10), *competing_board().team[1:]))
