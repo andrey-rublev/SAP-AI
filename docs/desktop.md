@@ -165,7 +165,8 @@ python desktop.py inspect --profile .local/desktop/profile.json --image .local/d
 This command is entirely offline. Inspect its board readings and proposed
 action, then view the overlay to confirm every region. Blank OCR is unknown,
 not empty. Occupied pet slots require both attack and health. Merging additionally
-requires identified species and known compatible levels.
+requires identified species and a known teammate level below three; an unread
+shop level counts as one, since shop offers are level one.
 With `food` configured, inspect also prints `board.food`; its overlay marks
 food portraits and configured cost regions. This checks saved pixels without
 capturing a window or sending input.
@@ -183,6 +184,32 @@ conditions and never presses a mouse button. Preview and profiles without this
 field retain their existing behavior. Choose a neutral point across all supported
 screens; no default coordinates are supplied. A parking failure stops with any
 pending action preserved.
+
+### Species from hover tooltips
+
+Portrait templates cover only a few species, so `play` also reads species from
+tooltips. Once a shop observation is stable, the runtime hovers up to three
+occupied pets with unknown species, waits for the tooltip and reads its title
+(two agreeing OCR passes, exact match against `desktop_identify.PET_NAMES`).
+It hovers only when the parked frame shows no tooltip candidate. The hover frame
+must show exactly one, with the same clipped edge regions as the parked frame.
+Names are cached per slot and keyed by attack/health/level. Rolls, purchases,
+merges and sales forget the slots they affect, and a new turn forgets the shop.
+Each pet gets at most two attempts.
+
+The calibration is a private JSON file, `.local/desktop/tooltip-layout.json`:
+
+```json
+{"version": 1, "calibrated": true, "image_size": [2560, 1440],
+ "layout": {"search_rect": [0, 30, 2560, 730], "panel_width_range": [600, 700],
+            "panel_height_range": [180, 450], "title_offset_rect": [120, 12, 420, 70],
+            "min_white_fraction": 0.75}}
+```
+
+`play` uses it automatically when its `image_size` matches the profile. Pass
+`--tooltip-layout PATH` to `run`, or `--no-species-hover` to turn it off.
+`--check` reports `species_hover`. Session logs record the outcome:
+`species_hovers` and `species_identified` in the `finished` event.
 
 An OCR engine or dependency failure aborts the observation and stops the session
 with `observation_error`, including when an action is awaiting acknowledgment.
