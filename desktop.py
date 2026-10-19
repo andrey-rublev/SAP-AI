@@ -16,10 +16,14 @@ from desktop_runtime import (CachedOCR, DesktopRuntime, WindowsGameWindow,
                              tesseract_ocr, validate_live_dependencies)
 from desktop_launch import GAME_TITLE, connect_game_window
 from desktop_control import desktop_control_lease
+from desktop_identify import SpeciesIdentifier, load_tooltip_layout
 from desktop_session import DesktopSession, SessionResult
 from desktop_state import DesktopPolicy, Phase
 from desktop_vision import Perceptor, Rect, VisionProfile
 from evaluation import positive_int
+
+
+DEFAULT_TOOLTIP_LAYOUT = ".local/desktop/tooltip-layout.json"
 
 
 def positive_seconds(value):
@@ -142,6 +146,10 @@ def add_session_arguments(command, *, play=False):
                          help="seconds allowed for observed action acknowledgment")
     command.add_argument("--max-incomplete-shop-polls", type=positive_int, default=30,
                          help="consecutive incomplete shop observations allowed before stopping; never retries input")
+    command.add_argument("--tooltip-layout", default=DEFAULT_TOOLTIP_LAYOUT if play else None,
+                         help="private tooltip calibration; hovering unknown pets reads their species")
+    command.add_argument("--no-species-hover", action="store_true",
+                         help="never hover pets to read species from their tooltips")
     command.add_argument("--sale-funded-rolls", action="store_true",
                          help="experimental: spend spare gold on a roll when supported sale income could still fund a replacement")
     command.add_argument("--log", default=".local/desktop/session.jsonl")
@@ -172,6 +180,29 @@ def validate_profile_assets(perceptor):
     for item in profile.numeric_templates:
         region, _, _ = profile.numeric_region(item.field)
         perceptor._template(item.template, region)
+
+
+def species_identifier(args, profile):
+    """Hover-based species reading, when a tooltip calibration is available.
+
+    An explicitly requested layout must load; the play default is optional so a
+    machine without one keeps the template-only behavior.
+    """
+    path = getattr(args, "tooltip_layout", None)
+    if getattr(args, "no_species_hover", False) or path is None or getattr(profile, "pointer_rest", None) is None:
+        return None
+    optional = args.command == "play" and path == DEFAULT_TOOLTIP_LAYOUT
+    if not Path(path).exists():
+        if optional:
+            return None
+        raise FileNotFoundError(f"tooltip layout not found: {path}")
+    try:
+        layout = load_tooltip_layout(path, profile.image_size)
+    except (ValueError, TypeError):
+        if optional:  # calibrated for another profile/client size
+            return None
+        raise
+    return SpeciesIdentifier(layout)
 
 
 def stopped_before_start(args):
@@ -215,15 +246,21 @@ def parse_args(argv=None):
 
 def run_desktop_session(args, profile, perceptor, window, should_stop, session_info=None):
     """Run one arena with the existing receipt and recording contract."""
-    runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute, should_stop=should_stop)
+    identifier = species_identifier(args, profile)
+    runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute, should_stop=should_stop,
+                             identifier=identifier)
     policy = DesktopPolicy(sale_funded_rolls=getattr(args, "sale_funded_rolls", False))
     recorder = FrameRecorder(args.record_dir, args.record_limit) if args.record_dir else None
     log_path = Path(args.log)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as log:
         def event(data):
-            if data.get("event") == "started" and policy.sale_funded_rolls:
-                data = {**data, "policy": {"name": "stats", "sale_funded_rolls": True}}
+            if data.get("event") == "started":
+                if policy.sale_funded_rolls:
+                    data = {**data, "policy": {"name": "stats", "sale_funded_rolls": True}}
+                data = {**data, "species_hover": identifier is not None}
+            if data.get("event") == "finished" and identifier is not None:
+                data = {**data, "species_hovers": identifier.hovers, "species_identified": identifier.identified}
             if session_info is not None and data.get("event") == "observed":
                 phase = data["board"]["phase"]
                 if phase != Phase.UNKNOWN.value and session_info["first_recognized_phase"] is None:
@@ -499,6 +536,7 @@ def main(argv=None):
                           "profile": str(Path(args.profile).resolve()),
                           "expected_client_size": list(profile.image_size),
                           "tesseract_path": executable,
+                          "species_hover": species_identifier(args, profile) is not None,
                           "stop_file": str(Path(args.stop_file).resolve()),
                           "stop_present": Path(args.stop_file).exists()}, indent=2))
         return

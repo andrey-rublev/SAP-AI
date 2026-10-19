@@ -403,16 +403,21 @@ def tesseract_ocr(image):
 class DesktopRuntime:
     """Connect calibrated perception and a window, with a last-moment recheck."""
 
-    def __init__(self, profile, perceptor, window, *, execute=False, should_stop=None):
+    def __init__(self, profile, perceptor, window, *, execute=False, should_stop=None, identifier=None):
         profile.validate(require_calibrated=True)
         self.profile, self.perceptor, self.window = profile, perceptor, window
         self.execute = execute
         self.should_stop = should_stop
         if isinstance(window, WindowsGameWindow) and should_stop is not None:
             window.should_stop = should_stop
+        # Optional desktop_identify.SpeciesIdentifier; hovering needs a park point.
+        if identifier is not None and getattr(profile, "pointer_rest", None) is None:
+            raise ValueError("species identification needs a calibrated pointer_rest")
+        self.identifier = identifier
         self.last_board = None
         self.last_frame = None
         self._pointer_dirty = True
+        self._last_raw_fingerprint = None
 
     def phase_actions(self, *, start_arena=False):
         """Enable calibrated transitions; entering a new arena is opt-in."""
@@ -442,8 +447,34 @@ class DesktopRuntime:
             _require_running(self.should_stop)
             self._pointer_dirty = False
         self.last_frame = self.window.capture()
-        self.last_board = self.perceptor.observe(self.last_frame)
+        board = self.perceptor.observe(self.last_frame)
+        raw = board.fingerprint()
+        stable, self._last_raw_fingerprint = raw == self._last_raw_fingerprint, raw
+        if self.identifier is not None:
+            board = self.identifier.annotate(board)
+            # Hover only a settled shop, so a tooltip binds to the pet it names.
+            if self.execute and stable and board.phase == Phase.SHOP:
+                board = self._identify(board)
+        self.last_board = board
         return self.last_board
+
+    def _identify(self, board):
+        size, rest = self.profile.image_size, self.profile.pointer_rest
+        points = {(row, index): slot.portrait.center
+                  for row in ("shop", "team") for index, slot in enumerate(getattr(self.profile, row))}
+
+        def hover(point):
+            _require_running(self.should_stop)
+            self._pointer_dirty = True
+            self.window.hover(point, size)
+
+        def park():
+            self.window.hover(rest, size)
+            self.identifier.sleep(.15)
+            self._pointer_dirty = False
+
+        return self.identifier.identify(board, self.last_frame, points=points, hover=hover,
+                                        capture=self.window.capture, park=park)
 
     def act(self, action):
         if not self.execute:
@@ -454,6 +485,8 @@ class DesktopRuntime:
             raise ValueError("action is not legal for the last observed board")
         self.last_frame = self.window.capture()
         current = self.perceptor.observe(self.last_frame)
+        if self.identifier is not None:
+            current = self.identifier.annotate(current)
         _require_running(self.should_stop)
         if current.fingerprint() != before.fingerprint():
             # This exception is reserved for a proven no-input rejection.
@@ -512,5 +545,10 @@ class DesktopRuntime:
             plan.append((x, y))
         # Each native click retains focus/geometry and stop checks. Any partial
         # input failure propagates; the pending session action is not retried.
-        for point in plan:
-            click(point)
+        try:
+            for point in plan:
+                click(point)
+        finally:
+            # Even a partial sequence may have moved pets; re-identify them.
+            if self.identifier is not None:
+                self.identifier.forget(action)
