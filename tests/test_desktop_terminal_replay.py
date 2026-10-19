@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from desktop_session import DesktopSession, PHASE_ACTION_KINDS, action_acknowledged
-from desktop_state import Action, Board, Phase
+from sap_ai.desktop.session import DesktopSession, PHASE_ACTION_KINDS, action_acknowledged
+from sap_ai.desktop.state import Action, Board, Phase
 
 
 @pytest.fixture

@@ -5,7 +5,7 @@ import math
 import os
 import time
 
-from desktop_runtime import DesktopUnavailable, GameWindowNotFound
+from sap_ai.desktop.runtime import DesktopUnavailable, GameWindowNotFound
 
 
 GAME_TITLE = "Super Auto Pets"

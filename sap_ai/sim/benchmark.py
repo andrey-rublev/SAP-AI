@@ -5,11 +5,11 @@ import argparse
 import json
 from pathlib import Path
 
-from agent import QLearningAgent
-from evaluation import evaluate_policy, positive_int
-from game import SuperAutoPetsEnv
-from heuristic import HeuristicAgent
-from main import compact_state
+from sap_ai.sim.agent import QLearningAgent
+from sap_ai.sim.evaluation import evaluate_policy, positive_int
+from sap_ai.sim.game import SuperAutoPetsEnv
+from sap_ai.sim.heuristic import HeuristicAgent
+from sap_ai.sim.main import compact_state
 
 
 def train_tabular(env, episodes: int, seed: int, max_steps: int = 500) -> QLearningAgent:
@@ -32,7 +32,7 @@ def run_report(episodes=4000, eval_episodes=300, seed=0, include_dqn=False,
         policies = [("Random", None), ("Heuristic", HeuristicAgent()),
                     ("Tabular Q", train_tabular(env, episodes, seed, max_steps))]
         if include_dqn:
-            from dqn import DQNAgent
+            from sap_ai.sim.dqn import DQNAgent
             dqn = DQNAgent(obs_dim=env.observation_space.shape[0],
                            n_actions=env.action_space.n,
                            obs_scale=env.observation_space.high, seed=seed)

@@ -6,9 +6,9 @@ import numpy as np
 from PIL import Image
 import pytest
 
-from desktop_state import FoodSlot, Phase
-from desktop import validate_profile_assets
-from desktop_vision import FoodSlotConfig, Perceptor, Rect, VisionProfile
+from sap_ai.desktop.state import FoodSlot, Phase
+from sap_ai.desktop.cli import validate_profile_assets
+from sap_ai.desktop.vision import FoodSlotConfig, Perceptor, Rect, VisionProfile
 
 
 def save_template(path, value, size=(8, 8)):

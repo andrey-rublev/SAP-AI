@@ -12,15 +12,15 @@ from uuid import uuid4
 
 import numpy as np
 
-from desktop_runtime import (CachedOCR, DesktopRuntime, WindowsGameWindow,
+from sap_ai.desktop.runtime import (CachedOCR, DesktopRuntime, WindowsGameWindow,
                              tesseract_ocr, validate_live_dependencies)
-from desktop_launch import GAME_TITLE, connect_game_window
-from desktop_control import desktop_control_lease
-from desktop_identify import SpeciesIdentifier, load_tooltip_layout
-from desktop_session import DesktopSession, SessionResult
-from desktop_state import DesktopPolicy, Phase
-from desktop_vision import Perceptor, Rect, VisionProfile
-from evaluation import positive_int
+from sap_ai.desktop.launch import GAME_TITLE, connect_game_window
+from sap_ai.desktop.control import desktop_control_lease
+from sap_ai.desktop.identify import SpeciesIdentifier, load_tooltip_layout
+from sap_ai.desktop.session import DesktopSession, SessionResult
+from sap_ai.desktop.state import DesktopPolicy, Phase
+from sap_ai.desktop.vision import Perceptor, Rect, VisionProfile
+from sap_ai.sim.evaluation import positive_int
 
 
 DEFAULT_TOOLTIP_LAYOUT = ".local/desktop/tooltip-layout.json"

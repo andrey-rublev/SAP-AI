@@ -8,13 +8,13 @@ import sys
 import numpy as np
 import pytest
 
-from desktop import main
-import desktop_runtime
-from desktop_runtime import GameWindowNotFound
-from desktop_runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow, prepare_numeric_crop, tesseract_ocr, validate_live_dependencies
-from desktop_session import DesktopSession
-from desktop_state import Action, Board, BoardChangedBeforeInput, DesktopPolicy, PetSlot, Phase
-from desktop_vision import Perceptor, Rect, VisionProfile
+from sap_ai.desktop.cli import main
+import sap_ai.desktop.runtime as desktop_runtime
+from sap_ai.desktop.runtime import GameWindowNotFound
+from sap_ai.desktop.runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow, prepare_numeric_crop, tesseract_ocr, validate_live_dependencies
+from sap_ai.desktop.session import DesktopSession
+from sap_ai.desktop.state import Action, Board, BoardChangedBeforeInput, DesktopPolicy, PetSlot, Phase
+from sap_ai.desktop.vision import Perceptor, Rect, VisionProfile
 
 
 def board(gold=10):
@@ -826,7 +826,7 @@ def fake_tesseract(monkeypatch):
     """Replace the optional OCR package before import; never launch a process."""
     ocr = SimpleNamespace(image_to_string=Mock(return_value=" 12\n"), pytesseract=SimpleNamespace())
     monkeypatch.setitem(sys.modules, "pytesseract", ocr)
-    monkeypatch.setattr("desktop_runtime.shutil.which", lambda name: "tesseract")
+    monkeypatch.setattr("sap_ai.desktop.runtime.shutil.which", lambda name: "tesseract")
     return ocr
 
 

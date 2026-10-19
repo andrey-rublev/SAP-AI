@@ -7,10 +7,10 @@ import numpy as np
 from PIL import Image
 import pytest
 
-from desktop_runtime import CachedOCR, tesseract_ocr
-from desktop_session import DesktopSession
-from desktop_state import Action, DesktopPolicy, PetSlot, Phase
-from desktop_vision import Perceptor, PhaseTemplate, Rect, SlotConfig, VisionProfile
+from sap_ai.desktop.runtime import CachedOCR, tesseract_ocr
+from sap_ai.desktop.session import DesktopSession
+from sap_ai.desktop.state import Action, DesktopPolicy, PetSlot, Phase
+from sap_ai.desktop.vision import Perceptor, PhaseTemplate, Rect, SlotConfig, VisionProfile
 
 
 def transition_scene(tmp_path):
@@ -67,7 +67,7 @@ def test_partial_stat_transition_abstains_then_requires_fresh_stable_pixels(
     engine = Mock(return_value="3")
     monkeypatch.setitem(sys.modules, "pytesseract", SimpleNamespace(
         image_to_string=engine, pytesseract=SimpleNamespace()))
-    monkeypatch.setattr("desktop_runtime._tesseract_executable", lambda: "mock-tesseract")
+    monkeypatch.setattr("sap_ai.desktop.runtime._tesseract_executable", lambda: "mock-tesseract")
 
     def read_crop(image):
         if image.shape == (1, 1, 3):

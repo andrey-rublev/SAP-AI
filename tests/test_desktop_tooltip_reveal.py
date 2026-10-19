@@ -4,11 +4,11 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from desktop_state import Board, FoodSlot, PetSlot, Phase
-from desktop_tooltip_layout import TooltipLayout, inspect_tooltip_panel
-import desktop_tooltip_layout as detector
-import desktop_tooltip_reveal as verifier
-from desktop_tooltip_reveal import TooltipChangeLimits, verify_revealed_tooltip
+from sap_ai.desktop.state import Board, FoodSlot, PetSlot, Phase
+from sap_ai.desktop.tooltip_layout import TooltipLayout, inspect_tooltip_panel
+import sap_ai.desktop.tooltip_layout as detector
+import sap_ai.desktop.tooltip_reveal as verifier
+from sap_ai.desktop.tooltip_reveal import TooltipChangeLimits, verify_revealed_tooltip
 
 
 def paint_panel(frame, rect):

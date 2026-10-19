@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from desktop_vision import VisionProfile, decode_profile_json
+from sap_ai.desktop.vision import VisionProfile, decode_profile_json
 
 
 def raw_profile(fields):

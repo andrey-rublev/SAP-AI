@@ -26,16 +26,14 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 PRIVATE_ROOT = ROOT / ".local"
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
-from desktop import validate_profile_assets
-from desktop_control import desktop_control_lease
-from desktop_runtime import (CachedOCR, DesktopUnavailable, OCR_TIMEOUT_SECONDS,
+from sap_ai.desktop.cli import validate_profile_assets
+from sap_ai.desktop.control import desktop_control_lease
+from sap_ai.desktop.runtime import (CachedOCR, DesktopUnavailable, OCR_TIMEOUT_SECONDS,
                              WindowsGameWindow, tesseract_ocr, validate_live_dependencies)
-from desktop_state import Board, Phase
-from desktop_tooltip_layout import TooltipLayout, inspect_tooltip_panel
-from desktop_vision import Perceptor, VisionProfile
+from sap_ai.desktop.state import Board, Phase
+from sap_ai.desktop.tooltip_layout import TooltipLayout, inspect_tooltip_panel
+from sap_ai.desktop.vision import Perceptor, VisionProfile
 
 
 ASSOCIATION_LIMIT = (

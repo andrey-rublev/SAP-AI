@@ -30,13 +30,11 @@ import numpy as np
 from PIL import Image, ImageEnhance
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
-from desktop_runtime import CachedOCR, tesseract_ocr
-from desktop_state import FoodSlot, PetSlot, Phase
-from desktop_vision import Perceptor, VisionProfile, decode_profile_json
-from evaluation import positive_int
+from sap_ai.desktop.runtime import CachedOCR, tesseract_ocr
+from sap_ai.desktop.state import FoodSlot, PetSlot, Phase
+from sap_ai.desktop.vision import Perceptor, VisionProfile, decode_profile_json
+from sap_ai.sim.evaluation import positive_int
 
 
 def digest(data):
@@ -220,7 +218,7 @@ def run(manifest_path, profile_path, output_dir, *, max_seconds=3600, max_cases=
               "profile": provenance, "manifest_sha256": digest(raw_manifest),
               "sources": [{k: v for k, v in frame.items() if k != "bytes"} for frame in frames],
               "code_sha256": {str(p.relative_to(ROOT)): digest(p.read_bytes()) for p in
-                              (Path(__file__).resolve(), ROOT / "desktop_vision.py", ROOT / "desktop_runtime.py", ROOT / "desktop_state.py")},
+                              (Path(__file__).resolve(), ROOT / "sap_ai/desktop/vision.py", ROOT / "sap_ai/desktop/runtime.py", ROOT / "sap_ai/desktop/state.py")},
               "python": platform.python_version(), "packages": packages, "variants": settings,
               "limits": {"seconds": max_seconds, "cases": max_cases, "examples": max_examples},
               "counts": {"correct": 0, "unknown": 0, "incorrect": 0, "unsafe_false_empty": 0},

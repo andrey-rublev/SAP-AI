@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from desktop_session import DesktopSession
-from desktop_state import Action, Board, DesktopPolicy, Phase
+from sap_ai.desktop.session import DesktopSession
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, Phase
 
 
 def recording():

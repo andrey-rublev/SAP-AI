@@ -7,8 +7,8 @@ from unittest.mock import Mock
 from PIL import Image
 import pytest
 
-import desktop
-from desktop_runtime import DesktopUnavailable
+import sap_ai.desktop.cli as desktop
+from sap_ai.desktop.runtime import DesktopUnavailable
 
 
 @pytest.fixture
@@ -113,7 +113,7 @@ def test_asset_failure_prevents_dependency_check_and_all_controller_io(preflight
 def test_dependency_failure_is_reported_as_cli_failure_without_output_files(
         preflight, monkeypatch, capsys, message):
     preflight.dependencies.side_effect = DesktopUnavailable(message)
-    monkeypatch.setattr("sys.argv", ["desktop.py", *preflight.args])
+    monkeypatch.setattr("sys.argv", ["sap_ai/desktop/cli.py", *preflight.args])
     with pytest.raises(SystemExit, match=message):
         desktop.cli()
     preflight.assets.assert_called_once()
@@ -134,7 +134,7 @@ def test_check_remains_play_only_and_preserves_normal_play_defaults():
 
 
 def test_cmd_forwarding_accepts_check_with_its_existing_restart_default():
-    launcher = (Path(desktop.__file__).parent / "play.cmd").read_text(encoding="utf-8")
-    assert '".venv\\Scripts\\python.exe" desktop.py play --restart-completed %*' in launcher
+    launcher = (Path(desktop.__file__).parents[2] / "play.cmd").read_text(encoding="utf-8")
+    assert '".venv\\Scripts\\python.exe" -m sap_ai.desktop.cli play --restart-completed %*' in launcher
     args = desktop.parse_args(["play", "--restart-completed", "--check"])
     assert args.check is args.restart_completed is args.execute is True

@@ -5,8 +5,8 @@ from unittest.mock import Mock
 
 import pytest
 
-import desktop
-from desktop_vision import NumberTemplate, SlotConfig, VisionProfile
+import sap_ai.desktop.cli as desktop
+from sap_ai.desktop.vision import NumberTemplate, SlotConfig, VisionProfile
 
 
 def profile_data():

@@ -2,8 +2,8 @@
 import json
 from pathlib import Path
 
-from desktop_session import DesktopSession, PHASE_ACTION_KINDS
-from desktop_state import Action, Board, DesktopPolicy, Phase
+from sap_ai.desktop.session import DesktopSession, PHASE_ACTION_KINDS
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, Phase
 
 
 def recording():

@@ -11,7 +11,7 @@ from math import isfinite
 from dataclasses import asdict, dataclass, replace
 from typing import Callable
 
-from desktop_state import (Action, Board, BoardChangedBeforeInput, Phase,
+from sap_ai.desktop.state import (Action, Board, BoardChangedBeforeInput, Phase,
                            legal_action, observed_sale_income)
 
 

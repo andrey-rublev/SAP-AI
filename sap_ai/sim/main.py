@@ -7,9 +7,9 @@ from pathlib import Path
 
 import numpy as np
 
-from agent import QLearningAgent
-from evaluation import evaluate_policy, positive_int
-from game import SuperAutoPetsEnv
+from sap_ai.sim.agent import QLearningAgent
+from sap_ai.sim.evaluation import evaluate_policy, positive_int
+from sap_ai.sim.game import SuperAutoPetsEnv
 
 
 def compact_state(obs):
@@ -92,7 +92,7 @@ def main(argv=None):
                                  max_steps=args.max_steps, seed=args.eval_seed)
         _describe("Learned policy", result)
         if args.plot:
-            from metrics import plot_training_curve
+            from sap_ai.sim.metrics import plot_training_curve
             Path(args.plot).parent.mkdir(parents=True, exist_ok=True)
             plot_training_curve(history, args.plot, title="Q-learning training reward")
             print(f"Saved training curve to {args.plot}")

@@ -34,12 +34,13 @@ A separate Gymnasium toy arena where pets are single numbers. It is useful for
 RL experiments, but its policies are never used against the real game.
 
 ```bash
-python -m pip install -e ".[dev,plot]"      # add ,dqn for PyTorch
-python main.py --episodes 4000              # tabular Q-learning
-python dqn.py --episodes 250                # Double DQN
-python benchmark.py                         # compare policies on shared seeds
+python -m pip install -e ".[dev,plot]"          # add ,dqn for PyTorch
+python -m sap_ai.sim.main --episodes 4000       # tabular Q-learning
+python -m sap_ai.sim.dqn --episodes 250         # Double DQN
+python -m sap_ai.sim.benchmark                  # compare policies on shared seeds
 ```
 
+Code lives in `sap_ai/desktop` (the bot) and `sap_ai/sim` (the lab).
 Design notes: [docs/architecture.md](docs/architecture.md).
 
 ## Tests

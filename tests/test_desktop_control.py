@@ -5,9 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-import desktop_control as control
-
-
+import sap_ai.desktop.control as control
 class FakeFunction:
     def __init__(self, function):
         self.function = function

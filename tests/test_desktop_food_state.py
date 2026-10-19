@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from desktop_state import Action, Board, DesktopPolicy, FoodSlot, PetSlot, Phase, legal_action
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, FoodSlot, PetSlot, Phase, legal_action
 from tools.export_desktop_replay import export_session
 
 

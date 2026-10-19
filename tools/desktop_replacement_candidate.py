@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 
-from desktop_state import Action, Board, DesktopPolicy, observed_sale_income
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, observed_sale_income
 
 
 @dataclass(frozen=True)

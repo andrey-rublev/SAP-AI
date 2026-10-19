@@ -7,9 +7,9 @@ from unittest.mock import Mock
 
 import pytest
 
-import desktop
-from desktop_session import SessionResult
-from desktop_state import Action, Board, Phase
+import sap_ai.desktop.cli as desktop
+from sap_ai.desktop.session import SessionResult
+from sap_ai.desktop.state import Action, Board, Phase
 from tools.export_desktop_replay import export_session
 
 
@@ -169,8 +169,8 @@ def test_batch_bootstrap_does_not_count_old_result_or_consume_normal_restart_all
 def test_default_and_cmd_override_keep_bootstrap_opt_in():
     assert desktop.parse_args(["play"]).restart_completed is False
     assert desktop.parse_args(["play", "--restart-completed", "--no-restart-completed"]).restart_completed is False
-    launcher = Path(desktop.__file__).with_name("play.cmd").read_text()
-    assert "desktop.py play --restart-completed %*" in launcher
+    launcher = (Path(desktop.__file__).parents[2] / "play.cmd").read_text()
+    assert "-m sap_ai.desktop.cli play --restart-completed %*" in launcher
 
 
 def test_cli_bootstrap_retains_two_exportable_receipts_and_runs_real_session(tmp_path, monkeypatch):

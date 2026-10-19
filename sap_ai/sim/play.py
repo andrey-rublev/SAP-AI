@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import argparse
 
-from agent import QLearningAgent
-from game import SuperAutoPetsEnv
-from heuristic import HeuristicAgent
-from main import compact_state
+from sap_ai.sim.agent import QLearningAgent
+from sap_ai.sim.game import SuperAutoPetsEnv
+from sap_ai.sim.heuristic import HeuristicAgent
+from sap_ai.sim.main import compact_state
 
 
 def load_policy(args):
@@ -25,7 +25,7 @@ def load_policy(args):
     if not args.checkpoint:
         raise SystemExit("--policy dqn requires --checkpoint PATH")
     try:
-        from dqn import DQNAgent
+        from sap_ai.sim.dqn import DQNAgent
     except ImportError as exc:
         raise SystemExit("DQN playback requires PyTorch; install the project's DQN dependencies") from exc
     policy = DQNAgent.from_checkpoint(args.checkpoint, device=args.device)

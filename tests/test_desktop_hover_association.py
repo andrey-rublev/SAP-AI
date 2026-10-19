@@ -6,10 +6,10 @@ from unittest.mock import Mock, call
 import numpy as np
 import pytest
 
-from desktop_runtime import DesktopUnavailable
-from desktop_state import Board, PetSlot, Phase
-from desktop_tooltip_layout import TooltipLayout
-from desktop_vision import Rect, SlotConfig, VisionProfile
+from sap_ai.desktop.runtime import DesktopUnavailable
+from sap_ai.desktop.state import Board, PetSlot, Phase
+from sap_ai.desktop.tooltip_layout import TooltipLayout
+from sap_ai.desktop.vision import Rect, SlotConfig, VisionProfile
 from tools import probe_desktop_hover as probe
 
 

@@ -14,8 +14,8 @@ from typing import Literal
 
 import numpy as np
 
-from desktop_state import Board, Phase
-from desktop_tooltip_layout import MAX_SEARCH_PIXELS, TooltipLayout, TooltipTitle, inventory_tooltip_panels
+from sap_ai.desktop.state import Board, Phase
+from sap_ai.desktop.tooltip_layout import MAX_SEARCH_PIXELS, TooltipLayout, TooltipTitle, inventory_tooltip_panels
 
 
 MAX_FRAME_PIXELS = MAX_SEARCH_PIXELS

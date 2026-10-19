@@ -3,8 +3,8 @@ from dataclasses import replace
 
 import pytest
 
-from desktop_session import DesktopSession
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase
+from sap_ai.desktop.session import DesktopSession
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, PetSlot, Phase
 
 
 def replay(frames, **kwargs):

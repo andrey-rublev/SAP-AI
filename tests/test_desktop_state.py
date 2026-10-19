@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from desktop_state import (Action, Board, BoardChangedBeforeInput, DesktopPolicy,
+from sap_ai.desktop.state import (Action, Board, BoardChangedBeforeInput, DesktopPolicy,
                            PetSlot, Phase, legal_action, observed_sale_income)
 
 

@@ -4,9 +4,9 @@ from dataclasses import replace
 
 import pytest
 
-import desktop_session
-from desktop_session import action_acknowledged
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
+import sap_ai.desktop.session as desktop_session
+from sap_ai.desktop.session import action_acknowledged
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
 from tools import eval_desktop as evaluation
 
 

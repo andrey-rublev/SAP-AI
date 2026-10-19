@@ -22,9 +22,9 @@ from typing import Callable
 
 import numpy as np
 
-from desktop_state import Action, Board, PetSlot
-from desktop_tooltip import read_pet_title, tesseract_text_ocr
-from desktop_tooltip_layout import TooltipLayout, TooltipPanelInventory, inventory_tooltip_panels
+from sap_ai.desktop.state import Action, Board, PetSlot
+from sap_ai.desktop.tooltip import read_pet_title, tesseract_text_ocr
+from sap_ai.desktop.tooltip_layout import TooltipLayout, TooltipPanelInventory, inventory_tooltip_panels
 
 
 # Pets across the standard packs plus common summoned tokens. Matching is exact,

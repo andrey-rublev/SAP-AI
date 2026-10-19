@@ -24,12 +24,10 @@ import PIL
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
-from desktop_state import Board
-from desktop_tooltip_layout import TooltipLayout
-from desktop_tooltip_reveal import TooltipChangeLimits, verify_revealed_tooltip
+from sap_ai.desktop.state import Board
+from sap_ai.desktop.tooltip_layout import TooltipLayout
+from sap_ai.desktop.tooltip_reveal import TooltipChangeLimits, verify_revealed_tooltip
 from tools import probe_desktop_hover as private_io
 
 
@@ -40,7 +38,7 @@ STAGES = ("clear", "clear", "hover", "hover", "clear", "clear")
 CLEAR_INDICES = (0, 1, 4, 5)
 CODE_SHA256 = {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in (
     "tools/check_desktop_tooltip_reveal.py", "tools/probe_desktop_hover.py",
-    "desktop_tooltip_reveal.py", "desktop_tooltip_layout.py", "desktop_state.py")}
+    "sap_ai/desktop/tooltip_reveal.py", "sap_ai/desktop/tooltip_layout.py", "sap_ai/desktop/state.py")}
 
 
 def _sha(data):

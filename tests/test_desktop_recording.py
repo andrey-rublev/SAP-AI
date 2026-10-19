@@ -8,8 +8,8 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-import desktop
-from desktop_state import Board, PetSlot, Phase
+import sap_ai.desktop.cli as desktop
+from sap_ai.desktop.state import Board, PetSlot, Phase
 
 
 @pytest.fixture

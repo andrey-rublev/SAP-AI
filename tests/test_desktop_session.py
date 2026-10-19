@@ -5,9 +5,9 @@ import json
 
 import pytest
 
-from desktop_state import (Action, Board, BoardChangedBeforeInput, DesktopPolicy,
+from sap_ai.desktop.state import (Action, Board, BoardChangedBeforeInput, DesktopPolicy,
                            PetSlot, Phase, legal_action)
-from desktop_session import DesktopSession, action_acknowledged
+from sap_ai.desktop.session import DesktopSession, action_acknowledged
 
 
 EMPTY = PetSlot(False)

@@ -33,11 +33,9 @@ import time
 
 # Also support direct execution from another directory without installation.
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
-from desktop_session import DesktopSession
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, observed_sale_income
+from sap_ai.desktop.session import DesktopSession
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, PetSlot, Phase, observed_sale_income
 
 
 SCENARIOS = (
@@ -349,7 +347,7 @@ def run_case(seed: int, *, scenario: str | None = None, turns: int = 5,
 
 
 def source_signature():
-    files = (Path(__file__), ROOT / "desktop_state.py", ROOT / "desktop_session.py")
+    files = (Path(__file__), ROOT / "sap_ai/desktop/state.py", ROOT / "sap_ai/desktop/session.py")
     return {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
 
 

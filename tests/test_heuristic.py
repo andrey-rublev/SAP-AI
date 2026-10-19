@@ -2,9 +2,9 @@
 import numpy as np
 import pytest
 
-from game import SuperAutoPetsEnv
-from heuristic import HeuristicAgent
-from main import evaluate
+from sap_ai.sim.game import SuperAutoPetsEnv
+from sap_ai.sim.heuristic import HeuristicAgent
+from sap_ai.sim.main import evaluate
 
 
 def obs_from(gold, turn, shop, team):

@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from metrics import moving_average, plot_training_curve
+from sap_ai.sim.metrics import moving_average, plot_training_curve
 
 
 def test_moving_average_smooths():

@@ -11,13 +11,13 @@ import sys
 import numpy as np
 import pytest
 
-import desktop
-from desktop_control import DesktopControlConflict
-from desktop_launch import connect_game_window
-from desktop_runtime import GameWindowNotFound
-from desktop_session import SessionResult
-from desktop_state import Action, Board, PetSlot, Phase
-from desktop_vision import NumberTemplate, Perceptor, PhaseTemplate, Rect, SlotConfig, VisionProfile
+import sap_ai.desktop.cli as desktop
+from sap_ai.desktop.control import DesktopControlConflict
+from sap_ai.desktop.launch import connect_game_window
+from sap_ai.desktop.runtime import GameWindowNotFound
+from sap_ai.desktop.session import SessionResult
+from sap_ai.desktop.state import Action, Board, PetSlot, Phase
+from sap_ai.desktop.vision import NumberTemplate, Perceptor, PhaseTemplate, Rect, SlotConfig, VisionProfile
 
 
 @pytest.fixture
@@ -123,7 +123,7 @@ def test_controller_error_exits_lease_before_propagating(tmp_path, cli_runtime, 
 
 @pytest.mark.parametrize("enabled", [False, True])
 def test_sale_funded_roll_option_reaches_policy_and_records_experimental_provenance(tmp_path, cli_runtime, enabled):
-    from desktop_state import PetSlot
+    from sap_ai.desktop.state import PetSlot
     runtime, _ = cli_runtime
     runtime.observe.return_value = Board(Phase.SHOP, gold=3, turn=4,
         shop=(PetSlot(True, None, 0, 1),), team=(PetSlot(True, None, 1, 1, 1),) * 5)
@@ -479,7 +479,7 @@ def test_cmd_launcher_missing_venv_is_clear_without_running_python(tmp_path):
     directory = tmp_path / "project with spaces"
     directory.mkdir()
     launcher = directory / "play.cmd"
-    shutil.copyfile(Path(desktop.__file__).with_name("play.cmd"), launcher)
+    shutil.copyfile(Path(desktop.__file__).parents[2] / "play.cmd", launcher)
     result = subprocess.run(["cmd.exe", "/d", "/c", str(launcher)], capture_output=True, text=True, timeout=10)
     assert result.returncode == 1
     assert "project Python environment is missing" in result.stderr

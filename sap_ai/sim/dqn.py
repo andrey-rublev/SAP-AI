@@ -21,7 +21,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from agent import QLearningAgent, _reset_env, _transition
+from sap_ai.sim.agent import QLearningAgent, _reset_env, _transition
 
 
 class QNetwork(nn.Module):
@@ -283,8 +283,8 @@ class DQNAgent:
 
 
 def main(argv=None):
-    from game import SuperAutoPetsEnv
-    from evaluation import evaluate_policy
+    from sap_ai.sim.game import SuperAutoPetsEnv
+    from sap_ai.sim.evaluation import evaluate_policy
 
     parser = argparse.ArgumentParser(description="Train a masked Double DQN on the built-in SAP arena.")
     parser.add_argument("--episodes", type=int, default=1500)
@@ -294,7 +294,7 @@ def main(argv=None):
     parser.add_argument("--eval-seed", type=int, default=10_000)
     parser.add_argument("--threads", type=int, default=1, help="CPU threads for the small network (default: 1)")
     parser.add_argument("--device", default=None)
-    parser.add_argument("--output", default="dqn.pt")
+    parser.add_argument("--output", default="sap_ai.sim.dqn.pt")
     parser.add_argument("--resume", metavar="PATH", help="resume a DQN checkpoint")
     parser.add_argument("--no-save", action="store_true")
     parser.add_argument("--plot", metavar="PATH")
@@ -323,7 +323,7 @@ def main(argv=None):
         low, high = result.win_rate_ci95
         print(f"95% interval    : {low:.1%}-{high:.1%} | truncated {result.truncations}")
         if args.plot:
-            from metrics import plot_training_curve
+            from sap_ai.sim.metrics import plot_training_curve
             Path(args.plot).parent.mkdir(parents=True, exist_ok=True)
             plot_training_curve(history, args.plot, title="Double DQN training reward")
         if not args.no_save:

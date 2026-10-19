@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from desktop_runtime import DesktopUnavailable, WindowsGameWindow
+from sap_ai.desktop.runtime import DesktopUnavailable, WindowsGameWindow
 
 
 class Clock:

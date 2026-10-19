@@ -4,8 +4,8 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-from desktop_runtime import CachedOCR
-from desktop_vision import Perceptor, Rect, VisionProfile
+from sap_ai.desktop.runtime import CachedOCR
+from sap_ai.desktop.vision import Perceptor, Rect, VisionProfile
 
 
 def crop(value=0):

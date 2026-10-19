@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from desktop_session import DesktopSession, action_acknowledged
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
+from sap_ai.desktop.session import DesktopSession, action_acknowledged
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
 from tools.desktop_replacement_candidate import VisibleReplacementPolicy, visible_replacement_plan
 from tools import eval_desktop_replacements as study
 
@@ -179,7 +179,7 @@ def test_fixed_candidate_evaluation_uses_disjoint_splits_and_saves_source_proven
     assert report["candidate_frozen_before_evaluation"] is True
     assert "no parameters or model weights trained" in report["limitations"].casefold()
     assert set(report["source_sha256"]) == {"eval_desktop_replacements.py", "desktop_replacement_candidate.py",
-                                              "desktop_state.py", "desktop_session.py"}
+                                              "state.py", "session.py"}
     assert not report["training"]["failure_examples"] and not report["heldout"]["failure_examples"]
     assert report["recorded_boards"]["unique_shop_boards"] > 100
     assert not report["recorded_boards"]["illegal_proposals"]

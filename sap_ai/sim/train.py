@@ -12,8 +12,8 @@ from pathlib import Path
 
 import numpy as np
 
-from agent import QLearningAgent
-from evaluation import positive_int
+from sap_ai.sim.agent import QLearningAgent
+from sap_ai.sim.evaluation import positive_int
 
 ACTIONS = ["buy_0", "buy_1", "buy_2", "roll", "battle"]
 PETS = ("ant", "fish", "otter", "beaver", "pig")

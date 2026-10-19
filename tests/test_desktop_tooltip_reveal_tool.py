@@ -6,9 +6,9 @@ import numpy as np
 from PIL import Image
 import pytest
 
-from desktop_state import Board, PetSlot, Phase
-from desktop_tooltip_layout import TooltipLayout
-from desktop_tooltip_reveal import TooltipChangeLimits
+from sap_ai.desktop.state import Board, PetSlot, Phase
+from sap_ai.desktop.tooltip_layout import TooltipLayout
+from sap_ai.desktop.tooltip_reveal import TooltipChangeLimits
 from tools import check_desktop_tooltip_reveal as tool
 
 

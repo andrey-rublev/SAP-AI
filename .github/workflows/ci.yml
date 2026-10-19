@@ -23,7 +23,7 @@ jobs:
       - name: Test core (DQN is optional)
         run: python -m pytest -q
       - name: Exercise CLI and JSON reports
-        run: python benchmark.py --episodes 20 --eval-episodes 5 --output benchmark.json
+        run: python -m sap_ai.sim.benchmark --episodes 20 --eval-episodes 5 --output benchmark.json
   neural:
     runs-on: ubuntu-latest
     steps:

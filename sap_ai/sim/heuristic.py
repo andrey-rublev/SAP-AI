@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from game import SuperAutoPetsEnv
+from sap_ai.sim.game import SuperAutoPetsEnv
 
 
 class HeuristicAgent:
@@ -76,7 +76,7 @@ class HeuristicAgent:
 
 
 if __name__ == "__main__":
-    from main import evaluate
+    from sap_ai.sim.main import evaluate
 
     env = SuperAutoPetsEnv()
     rate, wins = evaluate(env, agent=HeuristicAgent(), episodes=500)

@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from train import ACTIONS, SAPEnvironment
+from sap_ai.sim.train import ACTIONS, SAPEnvironment
 
 
 class Team:
@@ -63,7 +63,7 @@ def test_drill_cannot_loop_forever_and_seeds_repeat():
 
 
 def test_agent_can_train_optional_drill():
-    from agent import QLearningAgent
+    from sap_ai.sim.agent import QLearningAgent
 
     env = SAPEnvironment(engine=(Team, Battle))
     agent = QLearningAgent(ACTIONS, seed=3)

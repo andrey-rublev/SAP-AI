@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from desktop_session import DesktopSession
-from desktop_state import Action, Board, BoardChangedBeforeInput, DesktopPolicy, PetSlot, Phase
+from sap_ai.desktop.session import DesktopSession
+from sap_ai.desktop.state import Action, Board, BoardChangedBeforeInput, DesktopPolicy, PetSlot, Phase
 from tools.export_desktop_replay import export_session, main
 
 

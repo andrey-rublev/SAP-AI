@@ -13,8 +13,8 @@ import time
 
 import numpy as np
 
-from desktop_state import Action, BoardChangedBeforeInput, Phase, legal_action
-from desktop_vision import Rect
+from sap_ai.desktop.state import Action, BoardChangedBeforeInput, Phase, legal_action
+from sap_ai.desktop.vision import Rect
 
 
 OCR_TIMEOUT_SECONDS = 3.0

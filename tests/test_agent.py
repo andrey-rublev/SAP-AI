@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from agent import QLearningAgent
+from sap_ai.sim.agent import QLearningAgent
 
 
 def test_choose_action_is_valid():
@@ -97,7 +97,7 @@ def test_unpack_reset_handles_both_apis():
 
 
 def test_train_returns_history_and_learns():
-    from game import SuperAutoPetsEnv
+    from sap_ai.sim.game import SuperAutoPetsEnv
 
     env = SuperAutoPetsEnv()
     agent = QLearningAgent(list(range(env.action_space.n)), seed=0)
@@ -148,7 +148,7 @@ def test_train_bootstraps_truncations_but_not_terminations(classic, terminated):
 
 
 def test_training_seed_is_reproducible():
-    from game import SuperAutoPetsEnv
+    from sap_ai.sim.game import SuperAutoPetsEnv
     first = QLearningAgent(range(6), seed=13)
     second = QLearningAgent(range(6), seed=13)
     assert first.train(SuperAutoPetsEnv(), num_episodes=6) == second.train(SuperAutoPetsEnv(), num_episodes=6)
@@ -177,7 +177,7 @@ def test_checkpoint_restores_rng_and_typed_states(tmp_path):
     agent.q[b"board"] = {"buy": 1.0, "roll": -1.0}
     for _ in range(8):
         agent.choose_action("state")
-    path = tmp_path / "nested" / "agent.json"
+    path = tmp_path / "nested" / "sap_ai.sim.agent.json"
     agent.save(path)
     clone = QLearningAgent([]).load(path)
     assert dict(clone.q) == dict(agent.q)
@@ -189,7 +189,7 @@ def test_checkpoint_encoder_mismatch_is_reported(tmp_path):
         return "state"
 
     encoder.version = 1
-    path = tmp_path / "agent.json"
+    path = tmp_path / "sap_ai.sim.agent.json"
     QLearningAgent([0], state_fn=encoder).save(path)
     encoder.version = 2
     with pytest.raises(ValueError, match="state encoder"):

@@ -4,9 +4,9 @@ from unittest.mock import Mock, call
 
 import pytest
 
-import desktop_launch
-from desktop_launch import GAME_TITLE, STEAM_GAME_URI, connect_game_window, launch_installed_game
-from desktop_runtime import DesktopUnavailable, GameWindowNotFound
+import sap_ai.desktop.launch as desktop_launch
+from sap_ai.desktop.launch import GAME_TITLE, STEAM_GAME_URI, connect_game_window, launch_installed_game
+from sap_ai.desktop.runtime import DesktopUnavailable, GameWindowNotFound
 
 
 def missing(stop=None):

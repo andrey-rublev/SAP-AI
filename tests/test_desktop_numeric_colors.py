@@ -9,8 +9,8 @@ import numpy as np
 from PIL import Image
 import pytest
 
-from desktop_runtime import prepare_numeric_crop, tesseract_ocr
-from desktop_vision import NumericColor, Perceptor, VisionProfile
+from sap_ai.desktop.runtime import prepare_numeric_crop, tesseract_ocr
+from sap_ai.desktop.vision import NumericColor, Perceptor, VisionProfile
 
 
 INK = (40, 150, 80)  # Arbitrary synthetic color, not a game calibration.
@@ -208,7 +208,7 @@ def test_empty_or_dense_masks_abstain_without_reading_dark_holes(scene, mask, re
 def fake_engine(monkeypatch):
     engine = SimpleNamespace(image_to_string=Mock(return_value="12"), pytesseract=SimpleNamespace())
     monkeypatch.setitem(sys.modules, "pytesseract", engine)
-    monkeypatch.setattr("desktop_runtime._tesseract_executable", lambda: "mock-tesseract")
+    monkeypatch.setattr("sap_ai.desktop.runtime._tesseract_executable", lambda: "mock-tesseract")
     return engine.image_to_string
 
 

@@ -145,7 +145,7 @@ def test_real_perceptor_uses_injected_cached_ocr_and_checkpoints_provenance(sour
     assert saved == report
     assert report["profile"]["sha256"] == study.digest((source / "profile.json").read_bytes())
     assert report["sources"][0]["sha256"] == study.digest((source / "frame.png").read_bytes())
-    assert "desktop_runtime.py" in report["code_sha256"]
+    assert "sap_ai/desktop/runtime.py" in {key.replace("\\", "/") for key in report["code_sha256"]}
     assert (path.parent / "profile/phase.png").read_bytes() == (source / "phase.png").read_bytes()
 
 

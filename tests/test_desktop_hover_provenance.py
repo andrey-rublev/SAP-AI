@@ -10,10 +10,10 @@ import numpy as np
 from PIL import Image
 import pytest
 
-from desktop import validate_profile_assets
-from desktop_state import Phase
-from desktop_tooltip_layout import TooltipLayout
-from desktop_vision import (FoodSlotConfig, NumberTemplate, NumericColor, Perceptor,
+from sap_ai.desktop.cli import validate_profile_assets
+from sap_ai.desktop.state import Phase
+from sap_ai.desktop.tooltip_layout import TooltipLayout
+from sap_ai.desktop.vision import (FoodSlotConfig, NumberTemplate, NumericColor, Perceptor,
                             PhaseTemplate, Rect, SlotConfig, VisionProfile)
 from tools import probe_desktop_hover as probe
 

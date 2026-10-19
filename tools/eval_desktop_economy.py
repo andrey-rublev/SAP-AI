@@ -22,10 +22,8 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action, observed_sale_income
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action, observed_sale_income
 from tools.eval_desktop import save_report
 
 
@@ -270,7 +268,7 @@ def evaluate(*, output, pairs=50000, seconds=None, seed=0, checkpoint_seconds=30
         raise ValueError("checkpoint_seconds is required")
     output = Path(output)
     signature = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-                 for path in (Path(__file__), ROOT / "desktop_state.py")}
+                 for path in (Path(__file__), ROOT / "sap_ai/desktop/state.py")}
     config = {"seed": seed, "variants": VARIANTS, "distribution": "synthetic_bounded_stats_v1", "max_actions": 50}
     if resume:
         report = json.loads(output.read_text())

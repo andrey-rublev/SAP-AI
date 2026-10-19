@@ -17,14 +17,14 @@ live = ["pyautogui>=0.9.54", "pytesseract>=0.3.10", "Pillow>=10,<13"]
 dev = ["pytest>=8,<10", "Pillow>=10,<13"]
 
 [project.scripts]
-sap-train = "main:cli"
-sap-benchmark = "benchmark:cli"
-sap-play = "play:cli"
-sap-dqn = "dqn:main"
-sap-desktop = "desktop:cli"
+sap-train = "sap_ai.sim.main:cli"
+sap-benchmark = "sap_ai.sim.benchmark:cli"
+sap-play = "sap_ai.sim.play:cli"
+sap-dqn = "sap_ai.sim.dqn:main"
+sap-desktop = "sap_ai.desktop.cli:cli"
 
-[tool.setuptools]
-py-modules = ["agent", "benchmark", "desktop", "desktop_control", "desktop_launch", "desktop_runtime", "desktop_session", "desktop_state", "desktop_tooltip", "desktop_tooltip_layout", "desktop_tooltip_reveal", "desktop_vision", "dqn", "evaluation", "game", "heuristic", "main", "metrics", "play", "train"]
+[tool.setuptools.packages.find]
+include = ["sap_ai*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

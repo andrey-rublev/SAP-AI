@@ -7,10 +7,10 @@ from unittest.mock import Mock, call
 import numpy as np
 import pytest
 
-from desktop_runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow
-from desktop_session import DesktopSession
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase
-from desktop_vision import Rect, SlotConfig, VisionProfile
+from sap_ai.desktop.runtime import DesktopRuntime, DesktopUnavailable, WindowsGameWindow
+from sap_ai.desktop.session import DesktopSession
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, PetSlot, Phase
+from sap_ai.desktop.vision import Rect, SlotConfig, VisionProfile
 
 
 def profile(rest=(50, 95)):

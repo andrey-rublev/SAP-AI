@@ -4,8 +4,8 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from dqn import DQNAgent, ReplayBuffer
-from game import SuperAutoPetsEnv
+from sap_ai.sim.dqn import DQNAgent, ReplayBuffer
+from sap_ai.sim.game import SuperAutoPetsEnv
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -65,7 +65,7 @@ def test_train_returns_history_and_decays_epsilon(agent, env):
 
 def test_save_load_reproduces_q_values(agent, env, tmp_path):
     agent.train(env, num_episodes=5, max_steps=80)
-    path = tmp_path / "dqn.pt"
+    path = tmp_path / "sap_ai.sim.dqn.pt"
     agent.save(path)
 
     clone = DQNAgent(

@@ -21,11 +21,9 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
-from desktop_session import action_acknowledged
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action, observed_sale_income
+from sap_ai.desktop.session import action_acknowledged
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action, observed_sale_income
 from tools.desktop_replacement_candidate import VisibleReplacementPolicy
 from tools.eval_desktop import save_report
 
@@ -223,7 +221,7 @@ def evaluate(*, output: Path | str, train_pairs: int = 10000, heldout_pairs: int
               "limitations": LIMITATIONS,
               "source_sha256": {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
                   for path in (Path(__file__), ROOT / "tools/desktop_replacement_candidate.py",
-                               ROOT / "desktop_state.py", ROOT / "desktop_session.py")}}
+                               ROOT / "sap_ai/desktop/state.py", ROOT / "sap_ai/desktop/session.py")}}
     report["training"] = evaluate_split(train_seed, train_pairs)
     report["heldout"] = evaluate_split(heldout_seed, heldout_pairs)
     report["recorded_boards"] = audit_recorded_boards(ROOT / "tests/fixtures")

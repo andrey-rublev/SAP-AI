@@ -5,8 +5,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import pytest
 
-import desktop_tooltip_layout as detector
-from desktop_tooltip_layout import TooltipLayout, find_tooltip_title, inspect_tooltip_panel
+import sap_ai.desktop.tooltip_layout as detector
+from sap_ai.desktop.tooltip_layout import TooltipLayout, find_tooltip_title, inspect_tooltip_panel
 
 
 def panel(image, rect, text="Fish"):

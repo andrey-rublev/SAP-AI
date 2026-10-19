@@ -11,10 +11,10 @@ from unittest.mock import Mock, call
 import numpy as np
 import pytest
 
-from desktop_runtime import DesktopRuntime, DesktopUnavailable
-from desktop_session import DesktopSession, action_acknowledged
-from desktop_state import Action, Board, BoardChangedBeforeInput, FoodSlot, PetSlot, Phase, legal_action
-from desktop_vision import Rect
+from sap_ai.desktop.runtime import DesktopRuntime, DesktopUnavailable
+from sap_ai.desktop.session import DesktopSession, action_acknowledged
+from sap_ai.desktop.state import Action, Board, BoardChangedBeforeInput, FoodSlot, PetSlot, Phase, legal_action
+from sap_ai.desktop.vision import Rect
 
 
 EMPTY = PetSlot(False)

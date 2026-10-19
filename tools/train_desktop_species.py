@@ -23,10 +23,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageEnhance, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
-from desktop_vision import SlotConfig, decode_profile_json
+from sap_ai.desktop.vision import SlotConfig, decode_profile_json
 
 UNKNOWN = "__unknown__"
 EMPTY = "__empty__"

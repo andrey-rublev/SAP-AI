@@ -1,6 +1,6 @@
 # Architecture and design notes
 
-## Runtime paths
+## Runtime paths (`sap_ai/sim`)
 
 ```text
 main.py / dqn.py       agent.train(env)

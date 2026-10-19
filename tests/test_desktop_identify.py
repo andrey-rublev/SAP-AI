@@ -6,11 +6,11 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-from desktop_identify import PET_NAMES, SpeciesIdentifier, load_tooltip_layout
-from desktop_runtime import DesktopRuntime
-from desktop_state import Action, Board, PetSlot, Phase
-from desktop_tooltip_layout import TooltipLayout
-from desktop_vision import Rect
+from sap_ai.desktop.identify import PET_NAMES, SpeciesIdentifier, load_tooltip_layout
+from sap_ai.desktop.runtime import DesktopRuntime
+from sap_ai.desktop.state import Action, Board, PetSlot, Phase
+from sap_ai.desktop.tooltip_layout import TooltipLayout
+from sap_ai.desktop.vision import Rect
 
 LAYOUT = TooltipLayout(search_rect=(0, 0, 200, 200), panel_width_range=(60, 100),
                        panel_height_range=(40, 80), title_offset_rect=(5, 5, 40, 10),

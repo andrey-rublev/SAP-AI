@@ -4,8 +4,8 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-import desktop_tooltip_layout as detector
-from desktop_tooltip_layout import TooltipLayout, inspect_tooltip_panel, inventory_tooltip_panels
+import sap_ai.desktop.tooltip_layout as detector
+from sap_ai.desktop.tooltip_layout import TooltipLayout, inspect_tooltip_panel, inventory_tooltip_panels
 
 
 def scene():

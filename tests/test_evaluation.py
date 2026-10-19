@@ -4,10 +4,10 @@ import json
 import numpy as np
 import pytest
 
-from agent import QLearningAgent
-from evaluation import evaluate_policy
-from game import SuperAutoPetsEnv
-from main import compact_state, main, parse_args
+from sap_ai.sim.agent import QLearningAgent
+from sap_ai.sim.evaluation import evaluate_policy
+from sap_ai.sim.game import SuperAutoPetsEnv
+from sap_ai.sim.main import compact_state, main, parse_args
 
 
 def test_random_evaluation_is_repeatable_and_legal():

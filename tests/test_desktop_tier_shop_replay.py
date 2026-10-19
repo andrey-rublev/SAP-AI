@@ -3,8 +3,8 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
-from desktop_session import DesktopSession
-from desktop_state import Action, Board, DesktopPolicy, Phase
+from sap_ai.desktop.session import DesktopSession
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, Phase
 
 
 def recording(name="desktop_tier_shop_progress.json"):

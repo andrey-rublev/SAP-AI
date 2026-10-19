@@ -1,5 +1,5 @@
 """Tests for the benchmark harness (small, fast; DQN excluded)."""
-from benchmark import main, run
+from sap_ai.sim.benchmark import main, run
 
 
 def test_run_returns_three_agent_rows():
@@ -22,7 +22,7 @@ def test_main_returns_rows():
 
 
 def test_report_repeats_and_uses_same_episode_seeds():
-    from benchmark import run_report
+    from sap_ai.sim.benchmark import run_report
 
     a = run_report(episodes=15, eval_episodes=4, seed=7, eval_seed=90)
     b = run_report(episodes=15, eval_episodes=4, seed=7, eval_seed=90)
@@ -44,8 +44,8 @@ def test_main_exports_json(tmp_path):
 
 
 def test_report_uses_requested_tabular_step_budget(monkeypatch):
-    from benchmark import run_report
-    from agent import QLearningAgent
+    from sap_ai.sim.benchmark import run_report
+    from sap_ai.sim.agent import QLearningAgent
 
     captured = []
     def train(self, env, **kwargs):

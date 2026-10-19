@@ -26,7 +26,7 @@ current screen geometry, recognition or gameplay behavior.
 
 ```powershell
 python -m pip install -e ".[live,dev]"
-python desktop.py capture --output .local/desktop/shop.png
+python -m sap_ai.desktop.cli capture --output .local/desktop/shop.png
 ```
 
 The capture command requires the Super Auto Pets window to be in the foreground.
@@ -125,7 +125,7 @@ accuracy, effects or successful purchases.
 Extract template crops from a screenshot using observed coordinates:
 
 ```powershell
-python desktop.py template --image .local/desktop/shop.png --region 100 200 80 60 --output .local/desktop/templates/empty-slot.png
+python -m sap_ai.desktop.cli template --image .local/desktop/shop.png --region 100 200 80 60 --output .local/desktop/templates/empty-slot.png
 ```
 
 Those coordinates are an example, not a shipped calibration. An empty shop
@@ -159,7 +159,7 @@ Eligibility is checked on every reference before grouping same-phase variants;
 a closer reference with a stricter threshold cannot hide eligible evidence.
 
 ```powershell
-python desktop.py inspect --profile .local/desktop/profile.json --image .local/desktop/shop.png --overlay .local/desktop/overlay.png
+python -m sap_ai.desktop.cli inspect --profile .local/desktop/profile.json --image .local/desktop/shop.png --overlay .local/desktop/overlay.png
 ```
 
 This command is entirely offline. Inspect its board readings and proposed
@@ -190,7 +190,7 @@ pending action preserved.
 Portrait templates cover only a few species, so `play` also reads species from
 tooltips. Once a shop observation is stable, the runtime hovers up to three
 occupied pets with unknown species, waits for the tooltip and reads its title
-(two agreeing OCR passes, exact match against `desktop_identify.PET_NAMES`).
+(two agreeing OCR passes, exact match against `sap_ai.desktop.identify.PET_NAMES`).
 It hovers only when the parked frame shows no tooltip candidate. The hover frame
 must show exactly one, with the same clipped edge regions as the parked frame.
 Names are cached per slot and keyed by attack/health/level. Rolls, purchases,
@@ -217,7 +217,7 @@ It is not scored as an unreadable digit; frame studies report the error and fail
 their CLI invocation. Blank or invalid returned text can still become unknown.
 Use the project's Python environment so its OCR dependencies are available.
 
-`play.cmd` and `desktop.py run` wait for up to 30 consecutive incomplete SHOP
+`play.cmd` and `sap_ai.desktop.cli run` wait for up to 30 consecutive incomplete SHOP
 observations before stopping with `shop_observation_timeout`. They require a
 readable positive turn, gold, slot occupancy and occupied-pet attack/health;
 unknown species, levels and optional food do not block this stat baseline.
@@ -272,7 +272,7 @@ PowerShell and run:
 .\play.cmd
 ```
 
-This invokes the project's `.venv` Python with `desktop.py play`, using
+This invokes the project's `.venv` Python with `sap_ai.desktop.cli play`, using
 `.local/desktop/calibration-native.json` by default. It enables execution and
 arena menu transitions, checks all reference images and OCR dependencies before
 desktop access, and requests foreground ownership once per session. A missing environment,
@@ -293,7 +293,7 @@ as a zero-input receipt and never counted as an arena played. A separate bootstr
 log records the check and close attempt; both observations consume the shared
 poll budget and the same runtime/stop controls apply. A restored terminal after
 that restart stops with a diagnostic, without another restart attempt. Use
-`--no-restart-completed` to disable this behavior. Direct `desktop.py play` leaves
+`--no-restart-completed` to disable this behavior. Direct `sap_ai.desktop.cli play` leaves
 it disabled unless explicitly requested.
 
 Before its first recognized phase, `play` allows up to 300 initial unknown
@@ -340,8 +340,8 @@ the next check. No keyboard hook, key log or simulated Escape input is used.
 After setting `calibrated` to true and keeping the game foreground:
 
 ```powershell
-python desktop.py run --profile .local/desktop/profile.json
-python desktop.py run --profile .local/desktop/profile.json --execute --max-actions 3
+python -m sap_ai.desktop.cli run --profile .local/desktop/profile.json
+python -m sap_ai.desktop.cli run --profile .local/desktop/profile.json --execute --max-actions 3
 ```
 
 The first command proposes one stable action without sending input. The second

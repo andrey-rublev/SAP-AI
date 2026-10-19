@@ -4,8 +4,8 @@ import copy
 import numpy as np
 import pytest
 
-from desktop_state import Action, DesktopPolicy, Phase, legal_action
-from desktop_vision import PhaseTemplate, Perceptor, Rect, VisionProfile, _white_text_distance, image_distance, read_number
+from sap_ai.desktop.state import Action, DesktopPolicy, Phase, legal_action
+from sap_ai.desktop.vision import PhaseTemplate, Perceptor, Rect, VisionProfile, _white_text_distance, image_distance, read_number
 
 
 def save_template(path, color, size=(4, 4)):

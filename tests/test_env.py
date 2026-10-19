@@ -4,7 +4,7 @@ import pytest
 import gymnasium as gym
 from gymnasium.utils.env_checker import check_env
 
-from game import SuperAutoPetsEnv
+from sap_ai.sim.game import SuperAutoPetsEnv
 
 
 @pytest.fixture

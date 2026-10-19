@@ -1,8 +1,8 @@
 """Tests for the offline (dry-run) game loop in play.py."""
 import pytest
 
-from heuristic import HeuristicAgent
-from play import load_policy, main, parse_args, run_dry
+from sap_ai.sim.heuristic import HeuristicAgent
+from sap_ai.sim.play import load_policy, main, parse_args, run_dry
 
 
 def test_dry_run_returns_one_info_per_episode():
@@ -45,7 +45,7 @@ def test_dqn_requires_a_checkpoint():
 
 def test_dqn_checkpoint_load_and_legacy_observation_playback(tmp_path):
     pytest.importorskip("torch")
-    from dqn import DQNAgent
+    from sap_ai.sim.dqn import DQNAgent
     path = tmp_path / "legacy-dim.pt"
     DQNAgent(10, 6, hidden=16, device="cpu", seed=0).save(path)
     policy = load_policy(parse_args(["--policy", "dqn", "--checkpoint", str(path)]))
@@ -55,6 +55,6 @@ def test_dqn_checkpoint_load_and_legacy_observation_playback(tmp_path):
 
 
 def test_console_entrypoint_does_not_return_result_as_exit_status(monkeypatch):
-    import play
+    import sap_ai.sim.play as play
     monkeypatch.setattr(play, "main", lambda: [{"outcome": "won"}])
     assert play.cli() is None

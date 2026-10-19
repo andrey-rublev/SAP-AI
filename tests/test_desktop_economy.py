@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
 from tools import eval_desktop_economy as economy
 
 

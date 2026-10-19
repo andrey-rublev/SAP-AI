@@ -16,7 +16,7 @@ def report(observed, *, labels=None, error=None):
                          "labels": labels, "label_source": "independent fixture"}],
             "variants": [{"name": "identity", "brightness": 1}], "python": "3.12",
             "packages": {"numpy": "2.1"}, "profile": {"sha256": "c" * 64},
-            "code_sha256": {"desktop_vision.py": "d" * 64},
+            "code_sha256": {"sap_ai/desktop/vision.py": "d" * 64},
             "counts": counts, "observation_errors": int(error is not None),
             "cases": [{"image": "frame.png", "variant": "identity", "observed": observed,
                        "counts": counts, "error": error}]}
@@ -27,7 +27,7 @@ def test_equal_aggregate_totals_do_not_hide_lost_correct_reading():
     candidate = report({"phase": "shop", "gold": None, "turn": 3})
     assert baseline["counts"] == candidate["counts"]
     candidate["profile"]["sha256"] = "e" * 64
-    candidate["code_sha256"]["desktop_vision.py"] = "f" * 64
+    candidate["code_sha256"]["sap_ai/desktop/vision.py"] = "f" * 64
     result = compare(baseline, candidate)
     assert result["improved"] == result["regressed"] == 1
     assert result["per_field"]["gold"] == {"correct->unknown": 1}

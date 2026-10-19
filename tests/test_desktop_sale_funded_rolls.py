@@ -4,8 +4,8 @@ from itertools import chain, repeat
 
 import pytest
 
-from desktop_session import DesktopSession
-from desktop_state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
+from sap_ai.desktop.session import DesktopSession
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, PetSlot, Phase, legal_action
 
 
 EMPTY = PetSlot(False)

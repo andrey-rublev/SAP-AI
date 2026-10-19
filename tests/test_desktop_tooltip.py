@@ -7,9 +7,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import pytest
 
-import desktop_tooltip as tooltip
-
-
+import sap_ai.desktop.tooltip as tooltip
 def title_crop(text="Fish"):
     image = Image.new("RGB", (120, 30), (25, 25, 25))
     ImageDraw.Draw(image).text((6, 6), text, fill=(245, 170, 35), font=ImageFont.load_default())

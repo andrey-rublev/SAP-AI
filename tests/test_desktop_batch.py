@@ -8,10 +8,10 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-import desktop
-from desktop_runtime import DesktopUnavailable
-from desktop_session import SessionResult
-from desktop_state import Action, Board, PetSlot, Phase
+import sap_ai.desktop.cli as desktop
+from sap_ai.desktop.runtime import DesktopUnavailable
+from sap_ai.desktop.session import SessionResult
+from sap_ai.desktop.state import Action, Board, PetSlot, Phase
 
 
 def arguments(tmp_path, *flags):

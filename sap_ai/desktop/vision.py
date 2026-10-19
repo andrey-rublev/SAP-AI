@@ -15,7 +15,7 @@ from typing import Callable, Iterator
 
 import numpy as np
 
-from desktop_state import Board, FoodSlot, PetSlot, Phase
+from sap_ai.desktop.state import Board, FoodSlot, PetSlot, Phase
 
 
 def decode_profile_json(payload):
