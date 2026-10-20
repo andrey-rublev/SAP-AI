@@ -612,13 +612,15 @@ def run_autopilot(args, profile, perceptor, open_window, should_stop):
         return None if should_stop() else open_window()
 
     def wait_for_focus(window):
-        # Never take the window from someone using the computer.
+        # Never take the window from someone using the computer. Before the bot
+        # has played at all, the person just launched it, so take it right away.
         while not should_stop():
             if not window.exists():
                 return open_window()
             if window.is_foreground():
                 return window
-            if user_idle_seconds() >= args.idle_seconds and window.bring_to_front():
+            just_launched = memory["pilot"].summary["actions"] == 0
+            if (just_launched or user_idle_seconds() >= args.idle_seconds) and window.bring_to_front():
                 return window
             time.sleep(1)
         return None

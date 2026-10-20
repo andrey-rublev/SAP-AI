@@ -286,14 +286,41 @@ class WindowsGameWindow:
     def is_foreground(self):
         return self.exists() and self.user32.GetForegroundWindow() == self.handle
 
-    def bring_to_front(self):
-        """Restore and focus the client; the autopilot calls this only while the user is idle."""
+    def bring_to_front(self, sleep=time.sleep):
+        """Restore and focus the client; the autopilot calls this only while the user is idle.
+
+        Windows ignores SetForegroundWindow from a background process. Attaching
+        to the foreground window's input thread lifts that without sending
+        input; failing that, an Alt tap gives this process the last input.
+        """
         if not self.exists():
             return False
         if self.user32.IsIconic(self.handle):
             self.user32.ShowWindow.argtypes = [wintypes.HWND, wintypes.INT]
             self.user32.ShowWindow(self.handle, 9)  # SW_RESTORE
         self.user32.SetForegroundWindow(self.handle)
+        if self.is_foreground():
+            return True
+        kernel32 = ctypes.WinDLL("kernel32")
+        self.user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+        self.user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+        self.user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+        foreground_thread = self.user32.GetWindowThreadProcessId(self.user32.GetForegroundWindow(), None)
+        own_thread = kernel32.GetCurrentThreadId()
+        if foreground_thread and foreground_thread != own_thread:
+            if self.user32.AttachThreadInput(own_thread, foreground_thread, True):
+                try:
+                    self.user32.BringWindowToTop(self.handle)
+                    self.user32.SetForegroundWindow(self.handle)
+                finally:
+                    self.user32.AttachThreadInput(own_thread, foreground_thread, False)
+        sleep(.2)
+        if self.is_foreground():
+            return True
+        self.user32.keybd_event(0x12, 0, 0, 0)  # VK_MENU down
+        self.user32.keybd_event(0x12, 0, 2, 0)  # VK_MENU up (KEYEVENTF_KEYUP)
+        self.user32.SetForegroundWindow(self.handle)
+        sleep(.2)
         return self.is_foreground()
 
     def terminate(self, timeout=15., clock=time.monotonic, sleep=time.sleep):
