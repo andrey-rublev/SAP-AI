@@ -53,6 +53,12 @@ PET_NAMES = (
 def load_tooltip_layout(path, image_size) -> TooltipLayout:
     """Load a private tooltip calibration written for this exact client size."""
     data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if (isinstance(data, dict) and isinstance(data.get("image_size"), list) and isinstance(data.get("layout"), dict)
+            and data["image_size"] != list(image_size)):
+        from sap_ai.desktop.scaling import scale_factor, scale_tooltip_layout
+        # Same aspect ratio at another size: scale with the profile.
+        data = scale_tooltip_layout(data, scale_factor(data["image_size"], image_size))
+        data["image_size"] = list(image_size)
     if (not isinstance(data, dict) or set(data) != {"version", "calibrated", "image_size", "layout"}
             or data["version"] != 1 or data["calibrated"] is not True
             or data["image_size"] != list(image_size) or not isinstance(data["layout"], dict)):

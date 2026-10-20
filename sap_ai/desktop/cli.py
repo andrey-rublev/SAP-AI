@@ -527,6 +527,43 @@ def run_arena_batch(args, profile, perceptor, open_window, should_stop):
     return summary
 
 
+def prepare_display(args, profile):
+    """Match the game's client size to the profile, scaling the profile if needed.
+
+    A running client at the calibrated aspect ratio keeps its size. Otherwise
+    (or when the game is closed) the client size is chosen for this screen; a
+    window mode is written to the game's preferences while it is closed.
+    """
+    from sap_ai.desktop import display
+    from sap_ai.desktop.runtime import GameWindowNotFound
+    from sap_ai.desktop.scaling import scale_factor, scale_profile
+    native = tuple(profile.image_size)
+    cache = Path(args.profile).parent / "scaled-profiles"
+    try:
+        window = WindowsGameWindow(args.window)
+    except GameWindowNotFound:
+        window = None
+    size = window.client_size() if window is not None else None
+    if size is not None:
+        if size == native:
+            return profile
+        try:
+            scale_factor(native, size)
+            return scale_profile(args.profile, size, cache)
+        except ValueError:
+            if args.no_launch:
+                raise RuntimeError(f"the game window is {size[0]}x{size[1]}, which the "
+                                   f"{native[0]}x{native[1]} calibration cannot read; restart it windowed "
+                                   "or omit --no-launch so the bot can")
+            print(f"Game is {size[0]}x{size[1]}; restarting it in a window the calibration can read.")
+            window.shutdown()
+    target, windowed = display.choose_client_size(native, display.screen_size(), display.work_area())
+    if windowed and display.apply_windowed(target, Path(args.profile).parent / "display-backup.json"):
+        print(f"Set Super Auto Pets to a {target[0]}x{target[1]} window "
+              f"(previous display settings saved to {Path(args.profile).parent / 'display-backup.json'}).")
+    return profile if target == native else scale_profile(args.profile, target, cache)
+
+
 def run_autopilot(args, profile, perceptor, open_window, should_stop):
     """Play until stopped, recovering from stalls; see sap_ai.desktop.autopilot."""
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -552,6 +589,10 @@ def run_autopilot(args, profile, perceptor, open_window, should_stop):
             return None
         if not closed and window.exists():
             window.terminate()  # hung or unfocused client: end it, then relaunch
+        from sap_ai.desktop import display
+        if tuple(profile.image_size) != display.screen_size():
+            # The game saves its window mode on exit (e.g. maximized); reapply ours.
+            display.apply_windowed(profile.image_size, Path(args.profile).parent / "display-backup.json")
         return None if should_stop() else open_window()
 
     def wait_for_focus(window):
@@ -603,6 +644,8 @@ def main(argv=None):
     if args.command != "inspect":
         # Validate before constructing a desktop dependency or taking any screenshot.
         profile.validate(require_calibrated=True)
+    if args.command == "play" and args.continuous and not args.check:
+        profile = prepare_display(args, profile)
     perceptor = Perceptor(profile, ocr=CachedOCR(tesseract_ocr))
     if args.command == "play" and args.check:
         validate_profile_assets(perceptor)

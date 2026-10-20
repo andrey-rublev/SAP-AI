@@ -202,6 +202,13 @@ class WindowsGameWindow:
         if not self.user32.GetClientRect(self.handle, ctypes.byref(rect)):
             raise DesktopUnavailable("cannot read game client bounds")
         expected_size = tuple(expected_size)
+        if (rect.right, rect.bottom) != expected_size and self._maximized():
+            # A maximized window loses the calibrated size; restoring brings it back.
+            self.user32.ShowWindow.argtypes = [wintypes.HWND, wintypes.INT]
+            self.user32.ShowWindow(self.handle, 9)  # SW_RESTORE
+            time.sleep(.5)
+            if not self.user32.GetClientRect(self.handle, ctypes.byref(rect)):
+                raise DesktopUnavailable("cannot read game client bounds")
         if (rect.right, rect.bottom) != expected_size:
             raise DesktopUnavailable("game size differs from the calibrated profile")
         if self.user32.GetForegroundWindow() != self.handle:
@@ -250,6 +257,30 @@ class WindowsGameWindow:
 
     def exists(self):
         return bool(self.user32.IsWindow(self.handle))
+
+    def _maximized(self):
+        is_zoomed = getattr(self.user32, "IsZoomed", None)
+        if is_zoomed is None:
+            return False
+        is_zoomed.argtypes = [wintypes.HWND]
+        result = is_zoomed(self.handle)
+        return type(result) is int and result != 0  # test doubles are never maximized
+
+    def client_size(self):
+        """Client size without requiring focus; None when unavailable."""
+        rect = wintypes.RECT()
+        if not self.exists() or not self.user32.GetClientRect(self.handle, ctypes.byref(rect)):
+            return None
+        return rect.right, rect.bottom
+
+    def shutdown(self, timeout=30., clock=time.monotonic, sleep=time.sleep):
+        """Ask the client to quit (it saves its settings), ending it if it hangs."""
+        if self.exists():
+            self.user32.PostMessageW(self.handle, 0x0010, 0, 0)  # WM_CLOSE
+        deadline = clock() + timeout
+        while self.exists() and clock() < deadline:
+            sleep(.2)
+        return not self.exists() or self.terminate()
 
     def is_foreground(self):
         return self.exists() and self.user32.GetForegroundWindow() == self.handle

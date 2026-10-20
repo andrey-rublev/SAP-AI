@@ -149,8 +149,10 @@ def test_tooltip_layout_file_must_match_profile_size(tmp_path):
                        "panel_height_range": [40, 80], "title_offset_rect": [5, 5, 40, 10]}}
     path.write_text(json.dumps(data), encoding="utf-8")
     assert load_tooltip_layout(path, (200, 200)).title_offset_rect == (5, 5, 40, 10)
-    with pytest.raises(ValueError, match="image_size"):
+    with pytest.raises(ValueError, match="aspect"):
         load_tooltip_layout(path, (300, 200))
+    half = load_tooltip_layout(path, (100, 100))  # same aspect: scales with the profile
+    assert half.search_rect == (0, 0, 100, 100) and half.title_offset_rect == (2, 2, 20, 5)
     data["calibrated"] = False
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError):
