@@ -3,6 +3,25 @@
 Milestones for the desktop bot and the offline lab. Detailed run logs, captures
 and calibration stay private in `.local/` (Git-ignored).
 
+## 2026-10-20 — runs on its own
+
+- Autopilot (`play.cmd` default): keeps playing arenas; a stalled session is
+  followed by a fresh one, then a game restart; Game Over starts the next arena.
+  Stops after 3 restarts in a row that change nothing, or 5 sessions without a
+  gameplay action, instead of looping. Pauses when you use the computer.
+- Any 16:9-capable screen: on a 1920x1200 laptop the game runs in a 1904x1071
+  window and the 2560x1440 calibration is scaled (regions, points, references,
+  tooltip layout), with a measured allowance for resampled phase references.
+- Phase signs match on unseen background themes (consensus masks).
+- Battle intros (VS screen, fades) no longer time out End Turn.
+- HUD fallbacks: italic "1"s read glyph by glyph (gold 11 had deadlocked a run);
+  trophies read from the whole "N/10" label.
+- Pet levels tracked from the bot's own acknowledged buys/merges/sales, so it
+  sells and merges at scaled sizes where level badges are unreadable.
+- Upgrade threshold 3 (+0.35 mean trophies offline vs. 4 across three seed sets).
+- Live: a fresh arena played start to Game Over in one session (72/72 actions
+  acknowledged); hover identification named most pets.
+
 ## 2026-10-19 — playing to win, not just playing
 
 - Hover-based species identification: unknown pets are hovered once and their
