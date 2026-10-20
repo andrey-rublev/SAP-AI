@@ -117,3 +117,18 @@ def test_continuous_cli_defaults_to_unlimited_arenas_and_time():
     assert (capped.arenas, capped.max_seconds) == (3, 60)
     with pytest.raises(SystemExit):
         desktop.parse_args(["play", "--continuous", "--no-launch"])
+
+
+def test_arena_finished_by_a_recovery_session_counts_with_its_last_trophies(tmp_path):
+    stalled = ended("unknown_timeout", actions=11, acks=10)
+    run = Harness(tmp_path, [(stalled, 3), ended("result", actions=0, phase=Phase.RESULT)],
+                  limits=AutopilotLimits(arenas=1))
+    summary = run.pilot.run()
+    assert summary["completed_arenas"] == 1 and summary["trophies"] == [3]
+
+
+def test_stale_game_over_at_startup_is_not_an_arena(tmp_path):
+    run = Harness(tmp_path, [ended("result", actions=0, phase=Phase.RESULT), game_over(2)],
+                  limits=AutopilotLimits(arenas=1))
+    summary = run.pilot.run()
+    assert summary["completed_arenas"] == 1 and summary["trophies"] == [2] and run.restarts == 1

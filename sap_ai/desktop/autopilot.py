@@ -74,6 +74,8 @@ class Autopilot:
                         "client_restarts": 0, "focus_waits": 0, "failures_in_a_row": 0,
                         "last_reason": None, "error": None, "directory": str(self.directory.resolve())}
         self._started = clock()
+        # An arena can span several sessions (recoveries); count it as a whole.
+        self._arena_acks, self._arena_trophies = 0, None
 
     # -- bookkeeping ------------------------------------------------------------
     def _event(self, kind, **fields):
@@ -88,14 +90,16 @@ class Autopilot:
         temporary.write_text(json.dumps(self.summary, indent=2) + "\n", encoding="utf-8")
         temporary.replace(path)
 
-    def _arena_finished(self, info):
+    def _arena_finished(self):
         self.summary["completed_arenas"] += 1
-        if info.get("trophies") is not None:
-            self.summary["trophies"].append(info["trophies"])
+        if self._arena_trophies is not None:
+            self.summary["trophies"].append(self._arena_trophies)
             trophies = self.summary["trophies"]
             self.summary["mean_trophies"] = round(sum(trophies) / len(trophies), 2)
         self.report(f"arena {self.summary['completed_arenas']} finished with "
-                    f"{info.get('trophies')} trophies (mean {self.summary['mean_trophies']})")
+                    f"{self._arena_trophies} trophies (mean {self.summary['mean_trophies']})")
+        self._event("arena", number=self.summary["completed_arenas"], trophies=self._arena_trophies)
+        self._arena_acks, self._arena_trophies = 0, None
 
     # -- main loop ----------------------------------------------------------------
     def run(self) -> dict:
@@ -139,6 +143,11 @@ class Autopilot:
             if result is not None:
                 self.summary["actions"] += result.actions
                 self.summary["acknowledgments"] += result.acknowledgments
+                self._arena_acks += result.acknowledgments
+            if info.get("trophies") is not None:
+                self._arena_trophies = info["trophies"]
+            if outcome == "terminal" and self._arena_acks > 0:
+                outcome = "completed"  # Game Over reached by a recovery session
             reason = error or (result.reason if result is not None else "stopped")
             self.summary["last_reason"] = reason
             self._event("session", number=self.summary["sessions"], outcome=outcome, reason=reason,
@@ -154,7 +163,7 @@ class Autopilot:
                 return
             if outcome == "completed":
                 self.summary["failures_in_a_row"] = 0
-                self._arena_finished(info)
+                self._arena_finished()
                 restart_next = True  # Game Over: a fresh client opens a new arena
             elif outcome == "focus":
                 self.summary["focus_waits"] += 1

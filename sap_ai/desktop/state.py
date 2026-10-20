@@ -307,7 +307,7 @@ class DesktopPolicy:
     level-one sale could still fund a replacement after paying for the roll.
     """
 
-    def __init__(self, *, minimum_upgrade_gain: int = 4, sale_funded_rolls: bool = False,
+    def __init__(self, *, minimum_upgrade_gain: int = 3, sale_funded_rolls: bool = False,
                  merge_first_team_size: int | None = 3, final_purchase_gain: int | None = 1) -> None:
         _integer(minimum_upgrade_gain, "minimum_upgrade_gain", minimum=1)
         if minimum_upgrade_gain is None:
@@ -324,6 +324,7 @@ class DesktopPolicy:
     @classmethod
     def recorded_baseline(cls, **options) -> DesktopPolicy:
         """The pre-October-19 policy that produced the recorded native sessions."""
+        options.setdefault("minimum_upgrade_gain", 4)
         return cls(merge_first_team_size=None, final_purchase_gain=None, **options)
 
     def observation_complete(self, board: Board) -> bool:
