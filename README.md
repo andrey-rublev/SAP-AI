@@ -6,13 +6,18 @@ game hooks, just screen capture, OCR and the mouse.
 
 ```powershell
 cd path\to\SAP-AI
-.\play.cmd                                  # play one arena (opens the game via Steam)
-.\play.cmd --arenas 6 --max-seconds 3600    # a batch; summary reports trophies per arena
-.\play.cmd --check                          # verify calibration and OCR without touching the game
+.\play.cmd              # autopilot: opens the game via Steam and keeps playing arenas
+.\play.cmd --arenas 3   # stop after three completed arenas
+.\play.cmd --check      # verify calibration and OCR without touching the game
 ```
 
+It runs unattended. Stalls are recovered by observing again or restarting the
+game, and Game Over starts the next arena. If you use the computer, it pauses
+and resumes once you've been idle for a minute. On a display that isn't
+2560x1440 it runs the game in a 16:9 window and scales its calibration.
 Stop it any time: hold **Escape**, slam the pointer into a screen corner, or
-create `.local/desktop/STOP`. Setup and calibration: [docs/desktop.md](docs/desktop.md).
+create `.local/desktop/STOP`. Progress (trophies per arena) is written to
+`.local/desktop/autopilot/<run>/summary.json`. Details: [docs/desktop.md](docs/desktop.md).
 
 ## How it plays
 

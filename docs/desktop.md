@@ -263,6 +263,37 @@ and action indices still map to the correct points. The observed turn selects
 that prefix; an unreadable turn blocks shop actions when any slot is gated.
 Team slots are always present. Validate the schedule against the actual client.
 
+## Autopilot (`play.cmd`)
+
+`play.cmd` runs `play --continuous`: it keeps playing arenas until you stop it
+(hold Escape, pointer to a screen corner, or create `.local/desktop/STOP`).
+
+- **Recovery.** A session that stalls (unrecognized screen, unacknowledged
+  click, readiness timeout) is followed by a fresh session from a new
+  observation. If that also makes no progress, or the screen itself was
+  unrecognized, the game client is restarted; it reopens at the main menu and
+  the session navigates back into the running arena. Five sessions in a row
+  without a single acknowledged action stop the autopilot (`--max-failures`).
+- **Focus.** If another window takes the foreground, the autopilot waits. It
+  takes the game back only after the desktop has been idle for 60 seconds
+  (`--idle-seconds`), so it never fights someone using the computer.
+- **Hung client.** A client that ignores a normal close is ended and relaunched.
+- **Screen size.** The calibration is 2560x1440. On a screen of exactly that
+  size the game runs fullscreen. Otherwise the game is switched to the largest
+  16:9 window that fits (1904x1071 on a 1920x1200 laptop) and the calibration is
+  scaled to match: regions, points and reference images
+  (`sap_ai/desktop/scaling.py`). The game's previous display settings are saved
+  to `.local/desktop/display-backup.json`; `sap_ai.desktop.display.restore`
+  puts them back. A maximized window is restored to the calibrated size.
+- **Backgrounds.** Phases with several references of the same element on
+  different backgrounds also match on the pixels those references agree on, so
+  a shop sign is recognized on a background theme that was never calibrated.
+- **Progress.** `.local/desktop/autopilot/<run>/summary.json` is rewritten after
+  every session: completed arenas, trophies per arena and their mean,
+  recoveries, client restarts. Each session keeps its log and last frame.
+
+`--arenas N` caps completed arenas; `--max-seconds` adds a wall-clock limit.
+
 ## Preview and controlled execution
 
 For the native profile on this Windows checkout, change to the repository in
