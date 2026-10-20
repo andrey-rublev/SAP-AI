@@ -75,11 +75,11 @@ def test_phase_sign_matches_on_an_unseen_background(tmp_path):
     templates = tmp_path / "t"
     templates.mkdir()
     sign = np.zeros((20, 40, 3), dtype=np.uint8)
-    sign[4:16, 6:34] = (230, 160, 60)
+    sign[2:18, 2:38] = (230, 160, 60)
     sign[8:12, 10:30] = (90, 40, 20)
     def on(background):
         image = np.full((20, 40, 3), background, dtype=np.uint8)
-        image[4:16, 6:34] = sign[4:16, 6:34]
+        image[2:18, 2:38] = sign[2:18, 2:38]
         return image
     Image.fromarray(on((40, 160, 40))).save(templates / "day.png")
     Image.fromarray(on((240, 230, 200))).save(templates / "cream.png")
