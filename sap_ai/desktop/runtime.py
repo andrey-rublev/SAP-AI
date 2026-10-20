@@ -438,6 +438,53 @@ def user_idle_seconds():
     return ((kernel32.GetTickCount() - info.dwTime) & 0xFFFFFFFF) / 1000.0
 
 
+def read_hud_glyphs(crop, ocr_glyph=None):
+    """Read a black-on-white HUD number glyph by glyph, or None.
+
+    Tesseract cannot read this font's italic "1" (a plain slanted bar), so
+    "11" gold reads as nothing. A narrow, solid glyph is a "1"; any other glyph
+    is read on its own. Every glyph must read, or the whole number is unknown.
+    """
+    import re
+    from sap_ai.desktop.tooltip_layout import _white_components
+    dark = np.asarray(crop).max(axis=2) < 90
+    components = _white_components(dark)
+    if not components:
+        return None
+    height = dark.shape[0]
+    glyphs = sorted(c for c in components if c[3] - c[1] >= height * .35 and c[4] >= 15)
+    if not 1 <= len(glyphs) <= 2:
+        return None
+    digits = []
+    for x0, y0, x1, y1, area in glyphs:
+        width, tall = x1 - x0, y1 - y0
+        if width / tall < .55 and area / (width * tall) > .55:
+            digits.append("1")
+            continue
+        piece = np.pad(np.where(dark[y0:y1, x0:x1], 0, 255).astype(np.uint8), 10, constant_values=255)
+        text = (ocr_glyph or _tesseract_glyph)(np.repeat(np.repeat(piece, 3, axis=0), 3, axis=1))
+        if not re.fullmatch(r"\d", text or ""):
+            return None
+        digits.append(text)
+    return int("".join(digits))
+
+
+def _tesseract_glyph(image):
+    try:
+        import pytesseract
+    except ImportError:
+        return None
+    executable = _tesseract_executable()
+    if executable is None:
+        return None
+    pytesseract.pytesseract.tesseract_cmd = executable
+    try:
+        return pytesseract.image_to_string(image, config="--psm 10 -c tessedit_char_whitelist=0123456789",
+                                           timeout=OCR_TIMEOUT_SECONDS).strip()
+    except RuntimeError:
+        return None
+
+
 def read_trophy_label(frame, region):
     """Read the HUD trophy label "N/10" as N, or None.
 
@@ -566,7 +613,7 @@ class DesktopRuntime:
         self.last_frame = None
         self._pointer_dirty = True
         self._last_raw_fingerprint = None
-        self._trophy_cache = OrderedDict()
+        self._hud_cache = OrderedDict()
 
     def phase_actions(self, *, start_arena=False):
         """Enable calibrated transitions; entering a new arena is opt-in."""
@@ -596,7 +643,7 @@ class DesktopRuntime:
             _require_running(self.should_stop)
             self._pointer_dirty = False
         self.last_frame = self.window.capture()
-        board = self._fill_trophies(self.perceptor.observe(self.last_frame), self.last_frame)
+        board = self._fill_hud(self.perceptor.observe(self.last_frame), self.last_frame)
         raw = board.fingerprint()
         stable, self._last_raw_fingerprint = raw == self._last_raw_fingerprint, raw
         if self.identifier is not None:
@@ -607,19 +654,27 @@ class DesktopRuntime:
         self.last_board = board
         return self.last_board
 
-    def _fill_trophies(self, board, frame):
-        """Fall back to the whole "N/10" label when the trophy digit is unread."""
-        region = getattr(self.profile, "hud", {}).get("wins")
-        if board.wins is not None or board.phase != Phase.SHOP or region is None:
+    def _fill_hud(self, board, frame):
+        """Fallback readers for unread shop counters: glyphs for gold, turn and
+        lives; the whole "N/10" label for trophies. Results are cached per image."""
+        if board.phase != Phase.SHOP:
             return board
-        x, y, w, h = region.to_list()
-        key = np.ascontiguousarray(np.asarray(frame)[y:y + h, x:x + int(w * 2.6)]).tobytes()
-        if key not in self._trophy_cache:
-            self._trophy_cache[key] = read_trophy_label(frame, region)
-            if len(self._trophy_cache) > 32:
-                self._trophy_cache.popitem(last=False)
-        value = self._trophy_cache[key]
-        return board if value is None else replace(board, wins=value)
+        hud, values = getattr(self.profile, "hud", {}), {}
+        for name in ("gold", "turn", "lives", "wins"):
+            region = hud.get(name)
+            if getattr(board, name) is not None or region is None:
+                continue
+            x, y, w, h = region.to_list()
+            width = int(w * 2.6) if name == "wins" else w
+            key = (name, np.ascontiguousarray(np.asarray(frame)[y:y + h, x:x + width]).tobytes())
+            if key not in self._hud_cache:
+                self._hud_cache[key] = (read_trophy_label(frame, region) if name == "wins"
+                                        else read_hud_glyphs(region.crop(frame)))
+                if len(self._hud_cache) > 64:
+                    self._hud_cache.popitem(last=False)
+            if self._hud_cache[key] is not None:
+                values[name] = self._hud_cache[key]
+        return replace(board, **values) if values else board
 
     def _identify(self, board):
         size, rest = self.profile.image_size, self.profile.pointer_rest
@@ -647,7 +702,7 @@ class DesktopRuntime:
         if before is None or not legal_action(before, action):
             raise ValueError("action is not legal for the last observed board")
         self.last_frame = self.window.capture()
-        current = self._fill_trophies(self.perceptor.observe(self.last_frame), self.last_frame)
+        current = self._fill_hud(self.perceptor.observe(self.last_frame), self.last_frame)
         if self.identifier is not None:
             current = self.identifier.annotate(current)
         _require_running(self.should_stop)

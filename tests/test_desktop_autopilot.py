@@ -148,3 +148,12 @@ def test_menu_navigation_alone_is_not_progress(tmp_path):
     run.pilot.run_session = session
     summary = run.pilot.run()
     assert summary["status"] == "error" and len(run.calls) == 3
+
+
+def test_restarts_that_change_nothing_stop_instead_of_looping(tmp_path):
+    stalled = ended("unknown_timeout")
+    run = Harness(tmp_path, [stalled] * 20, limits=AutopilotLimits(max_consecutive_failures=99,
+                                                                    max_restarts_without_progress=3))
+    summary = run.pilot.run()
+    assert summary["status"] == "error" and "changed nothing" in summary["error"]
+    assert run.restarts == 3

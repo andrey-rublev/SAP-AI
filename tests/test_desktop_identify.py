@@ -203,6 +203,21 @@ def test_unread_trophies_fall_back_to_the_whole_label(monkeypatch):
     calls = []
     monkeypatch.setattr(runtime_module, "read_trophy_label", lambda frame, region: calls.append(1) or 4)
     driver, game, _ = make_runtime(shop_board, {})
-    driver.profile.hud = {"wins": Rect(5, 5, 10, 10)}
+    driver.profile.hud = {"wins": Rect(5, 5, 10, 10)}  # gold, turn, lives already read
     first, second = driver.observe(), driver.observe()
     assert first.wins == second.wins == 4 and len(calls) == 1  # cached per label image
+
+
+def test_glyph_reader_reads_italic_ones_and_other_digits_separately():
+    from sap_ai.desktop.runtime import read_hud_glyphs
+    crop = np.full((40, 60, 3), 255, dtype=np.uint8)
+    crop[5:35, 10:18] = 0   # a bar: "1"
+    crop[5:35, 30:52] = 0   # a wide block: read by OCR
+    crop[12:28, 36:46] = 255
+    assert read_hud_glyphs(crop, ocr_glyph=lambda image: "0") == 10
+    ones = np.full((40, 60, 3), 255, dtype=np.uint8)
+    ones[5:35, 10:18] = 0
+    ones[5:35, 30:38] = 0
+    assert read_hud_glyphs(ones, ocr_glyph=lambda image: "") == 11
+    assert read_hud_glyphs(crop, ocr_glyph=lambda image: "") is None  # unread glyph: unknown
+    assert read_hud_glyphs(np.full((40, 60, 3), 255, dtype=np.uint8)) is None

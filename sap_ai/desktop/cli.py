@@ -594,6 +594,7 @@ def run_autopilot(args, profile, perceptor, open_window, should_stop):
         session_args.record_dir = (str(Path(args.record_dir) / directory.name / session_dir.name)
                                    if args.record_dir else None)
         session_args.arenas = 0  # the autopilot prints its own summary
+        info.setdefault("gameplay_acks", 0)
         return run_desktop_session(session_args, profile, perceptor, window, should_stop, info, identifier)
 
     def restart_client(window):

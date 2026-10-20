@@ -39,6 +39,7 @@ FOCUS_MARKERS = ("lost focus", "minimized")
 class AutopilotLimits:
     arenas: int = 0                      # 0 plays until stopped
     max_consecutive_failures: int = 5    # failures in a row with zero acknowledged actions
+    max_restarts_without_progress: int = 3  # client restarts that changed nothing
     idle_seconds: float = 60.0           # user idle time before reclaiming focus
     poll_seconds: float = 1.0
 
@@ -76,6 +77,7 @@ class Autopilot:
         self._started = clock()
         # An arena can span several sessions (recoveries); count it as a whole.
         self._arena_acks, self._arena_trophies = 0, None
+        self._restarts_without_progress = 0
 
     # -- bookkeeping ------------------------------------------------------------
     def _event(self, kind, **fields):
@@ -127,6 +129,13 @@ class Autopilot:
                 return
             if restart_next:
                 restart_next = False
+                if self._restarts_without_progress >= self.limits.max_restarts_without_progress:
+                    self.summary.update(status="error", error=(
+                        f"{self._restarts_without_progress} game restarts in a row changed nothing "
+                        f"(last: {self.summary['last_reason']}); stopping instead of restarting again. "
+                        f"See {self.directory}"))
+                    return
+                self._restarts_without_progress += 1
                 self.summary["client_restarts"] += 1
                 self._event("client_restart", number=self.summary["client_restarts"])
                 self._save()
@@ -156,6 +165,8 @@ class Autopilot:
                         error=result.error if result else error, trophies=info.get("trophies"))
             # Menu clicks repeat after every restart; only gameplay counts.
             progressed = result is not None and info.get("gameplay_acks", result.acknowledgments) > 0
+            if progressed or outcome == "completed":
+                self._restarts_without_progress = 0
             if outcome == "stopped":
                 self.summary["status"] = "stopped"
                 return
