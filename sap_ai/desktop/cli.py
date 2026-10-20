@@ -277,7 +277,9 @@ def run_desktop_session(args, profile, perceptor, window, should_stop, session_i
                     data = {**data, "policy": {"name": "stats", "sale_funded_rolls": True}}
                 data = {**data, "species_hover": identifier is not None}
             if data.get("event") == "finished" and identifier is not None:
-                data = {**data, "species_hovers": identifier.hovers, "species_identified": identifier.identified}
+                data = {**data, "species_hovers": identifier.hovers, "species_identified": identifier.identified,
+                        "species_failures": dict(identifier.failures),
+                        "species_unread_titles": dict(identifier.unread_titles.most_common(10))}
             if session_info is not None and data.get("event") == "observed":
                 phase = data["board"]["phase"]
                 if phase != Phase.UNKNOWN.value and session_info["first_recognized_phase"] is None:

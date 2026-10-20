@@ -173,3 +173,9 @@ def test_identify_keeps_names_read_on_a_new_turn():
                                  hover=lambda point: names.update(pointer="TIGER"),
                                  capture=tooltip_frame, park=lambda: None)
     assert result.shop[0].species == "tiger"
+
+
+def test_failed_hovers_record_their_reason_and_raw_title():
+    driver, game, identifier = make_runtime(shop_board, {(15, 25): "WOMBAT"})
+    driver.observe(), driver.observe()
+    assert identifier.failures["title_unread"] == 2 and identifier.unread_titles["WOMBAT"] == 1

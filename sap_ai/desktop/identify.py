@@ -14,6 +14,7 @@ once; actions that move or replace pets invalidate the affected slots.
 """
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, replace
 import json
 from pathlib import Path
@@ -109,6 +110,9 @@ class SpeciesIdentifier:
         self._slots: dict[tuple[str, int], _Entry] = {}
         self._turn = None
         self.hovers = self.identified = 0
+        # Why hovers failed, and raw OCR of titles outside the vocabulary.
+        self.failures: Counter = Counter()
+        self.unread_titles: Counter = Counter()
 
     # -- cache ---------------------------------------------------------------
     def _sync_turn(self, board: Board) -> None:
@@ -191,10 +195,27 @@ class SpeciesIdentifier:
                 self.sleep(self.settle_seconds)
                 self.hovers += 1
                 found = inventory_tooltip_panels(np.asarray(capture()), self.layout)
-                name = None
-                if (len(found.candidates) == 1 and _only_static_clipping(found)
-                        and found.boundary_rects == parked.boundary_rects):
-                    name = read_pet_title(found.candidates[0].title_crop, self.vocabulary, ocr=self.ocr)
+                name, reason = None, None
+                if len(found.candidates) != 1:
+                    reason = f"panels_{min(len(found.candidates), 2)}"
+                elif not _only_static_clipping(found):
+                    reason = "unresolved"
+                elif found.boundary_rects != parked.boundary_rects:
+                    reason = "clipping_changed"
+                else:
+                    texts = []
+
+                    def ocr(image):
+                        texts.append(self.ocr(image))
+                        return texts[-1]
+
+                    name = read_pet_title(found.candidates[0].title_crop, self.vocabulary, ocr=ocr)
+                    if name is None:
+                        reason = "title_unread"
+                        if texts and len(self.unread_titles) < 50:
+                            self.unread_titles[str(texts[0]).strip()[:40]] += 1
+                if reason is not None:
+                    self.failures[reason] += 1
                 self.record(row, index, pet, name)
         finally:
             park()
