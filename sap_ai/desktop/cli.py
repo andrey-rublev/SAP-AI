@@ -26,6 +26,8 @@ from sap_ai.sim.evaluation import positive_int
 
 
 DEFAULT_TOOLTIP_LAYOUT = ".local/desktop/tooltip-layout.json"
+# Navigation that happens again after every client restart; not arena progress.
+MENU_ACTIONS = frozenset({"open_play", "open_arena"})
 
 
 def positive_seconds(value):
@@ -287,6 +289,9 @@ def run_desktop_session(args, profile, perceptor, window, should_stop, session_i
                 # Trophies as last read on the HUD: a lost arena's final count.
                 if data["board"].get("wins") is not None:
                     session_info["trophies"] = data["board"]["wins"]
+            if (session_info is not None and data.get("event") == "acknowledged"
+                    and data["action"]["kind"] not in MENU_ACTIONS):
+                session_info["gameplay_acks"] = session_info.get("gameplay_acks", 0) + 1
             if recorder is not None:
                 data = recorder.record(data, runtime.last_frame)
             log.write(json.dumps(data) + "\n")

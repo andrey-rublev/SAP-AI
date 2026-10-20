@@ -132,3 +132,17 @@ def test_stale_game_over_at_startup_is_not_an_arena(tmp_path):
                   limits=AutopilotLimits(arenas=1))
     summary = run.pilot.run()
     assert summary["completed_arenas"] == 1 and summary["trophies"] == [2] and run.restarts == 1
+
+
+def test_menu_navigation_alone_is_not_progress(tmp_path):
+    menus_only = ended("unknown_timeout", actions=2, acks=2)
+    run = Harness(tmp_path, [(menus_only, None)] * 6, limits=AutopilotLimits(max_consecutive_failures=3))
+    original = run.session
+
+    def session(window, number, info):
+        info["gameplay_acks"] = 0
+        return original(window, number, info)
+
+    run.pilot.run_session = session
+    summary = run.pilot.run()
+    assert summary["status"] == "error" and len(run.calls) == 3

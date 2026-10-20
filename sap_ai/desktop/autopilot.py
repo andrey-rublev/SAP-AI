@@ -154,7 +154,8 @@ class Autopilot:
                         actions=result.actions if result else 0,
                         acknowledgments=result.acknowledgments if result else 0,
                         error=result.error if result else error, trophies=info.get("trophies"))
-            progressed = result is not None and result.acknowledgments > 0
+            # Menu clicks repeat after every restart; only gameplay counts.
+            progressed = result is not None and info.get("gameplay_acks", result.acknowledgments) > 0
             if outcome == "stopped":
                 self.summary["status"] = "stopped"
                 return
