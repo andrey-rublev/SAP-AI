@@ -235,6 +235,8 @@ def action_acknowledged(before: Board, after: Board, action: Action,
 
 
 _NEXT = object()  # a session stage asks for the next observation
+# Actions whose effect appears only after unrecognized intros; the time limit still applies.
+TRANSITION_ACTIONS = frozenset({"end_turn", "confirm_end_turn", "confirm_name"})
 
 
 @dataclass
@@ -404,6 +406,10 @@ class DesktopSession:
         if board.phase == Phase.RESULT:
             return "result"
         unknown_limit = self.max_initial_unknown_polls if s.initial_unknown else self.max_unknown_polls
+        if s.pending is not None and s.pending.kind in TRANSITION_ACTIONS:
+            # Until the battle appears the game shows unrecognized intros (fades,
+            # the VS screen); the action's time limit still bounds the wait.
+            unknown_limit = max(unknown_limit, self.max_transition_polls)
         if s.unknown >= unknown_limit:
             return "unknown_timeout"
         return None
@@ -427,7 +433,8 @@ class DesktopSession:
         if s.pending is None:
             return None
         s.incomplete_shop_polls = 0
-        s.pending_polls += 1
+        if not (s.pending.kind in TRANSITION_ACTIONS and s.board.phase == Phase.UNKNOWN):
+            s.pending_polls += 1  # unrecognized battle intros spend only the time limit
         # Battles animate constantly; their phase alone confirms End Turn.
         confirmed = action_acknowledged(s.before, s.board, s.pending,
                                         previous_shop_turn=s.last_shop_turn)
@@ -436,8 +443,7 @@ class DesktopSession:
             self._emit(s, "acknowledged", action=asdict(s.pending), board=s.board.to_dict())
             s.pending = None
             return _NEXT
-        if (s.pending_polls >= self.action_max_polls
-                or self.clock() - s.pending_at >= self.action_timeout):
+        if s.pending_polls >= self.action_max_polls or self.clock() - s.pending_at >= self.action_timeout:
             return "action_timeout"
         return _NEXT
 

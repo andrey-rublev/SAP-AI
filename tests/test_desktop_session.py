@@ -1137,3 +1137,15 @@ def test_terminal_result_stops_pending_arena_start():
     assert clicks == [Action("open_play")]
     assert (result.reason, result.actions, result.acknowledgments) == ("result", 1, 0)
     assert result.pending_action == Action("open_play")
+
+
+def test_battle_intro_frames_do_not_time_out_a_confirmed_end_turn():
+    # The VS intro and fades read as unknown for longer than the normal unknown
+    # limit; the confirmation still waits for the battle within its time limit.
+    confirm, unknown, battle = Board(Phase.END_TURN_CONFIRM), Board(Phase.UNKNOWN), Board(Phase.BATTLE)
+    runner, clicks, _ = session([confirm, confirm] + [unknown] * 40 + [battle, battle],
+                                phase_actions=phase_actions(), max_unknown_polls=25, action_max_polls=10,
+                                max_polls=100)
+    result = runner.run()
+    assert clicks == [Action("confirm_end_turn")]
+    assert result.acknowledgments == 1 and result.reason != "unknown_timeout"
