@@ -119,9 +119,17 @@ def scale_profile(path, target_size, cache_dir) -> VisionProfile:
     # Numeric references are crops of their field's region; resolve via the scaled profile.
     numeric = data.pop("numeric_templates", [])
     partial = VisionProfile.from_dict({**data, "numeric_templates": []}, base_dir=out_dir)
+    values = {}
+    for item in numeric:
+        values.setdefault(item["field"], set()).add(item["value"])
     for item in numeric:
         region, _, _ = partial.numeric_region(item["field"])
         item["template"] = image(item["template"], region.to_list())
+        # Only fields with rival values get the allowance: the margin to the
+        # next-best value still has to hold. A single reference value (levels)
+        # has no rival to protect against misreads, so it stays strict.
+        if len(values[item["field"]]) > 1:
+            item["max_distance"] = round(item.get("max_distance", .06) + RESAMPLE_ALLOWANCE["rgb"] * shrink, 4)
     data["numeric_templates"] = numeric
     scaled_path = out_dir / "profile.json"
     scaled_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")

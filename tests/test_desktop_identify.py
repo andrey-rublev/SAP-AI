@@ -1,5 +1,6 @@
 """Hover-based species identification with synthetic frames and a fake mouse."""
 import json
+from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -179,3 +180,19 @@ def test_failed_hovers_record_their_reason_and_raw_title():
     driver, game, identifier = make_runtime(shop_board, {(15, 25): "WOMBAT"})
     driver.observe(), driver.observe()
     assert identifier.failures["title_unread"] == 2 and identifier.unread_titles["WOMBAT"] == 1
+
+
+def test_levels_follow_acknowledged_buys_merges_and_sales():
+    identifier = SpeciesIdentifier(LAYOUT, ocr=lambda image: "", sleep=lambda seconds: None)
+    unread = Board(Phase.SHOP, gold=10, turn=2, shop=(PetSlot(False),),
+                   team=(PetSlot(True, attack=3, health=4),) + (PetSlot(False),) * 4)
+    assert identifier.annotate(unread).team[0].level is None  # history unknown
+    identifier.acknowledged(Action("buy", 0, 0))
+    assert identifier.annotate(unread).team[0].level == 1
+    identifier.acknowledged(Action("merge", 0, 0))
+    identifier.acknowledged(Action("merge", 0, 0))
+    assert identifier.annotate(unread).team[0].level == 2
+    read = replace(unread, team=(PetSlot(True, attack=3, health=4, level=3),) + (PetSlot(False),) * 4)
+    assert identifier.annotate(read).team[0].level == 3  # a visible level wins
+    identifier.acknowledged(Action("sell", 0))
+    assert identifier.annotate(unread).team[0].level is None

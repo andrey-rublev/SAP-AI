@@ -20,7 +20,7 @@ from sap_ai.desktop.launch import GAME_TITLE, connect_game_window
 from sap_ai.desktop.control import desktop_control_lease
 from sap_ai.desktop.identify import SpeciesIdentifier, load_tooltip_layout
 from sap_ai.desktop.session import DesktopSession, SessionResult
-from sap_ai.desktop.state import DesktopPolicy, Phase
+from sap_ai.desktop.state import Action, DesktopPolicy, Phase
 from sap_ai.desktop.vision import Perceptor, Rect, VisionProfile
 from sap_ai.sim.evaluation import positive_int
 
@@ -263,9 +263,10 @@ def parse_args(argv=None):
     return args
 
 
-def run_desktop_session(args, profile, perceptor, window, should_stop, session_info=None):
+def run_desktop_session(args, profile, perceptor, window, should_stop, session_info=None, identifier=None):
     """Run one arena with the existing receipt and recording contract."""
-    identifier = species_identifier(args, profile)
+    if identifier is None:
+        identifier = species_identifier(args, profile)
     runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute, should_stop=should_stop,
                              identifier=identifier)
     policy = DesktopPolicy(sale_funded_rolls=getattr(args, "sale_funded_rolls", False))
@@ -289,6 +290,8 @@ def run_desktop_session(args, profile, perceptor, window, should_stop, session_i
                 # Trophies as last read on the HUD: a lost arena's final count.
                 if data["board"].get("wins") is not None:
                     session_info["trophies"] = data["board"]["wins"]
+            if identifier is not None and data.get("event") == "acknowledged":
+                identifier.acknowledged(Action.from_dict(data["action"]))
             if (session_info is not None and data.get("event") == "acknowledged"
                     and data["action"]["kind"] not in MENU_ACTIONS):
                 session_info["gameplay_acks"] = session_info.get("gameplay_acks", 0) + 1
@@ -575,8 +578,14 @@ def run_autopilot(args, profile, perceptor, open_window, should_stop):
     """Play until stopped, recovering from stalls; see sap_ai.desktop.autopilot."""
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     directory = Path(args.log).parent / "autopilot" / f"{stamp}-{uuid4().hex[:8]}"
+    # One identifier per arena: species and tracked levels survive recoveries.
+    memory = {"identifier": species_identifier(args, profile), "arenas": 0, "pilot": None}
 
     def run_session(window, number, info):
+        identifier = memory["identifier"]
+        if identifier is not None and memory["pilot"].summary["completed_arenas"] != memory["arenas"]:
+            memory["arenas"] = memory["pilot"].summary["completed_arenas"]
+            identifier.reset_arena()
         session_dir = directory / f"session-{number:04d}"
         session_dir.mkdir(parents=True, exist_ok=True)
         session_args = argparse.Namespace(**vars(args))
@@ -585,7 +594,7 @@ def run_autopilot(args, profile, perceptor, open_window, should_stop):
         session_args.record_dir = (str(Path(args.record_dir) / directory.name / session_dir.name)
                                    if args.record_dir else None)
         session_args.arenas = 0  # the autopilot prints its own summary
-        return run_desktop_session(session_args, profile, perceptor, window, should_stop, info)
+        return run_desktop_session(session_args, profile, perceptor, window, should_stop, info, identifier)
 
     def restart_client(window):
         try:
@@ -617,9 +626,10 @@ def run_autopilot(args, profile, perceptor, open_window, should_stop):
     limits = AutopilotLimits(arenas=args.arenas, max_consecutive_failures=args.max_failures,
                              idle_seconds=args.idle_seconds)
     print(f"Autopilot running; progress in {directory / 'summary.json'}. Hold Escape to stop.")
-    summary = Autopilot(run_session=run_session, open_window=open_window, restart_client=restart_client,
-                        wait_for_focus=wait_for_focus, should_stop=should_stop, directory=directory,
-                        limits=limits).run()
+    pilot = memory["pilot"] = Autopilot(run_session=run_session, open_window=open_window,
+                                        restart_client=restart_client, wait_for_focus=wait_for_focus,
+                                        should_stop=should_stop, directory=directory, limits=limits)
+    summary = pilot.run()
     print(json.dumps(summary, indent=2))
     if summary["status"] == "error":
         raise RuntimeError(f"autopilot stopped: {summary['error']}")

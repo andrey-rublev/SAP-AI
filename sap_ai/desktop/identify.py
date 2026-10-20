@@ -113,6 +113,8 @@ class SpeciesIdentifier:
         # Why hovers failed, and raw OCR of titles outside the vocabulary.
         self.failures: Counter = Counter()
         self.unread_titles: Counter = Counter()
+        # Merge experience of team pets the bot bought itself, by team slot.
+        self._experience: dict[int, int] = {}
 
     # -- cache ---------------------------------------------------------------
     def _sync_turn(self, board: Board) -> None:
@@ -127,11 +129,28 @@ class SpeciesIdentifier:
             return None
         return entry
 
+    def acknowledged(self, action: Action) -> None:
+        """Track levels from acknowledged actions: shop pets arrive at level one,
+        merges add one experience, sales clear the slot."""
+        if action.kind == "buy" and action.target is not None:
+            self._experience[action.target] = 0
+        elif action.kind == "merge" and action.target in self._experience:
+            self._experience[action.target] += 1
+        elif action.kind == "sell" and action.slot is not None:
+            self._experience.pop(action.slot, None)
+
+    def reset_arena(self) -> None:
+        """A new arena starts with an empty team and a new shop."""
+        self._slots, self._experience, self._turn = {}, {}, None
+
     def annotate(self, board: Board) -> Board:
-        """Fill unread species from the cache; never overrides a template reading."""
+        """Fill unread species and tracked levels; never overrides a reading."""
         if not isinstance(board, Board):
             return board
         self._sync_turn(board)
+        for index, pet in enumerate(board.team):
+            if pet.occupied is False:
+                self._experience.pop(index, None)
 
         def fill(row):
             pets = []
@@ -139,6 +158,9 @@ class SpeciesIdentifier:
                 entry = self._entry(row, index, pet)
                 if pet.species is None and entry is not None and entry.species is not None:
                     pet = replace(pet, species=entry.species)
+                if row == "team" and pet.occupied is True and pet.level is None and index in self._experience:
+                    experience = self._experience[index]
+                    pet = replace(pet, level=1 + (experience >= 2) + (experience >= 5))
                 pets.append(pet)
             return tuple(pets)
 
