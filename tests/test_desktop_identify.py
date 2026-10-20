@@ -196,3 +196,13 @@ def test_levels_follow_acknowledged_buys_merges_and_sales():
     assert identifier.annotate(read).team[0].level == 3  # a visible level wins
     identifier.acknowledged(Action("sell", 0))
     assert identifier.annotate(unread).team[0].level is None
+
+
+def test_unread_trophies_fall_back_to_the_whole_label(monkeypatch):
+    import sap_ai.desktop.runtime as runtime_module
+    calls = []
+    monkeypatch.setattr(runtime_module, "read_trophy_label", lambda frame, region: calls.append(1) or 4)
+    driver, game, _ = make_runtime(shop_board, {})
+    driver.profile.hud = {"wins": Rect(5, 5, 10, 10)}
+    first, second = driver.observe(), driver.observe()
+    assert first.wins == second.wins == 4 and len(calls) == 1  # cached per label image

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ctypes
+from dataclasses import replace
 from collections import OrderedDict
 from ctypes import wintypes
 import importlib.util
@@ -410,6 +411,38 @@ def user_idle_seconds():
     return ((kernel32.GetTickCount() - info.dwTime) & 0xFFFFFFFF) / 1000.0
 
 
+def read_trophy_label(frame, region):
+    """Read the HUD trophy label "N/10" as N, or None.
+
+    The calibrated trophy region holds only the first digit; a lone, thin "1"
+    is often unreadable on its own. The whole label, including "/10", is.
+    """
+    import re
+    x, y, w, h = region.to_list()
+    wide = np.asarray(frame)[y:y + h, max(0, x - 4):x + int(w * 2.6)]
+    dark = wide.max(axis=2) < 90  # black glyphs on the white label
+    if wide.size == 0 or int(dark.sum()) < 10:
+        return None
+    try:
+        import pytesseract
+        from PIL import Image
+    except ImportError:
+        return None
+    executable = _tesseract_executable()
+    if executable is None:
+        return None
+    pytesseract.pytesseract.tesseract_cmd = executable
+    binary = np.pad(np.where(dark, 0, 255).astype(np.uint8), 8, constant_values=255)
+    image = Image.fromarray(binary).resize((binary.shape[1] * 3, binary.shape[0] * 3))
+    try:
+        text = pytesseract.image_to_string(image, config="--psm 7 -c tessedit_char_whitelist=0123456789/",
+                                           timeout=OCR_TIMEOUT_SECONDS).strip()
+    except RuntimeError:
+        return None
+    match = re.fullmatch(r"(\d{1,2})/10", text)
+    return int(match.group(1)) if match and int(match.group(1)) <= 10 else None
+
+
 def prepare_numeric_crop(image):
     """Isolate complete numeric glyphs from contrasting HUD/stat backgrounds.
 
@@ -506,6 +539,7 @@ class DesktopRuntime:
         self.last_frame = None
         self._pointer_dirty = True
         self._last_raw_fingerprint = None
+        self._trophy_cache = OrderedDict()
 
     def phase_actions(self, *, start_arena=False):
         """Enable calibrated transitions; entering a new arena is opt-in."""
@@ -535,7 +569,7 @@ class DesktopRuntime:
             _require_running(self.should_stop)
             self._pointer_dirty = False
         self.last_frame = self.window.capture()
-        board = self.perceptor.observe(self.last_frame)
+        board = self._fill_trophies(self.perceptor.observe(self.last_frame), self.last_frame)
         raw = board.fingerprint()
         stable, self._last_raw_fingerprint = raw == self._last_raw_fingerprint, raw
         if self.identifier is not None:
@@ -545,6 +579,20 @@ class DesktopRuntime:
                 board = self._identify(board)
         self.last_board = board
         return self.last_board
+
+    def _fill_trophies(self, board, frame):
+        """Fall back to the whole "N/10" label when the trophy digit is unread."""
+        region = getattr(self.profile, "hud", {}).get("wins")
+        if board.wins is not None or board.phase != Phase.SHOP or region is None:
+            return board
+        x, y, w, h = region.to_list()
+        key = np.ascontiguousarray(np.asarray(frame)[y:y + h, x:x + int(w * 2.6)]).tobytes()
+        if key not in self._trophy_cache:
+            self._trophy_cache[key] = read_trophy_label(frame, region)
+            if len(self._trophy_cache) > 32:
+                self._trophy_cache.popitem(last=False)
+        value = self._trophy_cache[key]
+        return board if value is None else replace(board, wins=value)
 
     def _identify(self, board):
         size, rest = self.profile.image_size, self.profile.pointer_rest
@@ -572,7 +620,7 @@ class DesktopRuntime:
         if before is None or not legal_action(before, action):
             raise ValueError("action is not legal for the last observed board")
         self.last_frame = self.window.capture()
-        current = self.perceptor.observe(self.last_frame)
+        current = self._fill_trophies(self.perceptor.observe(self.last_frame), self.last_frame)
         if self.identifier is not None:
             current = self.identifier.annotate(current)
         _require_running(self.should_stop)
