@@ -494,6 +494,10 @@ def _white_text_distance(left, right, options):
     return float(unmatched / np.count_nonzero(left_mask | right_mask))
 
 
+CONSENSUS_TOLERANCE = 40      # max channel spread between references, per pixel
+CONSENSUS_MIN_FRACTION = .5   # share of agreeing pixels needed to use a group
+
+
 class Perceptor:
     """Read one atomic frame. The injected OCR callable accepts an RGB array."""
 
@@ -570,6 +574,16 @@ class Perceptor:
             scores = modes.setdefault(item.match_mode, {})
             if item.phase not in scores or score < scores[item.phase][0]:
                 scores[item.phase] = (score, item)
+        for item, mask, reference in self._consensus_references():
+            # Same element on different backgrounds: compare only the pixels
+            # every reference agrees on, so a new background still matches.
+            crop = item.region.crop(frame).astype(np.int16)
+            score = float(np.abs(crop - reference).mean(axis=2)[mask].mean() / 255)
+            if score <= item.max_distance:
+                eligible_modes.add("rgb")
+            scores = modes.setdefault("rgb", {})
+            if item.phase not in scores or score < scores[item.phase][0]:
+                scores[item.phase] = (score, item)
         winners = set()
         # RGB and Jaccard errors have different meanings. Compare competitors
         # within each mode; every mode with eligible evidence must confidently
@@ -585,6 +599,28 @@ class Perceptor:
                 return Phase.UNKNOWN
             winners.add(item.phase)
         return next(iter(winners)) if len(winners) == 1 else Phase.UNKNOWN
+
+    def _consensus_references(self):
+        """(template, mask, mean reference) per phase region with 2+ RGB references.
+
+        The mask keeps pixels on which all references agree (the element
+        itself); groups whose references mostly disagree are skipped.
+        """
+        if not hasattr(self, "_consensus"):
+            groups = {}
+            for item in self.profile.phase_templates:
+                if item.match_mode == "rgb":
+                    groups.setdefault((item.phase, item.region), []).append(item)
+            self._consensus = []
+            for items in groups.values():
+                if len(items) < 2:
+                    continue
+                stack = np.stack([self._template(item.template, item.region).astype(np.int16) for item in items])
+                mask = (stack.max(axis=0) - stack.min(axis=0)).max(axis=2) <= CONSENSUS_TOLERANCE
+                if mask.mean() >= CONSENSUS_MIN_FRACTION:
+                    strict = min(items, key=lambda item: item.max_distance)
+                    self._consensus.append((strict, mask, stack.mean(axis=0)))
+        return self._consensus
 
     def _slot(self, frame, slot, field_prefix=None):
         attack = self._number(frame, slot.attack, 0, 99, f"{field_prefix}.attack")

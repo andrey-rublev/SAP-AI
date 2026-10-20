@@ -68,3 +68,30 @@ def test_tooltip_layout_scales_with_the_profile():
     assert scaled["image_size"] == [1920, 1080]
     assert scaled["layout"]["search_rect"] == [0, 22, 1920, 548]
     assert scaled["layout"]["panel_width_range"] == [450, 526]
+
+
+def test_phase_sign_matches_on_an_unseen_background(tmp_path):
+    """Two references of one sign on different backgrounds match a third background."""
+    templates = tmp_path / "t"
+    templates.mkdir()
+    sign = np.zeros((20, 40, 3), dtype=np.uint8)
+    sign[4:16, 6:34] = (230, 160, 60)
+    sign[8:12, 10:30] = (90, 40, 20)
+    def on(background):
+        image = np.full((20, 40, 3), background, dtype=np.uint8)
+        image[4:16, 6:34] = sign[4:16, 6:34]
+        return image
+    Image.fromarray(on((40, 160, 40))).save(templates / "day.png")
+    Image.fromarray(on((240, 230, 200))).save(templates / "cream.png")
+    data = {"version": 1, "image_size": [100, 60], "calibrated": True,
+            "phase_templates": [{"phase": "shop", "region": [10, 10, 40, 20], "template": f"t/{name}.png",
+                                 "max_distance": .045, "margin": .015} for name in ("day", "cream")],
+            "team": [{"portrait": [60, 40, 10, 10]}] * 5}
+    path = tmp_path / "profile.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    perceptor = Perceptor(VisionProfile.load(path))
+    frame = np.zeros((60, 100, 3), dtype=np.uint8)
+    frame[10:30, 10:50] = on((200, 90, 140))  # evening background never calibrated
+    assert perceptor._phase(frame).value == "shop"
+    frame[10:30, 10:50] = 0  # no sign at all
+    assert perceptor._phase(frame).value == "unknown"
