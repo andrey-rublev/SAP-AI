@@ -248,6 +248,47 @@ class WindowsGameWindow:
                 raise DesktopUnavailable("game lost focus during shutdown; no restart attempted")
             sleep(min(.1, max(0., deadline - clock())))
 
+    def exists(self):
+        return bool(self.user32.IsWindow(self.handle))
+
+    def is_foreground(self):
+        return self.exists() and self.user32.GetForegroundWindow() == self.handle
+
+    def bring_to_front(self):
+        """Restore and focus the client; the autopilot calls this only while the user is idle."""
+        if not self.exists():
+            return False
+        if self.user32.IsIconic(self.handle):
+            self.user32.ShowWindow.argtypes = [wintypes.HWND, wintypes.INT]
+            self.user32.ShowWindow(self.handle, 9)  # SW_RESTORE
+        self.user32.SetForegroundWindow(self.handle)
+        return self.is_foreground()
+
+    def terminate(self, timeout=15., clock=time.monotonic, sleep=time.sleep):
+        """End a client that ignored a normal close; used only by the autopilot."""
+        pid = wintypes.DWORD()
+        self.user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+        self.user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+        self.user32.GetWindowThreadProcessId(self.handle, ctypes.byref(pid))
+        if not pid.value:
+            return not self.exists()
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        process = kernel32.OpenProcess(0x0001, False, pid.value)  # PROCESS_TERMINATE
+        if not process:
+            raise DesktopUnavailable("cannot open the game process to end it")
+        try:
+            kernel32.TerminateProcess(process, 1)
+        finally:
+            kernel32.CloseHandle(process)
+        deadline = clock() + timeout
+        while self.exists() and clock() < deadline:
+            sleep(.2)
+        return not self.exists()
+
     def geometry(self):
         if not self.user32.IsWindow(self.handle) or self.user32.IsIconic(self.handle):
             raise DesktopUnavailable("game window was closed or minimized")
@@ -320,6 +361,22 @@ class WindowsGameWindow:
                 self.mouse.mouseUp(button="left", _pause=False)
             finally:
                 self.mouse.FAILSAFE = failsafe
+
+
+class _LastInputInfo(ctypes.Structure):
+    _fields_ = [("cbSize", wintypes.UINT), ("dwTime", wintypes.DWORD)]
+
+
+def user_idle_seconds():
+    """Seconds since the last keyboard/mouse input in this Windows session."""
+    if os.name != "nt":
+        return float("inf")
+    info = _LastInputInfo(ctypes.sizeof(_LastInputInfo), 0)
+    user32, kernel32 = ctypes.WinDLL("user32"), ctypes.WinDLL("kernel32")
+    if not user32.GetLastInputInfo(ctypes.byref(info)):
+        return 0.0
+    kernel32.GetTickCount.restype = wintypes.DWORD
+    return ((kernel32.GetTickCount() - info.dwTime) & 0xFFFFFFFF) / 1000.0
 
 
 def prepare_numeric_crop(image):

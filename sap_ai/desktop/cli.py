@@ -6,14 +6,16 @@ from dataclasses import replace
 from datetime import datetime, timezone
 import json
 import math
+import sys
 import time
 from pathlib import Path
 from uuid import uuid4
 
 import numpy as np
 
-from sap_ai.desktop.runtime import (CachedOCR, DesktopRuntime, WindowsGameWindow,
-                             tesseract_ocr, validate_live_dependencies)
+from sap_ai.desktop.autopilot import Autopilot, AutopilotLimits
+from sap_ai.desktop.runtime import (CachedOCR, DesktopRuntime, DesktopUnavailable, WindowsGameWindow,
+                                    tesseract_ocr, user_idle_seconds, validate_live_dependencies)
 from sap_ai.desktop.launch import GAME_TITLE, connect_game_window
 from sap_ai.desktop.control import desktop_control_lease
 from sap_ai.desktop.identify import SpeciesIdentifier, load_tooltip_layout
@@ -133,6 +135,13 @@ def add_session_arguments(command, *, play=False):
                              help="maximum arenas to collect; shared budgets, at most N-1 normal restarts plus one separately bounded completed-client bootstrap if enabled")
         command.add_argument("--restart-completed", action=argparse.BooleanOptionalAction, default=False,
                              help="allow one normal restart of an initially completed zero-action arena")
+        command.add_argument("--continuous", action="store_true",
+                             help="autopilot: keep playing arenas, recovering from stalls by observing "
+                                  "again or restarting the game; --arenas then caps completed arenas")
+        command.add_argument("--idle-seconds", type=positive_seconds, default=60,
+                             help="autopilot: user idle time before taking the game window back")
+        command.add_argument("--max-failures", type=positive_int, default=5,
+                             help="autopilot: stop after this many sessions in a row without progress")
     else:
         command.add_argument("--execute", action="store_true")
         command.add_argument("--start-arena", action="store_true",
@@ -236,6 +245,14 @@ def parse_args(argv=None):
     play = commands.add_parser("play", help="take game control with execution and arena transitions enabled")
     add_session_arguments(play, play=True)
     args = p.parse_args(argv)
+    if args.command == "play" and args.continuous:
+        given = set(sys.argv[1:] if argv is None else argv)
+        if "--arenas" not in given:
+            args.arenas = 0  # unlimited
+        if "--max-seconds" not in given:
+            args.max_seconds = 10 * 365 * 24 * 3600.  # until stopped
+        if args.no_launch or args.window != GAME_TITLE:
+            p.error("--continuous requires automatic Steam launch and the default game window")
     if args.command == "play" and args.arenas > 1:
         if args.no_launch or args.window != GAME_TITLE:
             p.error("--arenas greater than 1 requires automatic Steam launch and the default game window")
@@ -510,6 +527,57 @@ def run_arena_batch(args, profile, perceptor, open_window, should_stop):
     return summary
 
 
+def run_autopilot(args, profile, perceptor, open_window, should_stop):
+    """Play until stopped, recovering from stalls; see sap_ai.desktop.autopilot."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    directory = Path(args.log).parent / "autopilot" / f"{stamp}-{uuid4().hex[:8]}"
+
+    def run_session(window, number, info):
+        session_dir = directory / f"session-{number:04d}"
+        session_dir.mkdir(parents=True, exist_ok=True)
+        session_args = argparse.Namespace(**vars(args))
+        session_args.log = str(session_dir / "session.jsonl")
+        session_args.last_frame = str(session_dir / "last-frame.png")
+        session_args.record_dir = (str(Path(args.record_dir) / directory.name / session_dir.name)
+                                   if args.record_dir else None)
+        session_args.arenas = 0  # the autopilot prints its own summary
+        return run_desktop_session(session_args, profile, perceptor, window, should_stop, info)
+
+    def restart_client(window):
+        try:
+            closed = window.close_for_restart(profile.image_size, timeout=args.launch_timeout)
+        except DesktopUnavailable:
+            closed = False
+        if should_stop():
+            return None
+        if not closed and window.exists():
+            window.terminate()  # hung or unfocused client: end it, then relaunch
+        return None if should_stop() else open_window()
+
+    def wait_for_focus(window):
+        # Never take the window from someone using the computer.
+        while not should_stop():
+            if not window.exists():
+                return open_window()
+            if window.is_foreground():
+                return window
+            if user_idle_seconds() >= args.idle_seconds and window.bring_to_front():
+                return window
+            time.sleep(1)
+        return None
+
+    limits = AutopilotLimits(arenas=args.arenas, max_consecutive_failures=args.max_failures,
+                             idle_seconds=args.idle_seconds)
+    print(f"Autopilot running; progress in {directory / 'summary.json'}. Hold Escape to stop.")
+    summary = Autopilot(run_session=run_session, open_window=open_window, restart_client=restart_client,
+                        wait_for_focus=wait_for_focus, should_stop=should_stop, directory=directory,
+                        limits=limits).run()
+    print(json.dumps(summary, indent=2))
+    if summary["status"] == "error":
+        raise RuntimeError(f"autopilot stopped: {summary['error']}")
+    return summary
+
+
 def main(argv=None):
     args = parse_args(argv)
     if args.command == "capture":
@@ -585,6 +653,9 @@ def run_controller(args, profile, perceptor):
             window.should_stop = should_stop
         return window
 
+    if args.command == "play" and args.continuous:
+        run_autopilot(args, profile, perceptor, open_window, should_stop)
+        return
     if args.command == "play" and args.arenas > 1:
         run_arena_batch(args, profile, perceptor, open_window, should_stop)
         return

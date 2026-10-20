@@ -170,7 +170,7 @@ def test_default_and_cmd_override_keep_bootstrap_opt_in():
     assert desktop.parse_args(["play"]).restart_completed is False
     assert desktop.parse_args(["play", "--restart-completed", "--no-restart-completed"]).restart_completed is False
     launcher = (Path(desktop.__file__).parents[2] / "play.cmd").read_text()
-    assert "-m sap_ai.desktop.cli play --restart-completed %*" in launcher
+    assert "-m sap_ai.desktop.cli play --restart-completed --continuous %*" in launcher
 
 
 def test_cli_bootstrap_retains_two_exportable_receipts_and_runs_real_session(tmp_path, monkeypatch):

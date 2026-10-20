@@ -135,6 +135,6 @@ def test_check_remains_play_only_and_preserves_normal_play_defaults():
 
 def test_cmd_forwarding_accepts_check_with_its_existing_restart_default():
     launcher = (Path(desktop.__file__).parents[2] / "play.cmd").read_text(encoding="utf-8")
-    assert '".venv\\Scripts\\python.exe" -m sap_ai.desktop.cli play --restart-completed %*' in launcher
+    assert '".venv\\Scripts\\python.exe" -m sap_ai.desktop.cli play --restart-completed --continuous %*' in launcher
     args = desktop.parse_args(["play", "--restart-completed", "--check"])
     assert args.check is args.restart_completed is args.execute is True
