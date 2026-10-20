@@ -108,6 +108,8 @@ def test_classification_of_session_endings():
     assert classify(ended("max_actions", actions=600)) == "recover"
     assert classify(None, "game size differs from the calibrated profile") == "recover"
     assert classify(ended("event_error")) == "fatal"
+    assert classify(ended("observation_error", error="DesktopUnavailable: stop requested or runtime "
+                                                    "deadline reached; no further input sent")) == "stopped"
 
 
 def test_continuous_cli_defaults_to_unlimited_arenas_and_time():

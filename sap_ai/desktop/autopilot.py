@@ -47,7 +47,7 @@ def classify(result, error: str | None = None) -> str:
     """Map a session ending (or a pre-session error) to an autopilot response."""
     if error is not None:
         return "focus" if any(marker in error for marker in FOCUS_MARKERS) else "recover"
-    if result is None or result.reason == "stopped":
+    if result is None or result.reason == "stopped" or "stop requested" in (result.error or ""):
         return "stopped"
     if result.reason == "result":
         played = result.actions > 0 and result.last_board is not None and result.last_board.phase == Phase.RESULT
