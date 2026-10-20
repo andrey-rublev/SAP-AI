@@ -17,6 +17,13 @@ from pathlib import Path
 from sap_ai.desktop.vision import VisionProfile, decode_profile_json
 
 ASPECT_TOLERANCE = .005
+# Phase references shrunk from native frames differ from frames the game renders
+# natively at the smaller size (text and edges resample differently). Measured
+# on live 1904x1071 frames: true matches rose to at most 0.073 (RGB) while the
+# nearest wrong screen stayed at 0.106 or more. The allowance grows with the
+# amount of shrinking and is zero at the calibrated size.
+RESAMPLE_ALLOWANCE = {"rgb": .06, "white_text": .12}
+ALLOWANCE_REFERENCE_SHRINK = .25
 
 
 def scale_factor(source_size, target_size) -> float:
@@ -81,7 +88,10 @@ def scale_profile(path, target_size, cache_dir) -> VisionProfile:
         return [image(item, region) for item in value]
 
     data["image_size"] = list(target)
+    shrink = min(abs(1 - factor) / ALLOWANCE_REFERENCE_SHRINK, 1.)
     for item in data.get("phase_templates", []):
+        mode = item.get("match_mode", "rgb")
+        item["max_distance"] = round(item.get("max_distance", .06) + RESAMPLE_ALLOWANCE[mode] * shrink, 4)
         item["region"] = rect(item["region"])
         item["template"] = image(item["template"], item["region"])
         options = item.get("white_text")
