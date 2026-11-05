@@ -118,6 +118,11 @@ class Autopilot:
         return self.summary
 
     def _loop(self):
+        # A stop file/deadline must prevent even startup, not just session IO.
+        self._save()
+        if self.should_stop():
+            self.summary["status"] = "stopped"
+            return
         window = self.open_window()
         restart_next = False
         while True:
@@ -149,14 +154,21 @@ class Autopilot:
             except DesktopUnavailable as exc:  # activation/geometry before any session input
                 error = str(exc)
             outcome = classify(result, error)
+            # The session callback separates navigation from gameplay. Keep the
+            # aggregate counters as IO evidence, but require actual gameplay to
+            # count an arena or reset recovery budgets.
+            gameplay_acks = (info.get("gameplay_acks", result.acknowledgments)
+                             if result is not None else 0)
             if result is not None:
                 self.summary["actions"] += result.actions
                 self.summary["acknowledgments"] += result.acknowledgments
-                self._arena_acks += result.acknowledgments
+                self._arena_acks += gameplay_acks
             if info.get("trophies") is not None:
                 self._arena_trophies = info["trophies"]
-            if outcome == "terminal" and self._arena_acks > 0:
-                outcome = "completed"  # Game Over reached by a recovery session
+            if outcome in {"terminal", "completed"}:
+                # Menu navigation can lead back to a pre-existing Game Over.
+                # Only receipts from this arena establish that it was played.
+                outcome = "completed" if self._arena_acks > 0 else "terminal"
             reason = error or (result.reason if result is not None else "stopped")
             self.summary["last_reason"] = reason
             self._event("session", number=self.summary["sessions"], outcome=outcome, reason=reason,
@@ -164,7 +176,7 @@ class Autopilot:
                         acknowledgments=result.acknowledgments if result else 0,
                         error=result.error if result else error, trophies=info.get("trophies"))
             # Menu clicks repeat after every restart; only gameplay counts.
-            progressed = result is not None and info.get("gameplay_acks", result.acknowledgments) > 0
+            progressed = gameplay_acks > 0
             if progressed or outcome == "completed":
                 self._restarts_without_progress = 0
             if outcome == "stopped":
@@ -180,6 +192,7 @@ class Autopilot:
             elif outcome == "focus":
                 self.summary["focus_waits"] += 1
                 self.report("game is not in front; waiting until you are idle before resuming")
+                self._save()  # expose the wait even if it lasts indefinitely
                 window = self.wait_for_focus(window)
             else:  # recover / terminal
                 self.summary["recoveries"] += 1

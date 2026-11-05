@@ -157,3 +157,61 @@ def test_restarts_that_change_nothing_stop_instead_of_looping(tmp_path):
     summary = run.pilot.run()
     assert summary["status"] == "error" and "changed nothing" in summary["error"]
     assert run.restarts == 3
+
+
+def test_menu_receipts_cannot_count_a_preexisting_terminal_arena(tmp_path):
+    run = Harness(tmp_path, [ended("result", actions=2, phase=Phase.RESULT), game_over(4)],
+                  limits=AutopilotLimits(arenas=1))
+    original = run.session
+
+    def session(window, number, info):
+        result = original(window, number, info)
+        info["gameplay_acks"] = 0 if number == 1 else result.acknowledgments
+        return result
+
+    run.pilot.run_session = session
+    summary = run.pilot.run()
+    assert summary["completed_arenas"] == 1 and summary["trophies"] == [4]
+    assert run.restarts == 1 and len(run.calls) == 2
+
+
+def test_navigation_then_recovery_on_game_over_is_still_not_a_completed_arena(tmp_path):
+    run = Harness(tmp_path, [ended("unknown_timeout", actions=2),
+                            ended("result", phase=Phase.RESULT), game_over(3)],
+                  limits=AutopilotLimits(arenas=1))
+    original = run.session
+
+    def session(window, number, info):
+        result = original(window, number, info)
+        info["gameplay_acks"] = 0 if number < 3 else result.acknowledgments
+        return result
+
+    run.pilot.run_session = session
+    summary = run.pilot.run()
+    assert summary["completed_arenas"] == 1 and summary["trophies"] == [3]
+    assert len(run.calls) == 3
+
+
+def test_stop_before_start_never_opens_a_window(tmp_path):
+    run = Harness(tmp_path, [])
+    run.pilot.open_window = lambda: pytest.fail("a stopped autopilot must not open the game")
+    summary = run.pilot.run()
+    assert summary["status"] == "stopped" and summary["sessions"] == 0
+
+
+def test_summary_is_readable_before_startup_and_while_waiting_for_focus(tmp_path):
+    run = Harness(tmp_path, [ended("observation_error", error="game lost focus"), game_over(1), ended("stopped")],
+                  limits=AutopilotLimits(arenas=1))
+    summary_path = tmp_path / "pilot" / "summary.json"
+
+    def open_window():
+        assert json.loads(summary_path.read_text())["status"] == "running"
+        return "window"
+
+    def focus(window):
+        saved = json.loads(summary_path.read_text())
+        assert saved["focus_waits"] == 1 and saved["sessions"] == 1
+        return window
+
+    run.pilot.open_window, run.pilot.wait_for_focus = open_window, focus
+    assert run.pilot.run()["status"] == "completed"
