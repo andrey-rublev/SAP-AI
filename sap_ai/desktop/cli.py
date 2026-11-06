@@ -301,7 +301,9 @@ def run_desktop_session(args, profile, perceptor, window, should_stop, session_i
                 if data["board"].get("wins") is not None:
                     session_info["trophies"] = data["board"]["wins"]
             if identifier is not None and data.get("event") == "acknowledged":
-                identifier.acknowledged(Action.from_dict(data["action"]), board=Board.from_dict(data["board"]))
+                raw = getattr(runtime, "last_raw_board", None)
+                identifier.acknowledged(Action.from_dict(data["action"]),
+                                        board=raw if isinstance(raw, Board) else None)
             if (session_info is not None and data.get("event") == "acknowledged"
                     and data["action"]["kind"] not in MENU_ACTIONS):
                 session_info["gameplay_acks"] = session_info.get("gameplay_acks", 0) + 1

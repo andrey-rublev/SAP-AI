@@ -610,6 +610,7 @@ class DesktopRuntime:
             raise ValueError("species identification needs a calibrated pointer_rest")
         self.identifier = identifier
         self.last_board = None
+        self.last_raw_board = None
         self.last_frame = None
         self._pointer_dirty = True
         self._last_raw_fingerprint = None
@@ -644,6 +645,7 @@ class DesktopRuntime:
             self._pointer_dirty = False
         self.last_frame = self.window.capture()
         board = self._fill_hud(self.perceptor.observe(self.last_frame), self.last_frame)
+        self.last_raw_board = board  # no inferred species or tracked levels
         raw = board.fingerprint()
         stable, self._last_raw_fingerprint = raw == self._last_raw_fingerprint, raw
         if self.identifier is not None:

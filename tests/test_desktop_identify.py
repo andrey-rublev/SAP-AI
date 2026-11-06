@@ -338,3 +338,30 @@ def test_zero_gold_shop_skips_hovering_but_keeps_existing_names():
     second = driver.observe()
     assert identifier.hovers == 0 and game.hovers == [REST]
     assert second.gold == 0
+
+
+
+def test_merge_receipts_use_raw_levels_so_derived_levels_cannot_erase_experience():
+    from sap_ai.desktop.session import action_acknowledged
+    source = PetSlot(True, "fish", 2, 3, 1)
+    team = (PetSlot(True, "fish", 3, 4),) + (PetSlot(False),) * 4
+    current = [Board(Phase.SHOP, gold=6, turn=1, shop=(source,), team=team)]
+    driver, game, identifier = make_runtime(lambda: current[0], {})
+    identifier.acknowledged(Action("buy", 0, 0))
+    action = Action("merge", 0, 0)
+    for count in (1, 2):
+        before = driver.observe()
+        driver.act(action)
+        target = PetSlot(True, attack=3 + count, health=4 + count)
+        current[0] = replace(current[0], gold=6 - count * 3, shop=(PetSlot(False),),
+                             team=(target,) + team[1:])
+        observed = driver.observe()
+        assert action_acknowledged(before, observed, action)
+        assert driver.last_raw_board.team[0].level is None
+        identifier.acknowledged(action, board=driver.last_raw_board)
+        annotated = identifier.annotate(current[0])
+        assert annotated.team[0].level == (2 if count == 2 else 1)
+        assert annotated.team[0].species == "fish"
+        if count == 1:
+            current[0] = replace(current[0], shop=(source,))
+    assert identifier.transferred == 2

@@ -149,7 +149,9 @@ class SpeciesIdentifier:
 
     def acknowledged(self, action: Action, *, board: Board | None = None) -> None:
         """Track levels from acknowledged actions: shop pets arrive at level one,
-        merges add one experience, sales clear the slot."""
+        merges add one experience, sales clear the slot. ``board`` must be the
+        unannotated observation: a derived pre-receipt level is not new evidence.
+        """
         if action.kind == "buy" and action.target is not None:
             self._experience[action.target] = 0
         elif action.kind == "merge" and action.target in self._experience:
