@@ -58,6 +58,17 @@ python -m sap_ai.sim.benchmark                  # compare policies on shared see
 Code lives in `sap_ai/desktop` (the bot) and `sap_ai/sim` (the lab).
 Design notes: [docs/architecture.md](docs/architecture.md).
 
+## Offline diagnostics
+
+Review a saved run without opening SAP:
+
+```bash
+python -m sap_ai.desktop.audit --run-dir .local/desktop/autopilot/RUN --output reports/audit.json
+```
+
+The report flags missing readings and broken receipts, and includes unfinished
+sessions. It reads JSON logs only. See [the foundation review](docs/foundation-review.md).
+
 ## Tests
 
 ```bash
