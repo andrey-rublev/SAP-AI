@@ -263,6 +263,21 @@ and action indices still map to the correct points. The observed turn selects
 that prefix; an unreadable turn blocks shop actions when any slot is gated.
 Team slots are always present. Validate the schedule against the actual client.
 
+## Shop strategy
+
+`play` defaults to `--strategy economy`: fill all five team slots before merging,
+then use spare gold for a roll when supported sale income can still fund a
+replacement. Every action is replanned and acknowledged individually.
+`--strategy conservative` restores the previous policy;
+`--no-sale-funded-rolls` disables only the extra search. The generic `run`
+command keeps the conservative default.
+
+[Offline paired evaluation](strategy-evaluation.md) documents held-out simulator
+results and their limits. The selected strategy and effective settings are
+written into the session's `started` event. Known shop names transfer to team
+pets after purchase/merge acknowledgment; no further hover is needed for that
+name while its evidence remains valid. Zero-gold shops skip identification.
+
 ## Autopilot (`play.cmd`)
 
 `play.cmd` runs `play --continuous`: it keeps playing arenas until you stop it

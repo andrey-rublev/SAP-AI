@@ -8,6 +8,7 @@ game hooks, just screen capture, OCR and the mouse.
 cd path\to\SAP-AI
 .\play.cmd              # autopilot: opens the game via Steam and keeps playing arenas
 .\play.cmd --arenas 3   # stop after three completed arenas
+.\play.cmd --strategy conservative  # previous shop policy
 .\play.cmd --check      # verify calibration and OCR without touching the game
 ```
 
@@ -24,8 +25,8 @@ create `.local/desktop/STOP`. Progress (trophies per arena) is written to
 | Step | What happens |
 | --- | --- |
 | See | Calibrated templates read the phase, gold, turn, trophies, lives and each pet's attack/health/level. |
-| Identify | Unknown pets are hovered once; their tooltip title is read against a fixed list of pet names. |
-| Decide | `DesktopPolicy`: merge duplicates, fill empty slots, swap weak pets for stronger offers, roll, end turn. |
+| Identify | Read unknown pet names from tooltips; retain known names after acknowledged purchases. |
+| Decide | Economy strategy: fill the team, merge duplicates, replace weak pets, search with spare gold when a supported sale can still fund a purchase. |
 | Act | Mouse input on the foreground game window only. |
 | Verify | Each action waits for its specific effect (gold change, slot change, phase change); nothing is retried blindly. |
 
@@ -36,14 +37,16 @@ Trophies per arena are now the headline metric; see the [changelog](CHANGELOG.md
 `python -m sap_ai.sim.arena` scores policies offline in a simplified arena that
 uses the bot's own board types (approximate stats, no abilities):
 
-Historical measurements (October 19, replacement threshold +4; the current
-threshold is +3). These are simulator results, not live win rates.
+November 6 held-out comparison (500 paired runs per opponent):
 
-| Policy (1,000 runs) | Mean trophies | Wins |
-| --- | ---: | ---: |
-| Merge-first strategy (+4 threshold) | 4.14 | 234 |
-| Previous strategy | 3.92 | 194 |
-| Previous strategy, species unknown | 1.77 | 0 |
+| Opponent | Conservative trophies | Economy trophies | Paired gain (95% CI) |
+| --- | ---: | ---: | --- |
+| Recorded baseline | 4.05 | 4.91 | +0.86 [0.56, 1.17] |
+| Conservative | 3.44 | 4.17 | +0.73 [0.45, 1.01] |
+| Economy | 3.12 | 3.60 | +0.48 [0.22, 0.74] |
+
+These are ability-free simulator results; live performance remains unmeasured.
+[Report and reproduction](docs/strategy-evaluation.md).
 
 ## Offline lab
 
@@ -55,7 +58,8 @@ bridge for evaluating real-game policies offline.
 python -m pip install -e ".[dev,plot]"          # add ,dqn for PyTorch
 python -m sap_ai.sim.main --episodes 4000       # tabular Q-learning
 python -m sap_ai.sim.dqn --episodes 250         # Double DQN
-python -m sap_ai.sim.benchmark                  # compare policies on shared seeds
+python -m sap_ai.sim.benchmark                  # compare toy-arena policies
+python -m sap_ai.sim.policy_study --runs 500 --seed 20000  # desktop-policy comparison
 ```
 
 Code lives in `sap_ai/desktop` (the bot) and `sap_ai/sim` (the lab).

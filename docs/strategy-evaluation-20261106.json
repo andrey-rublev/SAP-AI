@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "offline": true,
+  "configuration": {
+    "baseline": "conservative",
+    "candidate": "economy",
+    "opponents": [
+      "recorded",
+      "conservative",
+      "economy"
+    ],
+    "runs_per_opponent": 500,
+    "seed_start": 20000,
+    "seed_end_exclusive": 20500
+  },
+  "source_sha256": {
+    "sap_ai/sim/policy_study.py": "56b0635a37361f9836d020baf43930de3ef8a7d3e20b223ffd1fc99efef425f4",
+    "sap_ai/desktop/state.py": "d711b3145b4caa8615b8b3b8a1ded0bd06ba2199be158abc7d3e6cfbe12a0c47",
+    "sap_ai/desktop/strategy.py": "8144bea07be9282420be5a4aef7370eba3800dbc8a5fa0af61d6cd296bc9d1f3",
+    "sap_ai/sim/arena.py": "70fd18bb2fb341f49089096d9b8b381d5021142c5a53c314c6e6bb9feb6722c9"
+  },
+  "results": {
+    "recorded": {
+      "runs": 500,
+      "seed_start": 20000,
+      "seed_end_exclusive": 20500,
+      "baseline_mean_trophies": 4.05,
+      "candidate_mean_trophies": 4.914,
+      "baseline_victories": 118,
+      "candidate_victories": 155,
+      "mean_trophy_delta": 0.864,
+      "paired_mean_ci95": [
+        0.557562942722415,
+        1.170437057277585
+      ],
+      "better": 165,
+      "equal": 247,
+      "worse": 88
+    },
+    "conservative": {
+      "runs": 500,
+      "seed_start": 20000,
+      "seed_end_exclusive": 20500,
+      "baseline_mean_trophies": 3.442,
+      "candidate_mean_trophies": 4.174,
+      "baseline_victories": 89,
+      "candidate_victories": 115,
+      "mean_trophy_delta": 0.732,
+      "paired_mean_ci95": [
+        0.4532054659293778,
+        1.0107945340706221
+      ],
+      "better": 172,
+      "equal": 237,
+      "worse": 91
+    },
+    "economy": {
+      "runs": 500,
+      "seed_start": 20000,
+      "seed_end_exclusive": 20500,
+      "baseline_mean_trophies": 3.12,
+      "candidate_mean_trophies": 3.598,
+      "baseline_victories": 71,
+      "candidate_victories": 97,
+      "mean_trophy_delta": 0.478,
+      "paired_mean_ci95": [
+        0.21745728960671695,
+        0.738542710393283
+      ],
+      "better": 155,
+      "equal": 245,
+      "worse": 100
+    }
+  },
+  "limitations": "Ability-free approximation, not live win rates. CI is a paired normal approximation. Do not tune a candidate on the seeds used for its final evaluation."
+}

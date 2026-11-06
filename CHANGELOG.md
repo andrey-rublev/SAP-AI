@@ -3,6 +3,23 @@
 Milestones for the desktop bot and the offline lab. Detailed run logs, captures
 and calibration stay private in `.local/` (Git-ignored).
 
+## 2026-11-06 — economy strategy and fewer hovers
+
+- Add named economy/conservative strategies and a paired, seeded comparison
+  command with confidence intervals and source hashes.
+- Economy fills all five team slots before merging and uses supported sale
+  income to fund extra searches. It is now the `play` default; conservative and
+  `--no-sale-funded-rolls` are available as overrides.
+- On 500 held-out runs against each of three opponents, economy gains +0.86,
+  +0.73 and +0.48 mean trophies. All three per-opponent 95% paired intervals
+  exclude zero. These measurements are from the ability-free simulator.
+- Check proposals on 499 distinct recorded Boards: no illegal actions or
+  changes to abstention when required readings are missing.
+- Transfer known source names only after purchase/merge acknowledgment; zero
+  gold skips further hovers. This avoids reading the same pet twice.
+- [Evaluation report](docs/strategy-evaluation.md) includes reproducible results.
+  No live game run was performed.
+
 ## 2026-11-06 — offline foundation review
 
 - Count arenas using gameplay receipts; obey stop requests before opening a
