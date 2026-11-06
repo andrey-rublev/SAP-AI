@@ -81,6 +81,11 @@ class LevelMemory:
             if reading is not None and not _matches(reading, pet):
                 self._readings.pop(index)
                 reading = None
+            if reading is not None and reading.pet.species is None and pet.species is not None:
+                # A later direct species reading narrows the evidence. Keep it
+                # so a different named pet cannot inherit this cached level.
+                reading = replace(reading, pet=replace(reading.pet, species=pet.species))
+                self._readings[index] = reading
             if reading is not None and reading.confirmations == 2 and pet.level is None:
                 pet = replace(pet, level=reading.pet.level)
             team.append(pet)

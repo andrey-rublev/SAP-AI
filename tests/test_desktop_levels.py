@@ -83,3 +83,12 @@ def test_incomplete_shop_geometry_and_explicit_reset_clear_evidence():
     memory.observe(board()), memory.observe(board())
     memory.reset()
     assert memory.observe(board(None)).team[0].level is None
+
+
+
+def test_a_later_species_reading_narrows_previously_anonymous_level_evidence():
+    memory = LevelMemory()
+    memory.observe(board(species=None)), memory.observe(board(species=None))
+    assert memory.observe(board(None, species="fish")).team[0].level == 1
+    assert memory.annotate(board(None, species="pig")).team[0].level is None
+    assert memory.observe(board(None, species=None)).team[0].level is None
