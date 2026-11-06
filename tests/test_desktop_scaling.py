@@ -95,3 +95,55 @@ def test_phase_sign_matches_on_an_unseen_background(tmp_path):
     assert perceptor._phase(frame).value == "shop"
     frame[10:30, 10:50] = 0  # no sign at all
     assert perceptor._phase(frame).value == "unknown"
+
+
+
+def test_editing_a_reference_invalidates_the_scaled_cache(tmp_path):
+    path, _ = write_profile(tmp_path)
+    first = scale_profile(path, (300, 150), tmp_path / "cache")
+    # Change only reference pixels, retaining the JSON and the image dimensions.
+    replacement = np.full((40, 80, 3), 180, dtype=np.uint8)
+    Image.fromarray(replacement).save(tmp_path / "t/menu.png")
+    second = scale_profile(path, (300, 150), tmp_path / "cache")
+    assert first.base_dir != second.base_dir
+    item = second.phase_templates[0]
+    frame = np.zeros((150, 300, 3), dtype=np.uint8)
+    frame[30:60, 75:135] = 180
+    assert Perceptor(second)._phase(frame).value == "main_menu"
+    assert Perceptor(first)._phase(frame).value == "unknown"
+
+
+def test_scaled_cache_distinguishes_paths_that_flatten_to_the_same_name(tmp_path):
+    path, _ = write_profile(tmp_path)
+    data = json.loads(path.read_text())
+    (tmp_path / "a").mkdir()
+    Image.fromarray(np.zeros((20, 40, 3), dtype=np.uint8)).save(tmp_path / "a/b.png")
+    Image.fromarray(np.full((20, 40, 3), 255, dtype=np.uint8)).save(tmp_path / "a__b.png")
+    data["shop"][0]["species_templates"] = {"fish": "a/b.png", "pig": "a__b.png"}
+    path.write_text(json.dumps(data))
+    scaled = scale_profile(path, (300, 150), tmp_path / "cache")
+    refs = scaled.shop[0].species_templates
+    assert refs["fish"] != refs["pig"]
+    with Image.open(scaled.template_path(refs["fish"])) as fish:
+        assert np.asarray(fish).max() == 0
+    with Image.open(scaled.template_path(refs["pig"])) as pig:
+        assert np.asarray(pig).min() == 255
+
+
+@pytest.mark.parametrize("target", [(0, 0), (-1, -1), (300.5, 150), (True, 150), (300,), (300, 150, 1)])
+def test_invalid_scaling_dimensions_are_rejected_before_creating_cache(tmp_path, target):
+    path, _ = write_profile(tmp_path)
+    cache = tmp_path / "cache"
+    with pytest.raises(ValueError, match="positive integer"):
+        scale_profile(path, target, cache)
+    assert not cache.exists()
+
+
+def test_scaling_cannot_hide_an_invalid_source_profile(tmp_path):
+    path, _ = write_profile(tmp_path)
+    data = json.loads(path.read_text())
+    data["phase_templates"][0]["template"] = "../outside.png"
+    path.write_text(json.dumps(data))
+    with pytest.raises(ValueError, match="inside the profile directory"):
+        scale_profile(path, (300, 150), tmp_path / "cache")
+    assert not (tmp_path / "cache").exists()

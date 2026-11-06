@@ -16,6 +16,7 @@ from pathlib import Path
 
 from sap_ai.desktop.vision import VisionProfile, decode_profile_json
 
+SCALING_CACHE_VERSION = 2
 ASPECT_TOLERANCE = .005
 # Phase references shrunk from native frames differ from frames the game renders
 # natively at the smaller size (text and edges resample differently). Measured
@@ -26,7 +27,15 @@ RESAMPLE_ALLOWANCE = {"rgb": .06, "white_text": .12}
 ALLOWANCE_REFERENCE_SHRINK = .25
 
 
+def _size(value, name):
+    if (not isinstance(value, (list, tuple)) or len(value) != 2
+            or any(type(item) is not int or item <= 0 for item in value)):
+        raise ValueError(f"{name} must contain two positive integer dimensions")
+    return tuple(value)
+
+
 def scale_factor(source_size, target_size) -> float:
+    source_size, target_size = _size(source_size, "source size"), _size(target_size, "target size")
     sx, sy = target_size[0] / source_size[0], target_size[1] / source_size[1]
     if abs(sx - sy) > ASPECT_TOLERANCE * max(sx, sy):
         raise ValueError(f"cannot scale a {source_size[0]}x{source_size[1]} profile to "
@@ -36,24 +45,46 @@ def scale_factor(source_size, target_size) -> float:
 
 def fit_size(source_size, bounds) -> tuple[int, int]:
     """Largest client size with the profile's aspect ratio inside ``bounds``."""
+    source_size, bounds = _size(source_size, "source size"), _size(bounds, "bounds")
     factor = min(bounds[0] / source_size[0], bounds[1] / source_size[1], 1.0)
     width = int(source_size[0] * factor) // 2 * 2
-    return width, round(width * source_size[1] / source_size[0])
+    height = round(width * source_size[1] / source_size[0])
+    if width < 1 or height < 1:
+        raise ValueError("bounds are too small for a client with this aspect ratio")
+    return width, height
 
 
 def scale_profile(path, target_size, cache_dir) -> VisionProfile:
     """Return the profile at ``path`` scaled to ``target_size`` (same aspect)."""
     path = Path(path)
-    data = decode_profile_json(path.read_bytes())
-    source = tuple(data["image_size"])
-    target = tuple(int(value) for value in target_size)
+    payload = path.read_bytes()
+    data = decode_profile_json(payload)
+    # Validate the source before rewriting paths or dropping any fields. Scaling
+    # must not turn a rejected profile into an accepted one.
+    profile = VisionProfile.from_dict(data, base_dir=path.parent)
+    source = profile.image_size
+    target = _size(target_size, "target size")
     if source == target:
-        return VisionProfile.load(path)
+        return profile
     factor = scale_factor(source, target)
-    digest = hashlib.sha256(path.read_bytes() + json.dumps(target).encode()).hexdigest()[:16]
+    names = {item.template for item in (*profile.phase_templates, *profile.numeric_templates)}
+    for slot in (*profile.shop, *profile.team):
+        if slot.empty_template is not None:
+            names.add(slot.empty_template)
+        names.update(name for _, name in slot.species_references())
+    for slot in profile.food:
+        if slot.empty_template is not None:
+            names.add(slot.empty_template)
+        names.update(name for _, name in slot.food_references())
+    # An edited reference image is a new calibration even when its path and the
+    # JSON are unchanged. Include every referenced file and the scaling version.
+    fingerprint = hashlib.sha256(payload + json.dumps([target, SCALING_CACHE_VERSION]).encode())
+    for name in sorted(names):
+        fingerprint.update(json.dumps(name).encode())
+        fingerprint.update(hashlib.sha256(profile.template_path(name).read_bytes()).digest())
+    digest = fingerprint.hexdigest()[:16]
     out_dir = Path(cache_dir) / f"{target[0]}x{target[1]}-{digest}"
     out_dir.mkdir(parents=True, exist_ok=True)
-    base = path.parent
     data = copy.deepcopy(data)
 
     def rect(value):
@@ -73,12 +104,14 @@ def scale_profile(path, target_size, cache_dir) -> VisionProfile:
         """Resize a reference to exactly its scaled region; returns the cached name."""
         from PIL import Image
         width, height = region[2], region[3]
-        stem = Path(name).with_suffix("")
-        cached = Path("scaled") / f"{stem.as_posix().replace('/', '__')}-{width}x{height}.png"
+        # Distinct paths can collapse to the same flattened filename (a/b and
+        # a__b). A path digest keeps those references separate.
+        label = hashlib.sha256(name.encode()).hexdigest()[:16]
+        cached = Path("scaled") / f"{label}-{width}x{height}.png"
         destination = out_dir / cached
         if not destination.exists():
             destination.parent.mkdir(parents=True, exist_ok=True)
-            with Image.open((base / name).resolve()) as source_image:
+            with Image.open(profile.template_path(name)) as source_image:
                 source_image.convert("RGB").resize((width, height), Image.Resampling.LANCZOS).save(destination)
         return cached.as_posix()
 
