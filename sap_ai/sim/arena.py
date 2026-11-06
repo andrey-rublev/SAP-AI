@@ -122,6 +122,10 @@ def battle(left, right) -> int:
     a = [[p.attack, p.health] for p in left if p]
     b = [[p.attack, p.health] for p in right if p]
     while a and b:
+        # Zero attack is a valid observed stat. With no abilities modelled,
+        # neither front pet can ever damage the other: this is a draw.
+        if a[0][0] == b[0][0] == 0:
+            return 0
         a[0][1] -= b[0][0]
         b[0][1] -= a[0][0]
         if a[0][1] <= 0:
@@ -161,6 +165,10 @@ class SpeciesBlind:
 
 
 def compare(policies: dict, runs: int, seed: int = 0, opponent=None) -> dict:
+    if type(runs) is not int or runs < 1:
+        raise ValueError("runs must be a positive integer")
+    if type(seed) is not int or seed < 0:
+        raise ValueError("seed must be a nonnegative integer")
     opponent = opponent or DesktopPolicy.recorded_baseline()
     report = {}
     for name, policy in policies.items():
@@ -176,6 +184,8 @@ def main(argv=None):
     parser.add_argument("--runs", type=int, default=300)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args(argv)
+    if args.runs < 1 or args.seed < 0:
+        parser.error("runs must be positive and seed must be nonnegative")
     report = compare({"current": DesktopPolicy(), "recorded_baseline": DesktopPolicy.recorded_baseline(),
                       "baseline_no_species": SpeciesBlind(DesktopPolicy.recorded_baseline())},
                      args.runs, args.seed)

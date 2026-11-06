@@ -1,6 +1,8 @@
 """Offline arena on the desktop Board/Action schema."""
 import random
 
+import pytest
+
 from sap_ai.desktop.state import Action, DesktopPolicy, Phase
 from sap_ai.sim.arena import (SpeciesBlind, Shop, _Pet, battle, compare, lives_lost, max_tier,
                               play_run, shop_size)
@@ -42,3 +44,32 @@ def test_species_identification_is_worth_trophies_offline():
     report = compare({"seen": DesktopPolicy.recorded_baseline(),
                       "blind": SpeciesBlind(DesktopPolicy.recorded_baseline())}, runs=60)
     assert report["seen"]["mean_trophies"] > report["blind"]["mean_trophies"]
+
+
+
+def test_zero_attack_fronts_draw_even_with_stronger_pets_behind_them():
+    # Both lead pets survive forever under the ability-free combat rules.
+    left = [_Pet("a", 0, 4), _Pet("b", 10, 10)]
+    right = [_Pet("c", 0, 8), _Pet("d", 3, 3)]
+    assert battle(left, right) == 0
+    assert left[0].health == 4 and right[0].health == 8
+    assert battle([_Pet("a", 0, 4)], [_Pet("b", 1, 1)]) == -1
+    assert battle([_Pet("a", 1, 1)], [_Pet("b", 0, 4)]) == 1
+
+
+@pytest.mark.parametrize("runs,seed", [(0, 0), (-1, 0), (True, 0), (1.5, 0), (1, -1), (1, False)])
+def test_invalid_benchmark_counts_fail_before_evaluating_a_policy(runs, seed):
+    class NeverEvaluate:
+        def choose_action(self, board):
+            pytest.fail("invalid parameters must fail before policy evaluation")
+
+    with pytest.raises(ValueError):
+        compare({"never": NeverEvaluate()}, runs=runs, seed=seed)
+
+
+@pytest.mark.parametrize("args", [["--runs", "0"], ["--seed", "-1"]])
+def test_invalid_benchmark_cli_has_a_clear_usage_error(args):
+    from sap_ai.sim.arena import main
+    with pytest.raises(SystemExit) as exc:
+        main(args)
+    assert exc.value.code == 2
