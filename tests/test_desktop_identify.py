@@ -287,3 +287,54 @@ def test_turn_regression_clears_both_team_names_and_tracked_levels():
     assert identifier.annotate(raw).team[0].species == "fish"
     next_arena = identifier.annotate(replace(raw, turn=1))
     assert next_arena.team[0].species is None and next_arena.team[0].level is None
+
+
+
+def test_acknowledged_purchase_reuses_the_shop_name_without_another_hover():
+    from sap_ai.desktop.session import action_acknowledged
+    source = PetSlot(True, attack=2, health=3)
+    before = Board(Phase.SHOP, gold=10, turn=1, shop=(source,), team=(PetSlot(False),) * 5)
+    current = [before]
+    driver, game, identifier = make_runtime(lambda: current[0], {(15, 155): "TIGER"})
+    driver.observe()
+    identified = driver.observe()
+    assert identified.shop[0].species == "tiger" and identifier.hovers == 1
+    action = Action("buy", 0, 0)
+    driver.act(action)
+    current[0] = replace(before, gold=7, shop=(PetSlot(False),), team=(source,) + before.team[1:])
+    observed = driver.observe()
+    assert observed.team[0].species is None  # dispatch alone never transfers identity
+    assert action_acknowledged(identified, observed, action)
+    identifier.acknowledged(action, board=observed)
+    result = driver.observe()
+    assert result.team[0].species == "tiger" and result.team[0].level == 1
+    assert identifier.hovers == 1 and identifier.transferred == 1
+    driver.act(Action("end_turn"))  # transferred metadata must survive raw preflight
+
+
+@pytest.mark.parametrize("contradiction", ["wrong_action", "different_species", "empty", "reset"])
+def test_identity_transfer_requires_matching_receipt_and_compatible_target(contradiction):
+    identifier = SpeciesIdentifier(LAYOUT, ocr=lambda image: "")
+    source = PetSlot(True, "fish", 2, 3, 1)
+    before = Board(Phase.SHOP, gold=10, turn=1, shop=(source,), team=(PetSlot(False),) * 5)
+    action = Action("buy", 0, 0)
+    identifier.forget(action, before=before)
+    target = PetSlot(True, attack=2, health=3)
+    if contradiction == "different_species":
+        target = replace(target, species="pig")
+    if contradiction == "empty":
+        target = PetSlot(False)
+    if contradiction == "reset":
+        identifier.reset_arena()
+    after = replace(before, gold=7, shop=(PetSlot(False),), team=(target,) + before.team[1:])
+    identifier.acknowledged(Action("roll") if contradiction == "wrong_action" else action, board=after)
+    assert identifier.transferred == 0
+    assert identifier.annotate(after).team[0].species != "fish"
+
+
+def test_zero_gold_shop_skips_hovering_but_keeps_existing_names():
+    driver, game, identifier = make_runtime(lambda: shop_board(gold=0), {})
+    driver.observe()
+    second = driver.observe()
+    assert identifier.hovers == 0 and game.hovers == [REST]
+    assert second.gold == 0

@@ -649,7 +649,7 @@ class DesktopRuntime:
         if self.identifier is not None:
             board = self.identifier.annotate(board)
             # Hover only a settled shop, so a tooltip binds to the pet it names.
-            if self.execute and stable and board.phase == Phase.SHOP:
+            if self.execute and stable and board.phase == Phase.SHOP and board.gold != 0:
                 board = self._identify(board)
         self.last_board = board
         return self.last_board
@@ -769,4 +769,4 @@ class DesktopRuntime:
         finally:
             # Even a partial sequence may have moved pets; re-identify them.
             if self.identifier is not None:
-                self.identifier.forget(action)
+                self.identifier.forget(action, before=before)

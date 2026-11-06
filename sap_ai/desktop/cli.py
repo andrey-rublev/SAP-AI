@@ -20,7 +20,7 @@ from sap_ai.desktop.launch import GAME_TITLE, connect_game_window
 from sap_ai.desktop.control import desktop_control_lease
 from sap_ai.desktop.identify import SpeciesIdentifier, load_tooltip_layout
 from sap_ai.desktop.session import DesktopSession, SessionResult
-from sap_ai.desktop.state import Action, DesktopPolicy, Phase
+from sap_ai.desktop.state import Action, Board, DesktopPolicy, Phase
 from sap_ai.desktop.strategy import STRATEGIES, make_policy
 from sap_ai.desktop.vision import Perceptor, Rect, VisionProfile
 from sap_ai.sim.evaluation import positive_int
@@ -290,6 +290,7 @@ def run_desktop_session(args, profile, perceptor, window, should_stop, session_i
                 data = {**data, "species_hover": identifier is not None}
             if data.get("event") == "finished" and identifier is not None:
                 data = {**data, "species_hovers": identifier.hovers, "species_identified": identifier.identified,
+                        "species_transferred": identifier.transferred,
                         "species_failures": dict(identifier.failures),
                         "species_unread_titles": dict(identifier.unread_titles.most_common(10))}
             if session_info is not None and data.get("event") == "observed":
@@ -300,7 +301,7 @@ def run_desktop_session(args, profile, perceptor, window, should_stop, session_i
                 if data["board"].get("wins") is not None:
                     session_info["trophies"] = data["board"]["wins"]
             if identifier is not None and data.get("event") == "acknowledged":
-                identifier.acknowledged(Action.from_dict(data["action"]))
+                identifier.acknowledged(Action.from_dict(data["action"]), board=Board.from_dict(data["board"]))
             if (session_info is not None and data.get("event") == "acknowledged"
                     and data["action"]["kind"] not in MENU_ACTIONS):
                 session_info["gameplay_acks"] = session_info.get("gameplay_acks", 0) + 1

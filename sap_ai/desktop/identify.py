@@ -109,7 +109,8 @@ class SpeciesIdentifier:
         self.settle_seconds, self.max_hovers, self.max_attempts = settle_seconds, max_hovers, max_attempts
         self._slots: dict[tuple[str, int], _Entry] = {}
         self._turn = None
-        self.hovers = self.identified = 0
+        self.hovers = self.identified = self.transferred = 0
+        self._pending_identity: tuple[Action, str] | None = None
         # Why hovers failed, and raw OCR of titles outside the vocabulary.
         self.failures: Counter = Counter()
         self.unread_titles: Counter = Counter()
@@ -146,7 +147,7 @@ class SpeciesIdentifier:
             return None
         return entry
 
-    def acknowledged(self, action: Action) -> None:
+    def acknowledged(self, action: Action, *, board: Board | None = None) -> None:
         """Track levels from acknowledged actions: shop pets arrive at level one,
         merges add one experience, sales clear the slot."""
         if action.kind == "buy" and action.target is not None:
@@ -155,10 +156,21 @@ class SpeciesIdentifier:
             self._experience[action.target] += 1
         elif action.kind == "sell" and action.slot is not None:
             self._experience.pop(action.slot, None)
+        pending, self._pending_identity = self._pending_identity, None
+        if (pending is not None and pending[0] == action and board is not None
+                and action.target is not None and action.target < len(board.team)):
+            pet = self._tracked_pet("team", action.target, board.team[action.target])
+            if (pet.occupied is True and pet.strength is not None
+                    and (pet.species is None or pet.species == pending[1])):
+                # The normal receipt has already established the purchase/merge.
+                # Retain its known source name under the observed target stats.
+                self._slots[("team", action.target)] = _Entry(_key(pet), species=pending[1])
+                self.transferred += 1
 
     def reset_arena(self) -> None:
         """A new arena starts with an empty team and a new shop."""
         self._slots, self._experience, self._turn = {}, {}, None
+        self._pending_identity = None
 
     def annotate(self, board: Board) -> Board:
         """Fill unread species and tracked levels; never overrides a reading."""
@@ -208,8 +220,14 @@ class SpeciesIdentifier:
             self.identified += 1
         self._slots[(row, index)] = entry
 
-    def forget(self, action: Action) -> None:
-        """Invalidate slots whose occupant an executed action may have changed."""
+    def forget(self, action: Action, *, before: Board | None = None) -> None:
+        """Invalidate moved slots; retain a source name only for a later receipt."""
+        self._pending_identity = None
+        if (before is not None and action.kind in {"buy", "merge"} and action.slot is not None
+                and action.slot < len(before.shop)):
+            source = before.shop[action.slot]
+            if source.occupied is True and source.species is not None:
+                self._pending_identity = (action, source.species)
         if action.kind in {"roll", "buy", "merge", "buy_food"}:
             self._slots = {slot: entry for slot, entry in self._slots.items() if slot[0] != "shop"}
         if action.kind in {"buy", "merge", "buy_food"} and action.target is not None:
