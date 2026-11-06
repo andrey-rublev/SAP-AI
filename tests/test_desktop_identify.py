@@ -221,3 +221,69 @@ def test_glyph_reader_reads_italic_ones_and_other_digits_separately():
     assert read_hud_glyphs(ones, ocr_glyph=lambda image: "") == 11
     assert read_hud_glyphs(crop, ocr_glyph=lambda image: "") is None  # unread glyph: unknown
     assert read_hud_glyphs(np.full((40, 60, 3), 255, dtype=np.uint8)) is None
+
+
+@pytest.mark.parametrize("row", ["team", "shop"])
+def test_empty_then_refilled_slot_does_not_revive_the_previous_name(row):
+    identifier = SpeciesIdentifier(LAYOUT, ocr=lambda image: "")
+    board = shop_board()
+    identifier.annotate(board)
+    pet = getattr(board, row)[0]
+    identifier.record(row, 0, pet, "Fish")
+    assert getattr(identifier.annotate(board), row)[0].species == "fish"
+    slots = getattr(board, row)
+    identifier.annotate(replace(board, **{row: (PetSlot(False),) + slots[1:]}))
+    assert getattr(identifier.annotate(board), row)[0].species is None
+
+
+def test_contradicted_species_cannot_return_on_a_later_unreadable_frame():
+    identifier = SpeciesIdentifier(LAYOUT, ocr=lambda image: "")
+    board = shop_board()
+    identifier.annotate(board)
+    identifier.record("team", 0, board.team[0], "Fish")
+    assert identifier.annotate(shop_board(team_species="pig")).team[0].species == "pig"
+    assert identifier.annotate(board).team[0].species is None
+
+
+def test_stats_returning_to_an_old_value_do_not_revive_an_old_name():
+    identifier = SpeciesIdentifier(LAYOUT, ocr=lambda image: "")
+    board = shop_board()
+    identifier.annotate(board)
+    identifier.record("shop", 0, board.shop[0], "Fish")
+    identifier.annotate(shop_board(shop_attack=5))
+    assert identifier.annotate(board).shop[0].species is None
+
+
+def test_tracked_levels_keep_hover_identity_cached_across_raw_frames():
+    raw = replace(shop_board(), team=(PetSlot(True, attack=3, health=4),) + (PetSlot(False),) * 4)
+    driver, game, identifier = make_runtime(lambda: raw, {(15, 25): "RHINO", (15, 155): "TIGER"})
+    identifier.acknowledged(Action("buy", 0, 0))
+    driver.observe()
+    identified = driver.observe()
+    assert identified.team[0].species == "rhino" and identified.team[0].level == 1
+    hover_count = len(game.hovers)
+    assert driver.observe() == identified
+    assert len(game.hovers) == hover_count
+    driver.act(Action("roll"))  # raw level None must not cause a pre-input deferral
+    game.click.assert_called_once()
+
+
+def test_visible_level_contradiction_discards_the_tracked_level():
+    identifier = SpeciesIdentifier(LAYOUT, ocr=lambda image: "")
+    raw = replace(shop_board(), team=(PetSlot(True, attack=3, health=4),) + (PetSlot(False),) * 4)
+    identifier.acknowledged(Action("buy", 0, 0))
+    assert identifier.annotate(raw).team[0].level == 1
+    seen = replace(raw, team=(replace(raw.team[0], level=2),) + raw.team[1:])
+    assert identifier.annotate(seen).team[0].level == 2
+    assert identifier.annotate(raw).team[0].level is None
+
+
+def test_turn_regression_clears_both_team_names_and_tracked_levels():
+    identifier = SpeciesIdentifier(LAYOUT, ocr=lambda image: "")
+    raw = replace(shop_board(), turn=6, team=(PetSlot(True, attack=3, health=4),) + (PetSlot(False),) * 4)
+    identifier.annotate(raw)
+    identifier.acknowledged(Action("buy", 0, 0))
+    identifier.record("team", 0, raw.team[0], "Fish")
+    assert identifier.annotate(raw).team[0].species == "fish"
+    next_arena = identifier.annotate(replace(raw, turn=1))
+    assert next_arena.team[0].species is None and next_arena.team[0].level is None

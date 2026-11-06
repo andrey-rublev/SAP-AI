@@ -119,11 +119,28 @@ class SpeciesIdentifier:
     # -- cache ---------------------------------------------------------------
     def _sync_turn(self, board: Board) -> None:
         if board.turn is not None and board.turn != self._turn:
+            if self._turn is not None and board.turn < self._turn:
+                # A resumed client may have entered a new arena without a
+                # terminal receipt; no team history transfers to that arena.
+                self.reset_arena()
             # A new turn brings a new shop; team pets keep their identities.
             self._turn = board.turn
             self._slots = {slot: entry for slot, entry in self._slots.items() if slot[0] == "team"}
 
+    def _tracked_pet(self, row: str, index: int, pet: PetSlot) -> PetSlot:
+        if row == "team" and pet.occupied is True and index in self._experience:
+            experience = self._experience[index]
+            level = 1 + (experience >= 2) + (experience >= 5)
+            if pet.level is None:
+                return replace(pet, level=level)
+            if pet.level != level:
+                # A visible level contradicts our history. Drop that history
+                # instead of reverting to it on the next unreadable frame.
+                self._experience.pop(index, None)
+        return pet
+
     def _entry(self, row: str, index: int, pet: PetSlot) -> _Entry | None:
+        pet = self._tracked_pet(row, index, pet)
         entry = self._slots.get((row, index))
         if entry is None or pet.occupied is not True or entry.key != _key(pet):
             return None
@@ -155,12 +172,16 @@ class SpeciesIdentifier:
         def fill(row):
             pets = []
             for index, pet in enumerate(getattr(board, row)):
+                pet = self._tracked_pet(row, index, pet)
                 entry = self._entry(row, index, pet)
+                if (entry is None or (pet.species is not None and entry.species is not None
+                                      and pet.species != entry.species)):
+                    # Once contradicted, a name cannot revive when a different
+                    # pet later occupies the same slot with matching stats.
+                    self._slots.pop((row, index), None)
+                    entry = None
                 if pet.species is None and entry is not None and entry.species is not None:
                     pet = replace(pet, species=entry.species)
-                if row == "team" and pet.occupied is True and pet.level is None and index in self._experience:
-                    experience = self._experience[index]
-                    pet = replace(pet, level=1 + (experience >= 2) + (experience >= 5))
                 pets.append(pet)
             return tuple(pets)
 
@@ -179,6 +200,7 @@ class SpeciesIdentifier:
         return result
 
     def record(self, row: str, index: int, pet: PetSlot, species: str | None) -> None:
+        pet = self._tracked_pet(row, index, pet)
         entry = self._entry(row, index, pet) or _Entry(_key(pet))
         entry.attempts += 1
         if species is not None:
@@ -203,7 +225,7 @@ class SpeciesIdentifier:
         unless the parked frame is free of tooltips, which binds each later
         tooltip to the pet under the pointer. The pointer is parked afterwards.
         """
-        self._sync_turn(board)
+        board = self.annotate(board)
         targets = self.targets(board)[:self.max_hovers]
         if not targets:
             return board
