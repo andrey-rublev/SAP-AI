@@ -33,7 +33,7 @@ from sap_ai.desktop.tooltip_layout import TooltipLayout, TooltipPanelInventory, 
 PET_NAMES = (
     "Ant", "Beaver", "Beetle", "Bluebird", "Chinchilla", "Cricket", "Duck", "Duckling",
     "Fish", "Frog", "Hummingbird", "Horse", "Iguana", "Kiwi", "Ladybug", "Mosquito",
-    "Otter", "Pig", "Pigeon", "Sloth", "Bat", "Bear", "Bison", "Blowfish",
+    "Otter", "Pig", "Pigeon", "Sloth", "Badger", "Bat", "Bear", "Bison", "Blowfish",
     "Boar", "Buffalo", "Bus", "Butterfly", "Camel", "Cat", "Caterpillar", "Chick",
     "Chicken", "Cow", "Crab", "Crocodile", "Crow", "Deer", "Dodo", "Dog", "Dolphin",
     "Dragon", "Eagle", "Elephant", "Ferret", "Fly", "Flamingo", "Fox", "Giraffe",

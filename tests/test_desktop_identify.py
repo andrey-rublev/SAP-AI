@@ -401,3 +401,16 @@ def test_recovery_runtime_can_share_direct_level_evidence_but_a_new_arena_cannot
     assert second.observe().team[0].level == 1
     memory.reset()
     assert second.observe().team[0].level is None
+
+
+
+def test_badger_title_is_accepted_by_the_production_identifier():
+    driver, game, identifier = make_runtime(shop_board, {(15, 25): "BADGER"})
+    driver.observe()
+    assert driver.observe().team[0].species == "badger"
+
+
+def test_title_vocabulary_covers_every_species_in_the_offline_arena():
+    from sap_ai.sim.arena import PETS
+    species = {name for tier in PETS.values() for name in tier}
+    assert species <= {name.casefold() for name in PET_NAMES}
