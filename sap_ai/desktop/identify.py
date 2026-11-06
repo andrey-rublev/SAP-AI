@@ -2,7 +2,7 @@
 
 Portrait templates only cover a handful of species, so most pets were observed
 with ``species=None`` and merges never fired. Hovering a pet shows a tooltip
-whose title is the pet's name; :func:`desktop_tooltip.read_pet_title` reads it
+whose title is the pet's name; :func:`sap_ai.desktop.tooltip.read_pet_title` reads it
 against a fixed vocabulary (two agreeing OCR passes, exact names only).
 
 Binding a tooltip to the hovered slot relies on two observations: the parked
@@ -92,7 +92,7 @@ def _key(pet: PetSlot):
 class SpeciesIdentifier:
     """Per-slot species cache plus the hover/read protocol.
 
-    ``annotate`` is pure; ``identify`` performs IO through the supplied
+    ``annotate`` updates cached evidence without IO; ``identify`` performs IO through the supplied
     ``hover``/``capture``/``park`` callables so the runtime keeps every focus,
     geometry and stop check.
     """

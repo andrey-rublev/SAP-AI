@@ -3,6 +3,21 @@
 Milestones for the desktop bot and the offline lab. Detailed run logs, captures
 and calibration stay private in `.local/` (Git-ignored).
 
+## 2026-11-06 — retain observed levels during recovery
+
+- Keep a directly read level after two matching observations, even if the next
+  badge is unreadable. Stats, occupancy and known species must still agree.
+- Share that memory across autopilot recoveries, clear affected slots after
+  input, and clear the whole cache for a new arena. Preflight does not advance
+  confirmation counts. Tooltip setup is not required.
+- Recovered 196 missing level readings in six historical native arenas while
+  preserving all directly observed levels. This did not change proposals on
+  those recorded Boards or establish new live performance.
+- Recognize Badger tooltips; test that the vocabulary covers every species in
+  the offline arena.
+- [Recovery evidence](docs/level-recovery.md) explains behavior and limits.
+  SAP stayed closed for all development and tests.
+
 ## 2026-11-06 — economy strategy and fewer hovers
 
 - Add named economy/conservative strategies and a paired, seeded comparison

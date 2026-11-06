@@ -185,6 +185,21 @@ field retain their existing behavior. Choose a neutral point across all supporte
 screens; no default coordinates are supplied. A parking failure stops with any
 pending action preserved.
 
+### Retaining observed pet levels
+
+A resumed session may see a readable level badge on one frame and an unreadable
+one later. `LevelMemory` retains that level after two consecutive matching raw
+readings. It only fills a missing level while the pet's occupancy, attack,
+health and known species still agree. Contradictions revoke the entry.
+Purchases, merges, food and sales clear the affected target even when the input
+later fails; a new arena clears all entries. Pre-input lookup never confirms
+another reading from the same capture.
+
+The memory is shared across recovery sessions in the same autopilot process and
+works without tooltip configuration. It is not persisted across separate
+program starts. [Offline recovery evidence](level-recovery.md) records the
+coverage check and its limits.
+
 ### Species from hover tooltips
 
 Portrait templates cover only a few species, so `play` also reads species from
