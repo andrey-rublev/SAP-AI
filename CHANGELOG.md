@@ -3,6 +3,20 @@
 Milestones for the desktop bot and the offline lab. Detailed run logs, captures
 and calibration stay private in `.local/` (Git-ignored).
 
+## 2026-11-06 — offline foundation review
+
+- Count arenas using gameplay receipts; obey stop requests before opening a
+  window and save startup/focus-wait progress promptly.
+- Invalidate contradicted pet names and normalize tracked levels across raw
+  observations, cached identities and pre-input checks.
+- Invalidate scaled calibration caches when reference pixels change; validate
+  original profiles and distinguish reference filenames before scaling.
+- Add `python -m sap_ai.desktop.audit` for saved JSONL: missing readings, pending
+  actions, unspent gold, unique-board coverage and receipt timeline integrity.
+- Bound zero-attack stalemates and reject invalid offline benchmark counts.
+- [Foundation review](docs/foundation-review.md) records findings and remaining
+  work. No native game run was performed in this pass.
+
 ## 2026-10-20 — runs on its own
 
 - Autopilot (`play.cmd` default): keeps playing arenas; a stalled session is

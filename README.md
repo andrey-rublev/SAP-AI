@@ -11,8 +11,8 @@ cd path\to\SAP-AI
 .\play.cmd --check      # verify calibration and OCR without touching the game
 ```
 
-It runs unattended. Stalls are recovered by observing again or restarting the
-game, and Game Over starts the next arena. If you use the computer, it pauses
+Autopilot is experimental. It can recover from stalls by observing again or
+restarting the game, and Game Over starts the next arena. If you use the computer, it pauses
 and resumes once you've been idle for a minute. On a display that isn't
 2560x1440 it runs the game in a 16:9 window and scales its calibration.
 Stop it any time: hold **Escape**, slam the pointer into a screen corner, or
@@ -36,9 +36,12 @@ Trophies per arena are now the headline metric; see the [changelog](CHANGELOG.md
 `python -m sap_ai.sim.arena` scores policies offline in a simplified arena that
 uses the bot's own board types (approximate stats, no abilities):
 
+Historical measurements (October 19, replacement threshold +4; the current
+threshold is +3). These are simulator results, not live win rates.
+
 | Policy (1,000 runs) | Mean trophies | Wins |
 | --- | ---: | ---: |
-| Current strategy | 4.14 | 234 |
+| Merge-first strategy (+4 threshold) | 4.14 | 234 |
 | Previous strategy | 3.92 | 194 |
 | Previous strategy, species unknown | 1.77 | 0 |
 
