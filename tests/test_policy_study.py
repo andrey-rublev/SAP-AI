@@ -1,5 +1,6 @@
 """Reproducible, paired policy studies; no native or OCR dependencies."""
 import json
+from pathlib import Path
 
 import pytest
 
@@ -81,3 +82,21 @@ def test_cli_writes_reproducible_json_without_overwriting_existing_reports(tmp_p
     with pytest.raises(SystemExit):
         policy_study.main(["--output", str(output)])
     assert output.read_bytes() == old
+
+
+
+def test_economy_strategy_preserves_legality_and_abstention_on_recorded_boards():
+    from sap_ai.desktop.state import Board, legal_action
+    boards = {}
+    for path in sorted((Path(__file__).parent / "fixtures").glob("desktop_*.json")):
+        for row in json.loads(path.read_text(encoding="utf-8")).get("boards", []):
+            board = Board.from_dict(row)
+            boards.setdefault(board.fingerprint(), board)
+    baseline, candidate = make_policy("conservative"), make_policy("economy")
+    for board in boards.values():
+        original, proposed = baseline.choose_action(board), candidate.choose_action(board)
+        if original is None:
+            assert proposed is None
+        if proposed is not None:
+            assert legal_action(board, proposed)
+    assert len(boards) > 400

@@ -527,3 +527,38 @@ def test_play_cold_launch_honors_stop_controls_before_activation_or_capture(tmp_
     runtime.act.assert_not_called()
     final = json.loads((tmp_path / "session.jsonl").read_text().splitlines()[-1])["result"]
     assert (final["reason"], final["actions"], final["polls"], final["pending_action"]) == ("stopped", 0, 0, None)
+
+
+
+def test_launcher_defaults_to_measured_economy_strategy_with_explicit_fallback():
+    assert desktop.parse_args(["play"]).strategy == "economy"
+    conservative = desktop.parse_args(["play", "--strategy", "conservative"])
+    assert conservative.strategy == "conservative" and conservative.sale_funded_rolls is None
+    disabled = desktop.parse_args(["play", "--no-sale-funded-rolls"])
+    assert disabled.strategy == "economy" and disabled.sale_funded_rolls is False
+    assert desktop.parse_args(["play", "--sale-funded-rolls"]).sale_funded_rolls is True
+
+
+def test_economy_preview_fills_team_before_merge_and_logs_actual_strategy(tmp_path, cli_runtime):
+    pet = PetSlot(True, "fish", 2, 3, 1)
+    empty = PetSlot(False)
+    runtime, _ = cli_runtime
+    runtime.observe.return_value = Board(Phase.SHOP, gold=6, turn=2,
+        shop=(pet,), team=(pet, PetSlot(True, "ant", 2, 2, 1), PetSlot(True, "pig", 4, 1, 1), empty, empty))
+    desktop.main(arguments(tmp_path) + ["--strategy", "economy"])
+    events = [json.loads(line) for line in (tmp_path / "session.jsonl").read_text().splitlines()]
+    assert [event["action"] for event in events if event["event"] == "proposed"] == [Action("buy", 0, 3).to_dict()]
+    assert events[0]["policy"] == {"name": "stats", "strategy": "economy", "sale_funded_rolls": True,
+                                    "merge_first_team_size": 5, "minimum_upgrade_gain": 3}
+    runtime.act.assert_not_called()
+
+
+def test_economy_preview_can_disable_sale_funded_searches(tmp_path, cli_runtime):
+    runtime, _ = cli_runtime
+    runtime.observe.return_value = Board(Phase.SHOP, gold=3, turn=4,
+        shop=(PetSlot(True, attack=0, health=1),), team=(PetSlot(True, attack=1, health=1, level=1),) * 5)
+    desktop.main(arguments(tmp_path) + ["--strategy", "economy", "--no-sale-funded-rolls"])
+    events = [json.loads(line) for line in (tmp_path / "session.jsonl").read_text().splitlines()]
+    assert [event["action"]["kind"] for event in events if event["event"] == "proposed"] == ["end_turn"]
+    assert events[0]["policy"]["sale_funded_rolls"] is False
+    runtime.act.assert_not_called()

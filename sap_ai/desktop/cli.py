@@ -21,6 +21,7 @@ from sap_ai.desktop.control import desktop_control_lease
 from sap_ai.desktop.identify import SpeciesIdentifier, load_tooltip_layout
 from sap_ai.desktop.session import DesktopSession, SessionResult
 from sap_ai.desktop.state import Action, DesktopPolicy, Phase
+from sap_ai.desktop.strategy import STRATEGIES, make_policy
 from sap_ai.desktop.vision import Perceptor, Rect, VisionProfile
 from sap_ai.sim.evaluation import positive_int
 
@@ -161,8 +162,10 @@ def add_session_arguments(command, *, play=False):
                          help="private tooltip calibration; hovering unknown pets reads their species")
     command.add_argument("--no-species-hover", action="store_true",
                          help="never hover pets to read species from their tooltips")
-    command.add_argument("--sale-funded-rolls", action="store_true",
-                         help="experimental: spend spare gold on a roll when supported sale income could still fund a replacement")
+    command.add_argument("--strategy", choices=STRATEGIES, default="economy" if play else "conservative",
+                         help="shop policy: economy fills the team before merging and uses sale-funded searches")
+    command.add_argument("--sale-funded-rolls", action=argparse.BooleanOptionalAction, default=None,
+                         help="override the strategy's spare-gold search setting; every sale still needs a fresh observation")
     command.add_argument("--log", default=".local/desktop/session.jsonl")
     command.add_argument("--stop-file", default=".local/desktop/STOP",
                          help="stop before further input when this local file exists")
@@ -269,14 +272,20 @@ def run_desktop_session(args, profile, perceptor, window, should_stop, session_i
         identifier = species_identifier(args, profile)
     runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute, should_stop=should_stop,
                              identifier=identifier)
-    policy = DesktopPolicy(sale_funded_rolls=getattr(args, "sale_funded_rolls", False))
+    strategy = getattr(args, "strategy", "conservative")
+    policy = make_policy(strategy, sale_funded_rolls=getattr(args, "sale_funded_rolls", None))
     recorder = FrameRecorder(args.record_dir, args.record_limit) if args.record_dir else None
     log_path = Path(args.log)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as log:
         def event(data):
             if data.get("event") == "started":
-                if policy.sale_funded_rolls:
+                if strategy != "conservative":
+                    data = {**data, "policy": {"name": "stats", "strategy": strategy,
+                                              "sale_funded_rolls": policy.sale_funded_rolls,
+                                              "merge_first_team_size": policy.merge_first_team_size,
+                                              "minimum_upgrade_gain": policy.minimum_upgrade_gain}}
+                elif policy.sale_funded_rolls:
                     data = {**data, "policy": {"name": "stats", "sale_funded_rolls": True}}
                 data = {**data, "species_hover": identifier is not None}
             if data.get("event") == "finished" and identifier is not None:
