@@ -365,3 +365,39 @@ def test_merge_receipts_use_raw_levels_so_derived_levels_cannot_erase_experience
         if count == 1:
             current[0] = replace(current[0], shop=(source,))
     assert identifier.transferred == 2
+
+
+
+def test_runtime_recovers_resumed_levels_without_tooltip_identification():
+    from sap_ai.desktop.strategy import make_policy
+    empty = PetSlot(False)
+    raw = Board(Phase.SHOP, gold=3, turn=5, shop=(PetSlot(True, attack=8, health=8),),
+                team=(PetSlot(True, attack=1, health=2, level=1),) + (PetSlot(True, attack=7, health=7, level=2),) * 4)
+    current = [raw]
+    driver, game, _ = make_runtime(lambda: current[0], {})
+    driver.identifier = None
+    driver.observe(), driver.observe()
+    current[0] = replace(raw, team=tuple(replace(pet, level=None) for pet in raw.team))
+    observed = driver.observe()
+    assert driver.last_raw_board.team[0].level is None
+    assert [pet.level for pet in observed.team] == [1, 2, 2, 2, 2]
+    action = make_policy("economy").choose_action(observed)
+    assert action == Action("sell", 0)
+    driver.act(action)  # raw unread levels normalize identically in preflight
+    assert game.click.call_count == 2
+    assert driver.level_memory.annotate(current[0]).team[0].level is None
+
+
+def test_recovery_runtime_can_share_direct_level_evidence_but_a_new_arena_cannot():
+    from sap_ai.desktop.levels import LevelMemory
+    current = [shop_board()]
+    first, _, _ = make_runtime(lambda: current[0], {}, execute=False)
+    memory = first.level_memory
+    first.identifier = None
+    first.observe(), first.observe()
+    current[0] = replace(current[0], team=(replace(current[0].team[0], level=None),) + current[0].team[1:])
+    second, _, _ = make_runtime(lambda: current[0], {}, execute=False)
+    second.identifier, second.level_memory = None, memory
+    assert second.observe().team[0].level == 1
+    memory.reset()
+    assert second.observe().team[0].level is None

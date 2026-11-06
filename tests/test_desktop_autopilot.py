@@ -215,3 +215,43 @@ def test_summary_is_readable_before_startup_and_while_waiting_for_focus(tmp_path
 
     run.pilot.open_window, run.pilot.wait_for_focus = open_window, focus
     assert run.pilot.run()["status"] == "completed"
+
+
+
+def test_autopilot_keeps_observed_levels_during_recovery_and_resets_them_per_arena(tmp_path, monkeypatch):
+    from dataclasses import replace
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from sap_ai.desktop.state import PetSlot
+    import sap_ai.desktop.display as display
+
+    known = Board(Phase.SHOP, gold=6, turn=4, shop=(PetSlot(False),),
+                  team=(PetSlot(True, "fish", 3, 4, 1),) + (PetSlot(False),) * 4)
+    unread = replace(known, team=(replace(known.team[0], level=None),) + known.team[1:])
+    memories = []
+
+    def run_session(args, profile, perceptor, window, stopped, info, identifier, levels):
+        assert identifier is None  # observing levels must not depend on hover configuration
+        memories.append(levels)
+        info.update(gameplay_acks=3, trophies=len(memories))
+        if len(memories) == 1:
+            levels.observe(known), levels.observe(known)
+            return ended("action_timeout", actions=3)
+        if len(memories) == 2:
+            assert levels.annotate(unread).team[0].level == 1
+        else:
+            assert levels.annotate(unread).team[0].level is None
+        return ended("result", actions=3, phase=Phase.RESULT)
+
+    monkeypatch.setattr(desktop, "species_identifier", lambda *args: None)
+    monkeypatch.setattr(desktop, "run_desktop_session", run_session)
+    monkeypatch.setattr(display, "screen_size", lambda: (100, 100))
+    window = Mock()
+    window.close_for_restart.return_value = True
+    args = SimpleNamespace(log=str(tmp_path / "session.jsonl"), profile="unused", record_dir=None,
+                           arenas=2, max_failures=5, idle_seconds=60, launch_timeout=90)
+    summary = desktop.run_autopilot(args, SimpleNamespace(image_size=(100, 100)), None,
+                                    lambda: window, lambda: False)
+    assert summary["completed_arenas"] == 2 and len(memories) == 3
+    assert memories[0] is memories[1] is memories[2]
+    window.close_for_restart.assert_called_once()

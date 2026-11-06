@@ -15,6 +15,7 @@ import time
 import numpy as np
 
 from sap_ai.desktop.state import Action, BoardChangedBeforeInput, Phase, legal_action
+from sap_ai.desktop.levels import LevelMemory
 from sap_ai.desktop.vision import Rect
 
 
@@ -598,7 +599,8 @@ def tesseract_ocr(image):
 class DesktopRuntime:
     """Connect calibrated perception and a window, with a last-moment recheck."""
 
-    def __init__(self, profile, perceptor, window, *, execute=False, should_stop=None, identifier=None):
+    def __init__(self, profile, perceptor, window, *, execute=False, should_stop=None, identifier=None,
+                 level_memory=None):
         profile.validate(require_calibrated=True)
         self.profile, self.perceptor, self.window = profile, perceptor, window
         self.execute = execute
@@ -609,6 +611,7 @@ class DesktopRuntime:
         if identifier is not None and getattr(profile, "pointer_rest", None) is None:
             raise ValueError("species identification needs a calibrated pointer_rest")
         self.identifier = identifier
+        self.level_memory = level_memory if level_memory is not None else LevelMemory()
         self.last_board = None
         self.last_raw_board = None
         self.last_frame = None
@@ -647,6 +650,7 @@ class DesktopRuntime:
         board = self._fill_hud(self.perceptor.observe(self.last_frame), self.last_frame)
         self.last_raw_board = board  # no inferred species or tracked levels
         raw = board.fingerprint()
+        board = self.level_memory.observe(board)
         stable, self._last_raw_fingerprint = raw == self._last_raw_fingerprint, raw
         if self.identifier is not None:
             board = self.identifier.annotate(board)
@@ -705,6 +709,7 @@ class DesktopRuntime:
             raise ValueError("action is not legal for the last observed board")
         self.last_frame = self.window.capture()
         current = self._fill_hud(self.perceptor.observe(self.last_frame), self.last_frame)
+        current = self.level_memory.annotate(current)
         if self.identifier is not None:
             current = self.identifier.annotate(current)
         _require_running(self.should_stop)
@@ -770,5 +775,6 @@ class DesktopRuntime:
                 click(point)
         finally:
             # Even a partial sequence may have moved pets; re-identify them.
+            self.level_memory.forget(action)
             if self.identifier is not None:
                 self.identifier.forget(action, before=before)

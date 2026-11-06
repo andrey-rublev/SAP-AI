@@ -84,7 +84,7 @@ class LevelMemory:
             if reading is not None and reading.confirmations == 2 and pet.level is None:
                 pet = replace(pet, level=reading.pet.level)
             team.append(pet)
-        return replace(board, team=tuple(team))
+        return board if tuple(team) == board.team else replace(board, team=tuple(team))
 
     def forget(self, action: Action):
         """An input may have changed its target even if its receipt later fails."""

@@ -22,6 +22,7 @@ from sap_ai.desktop.identify import SpeciesIdentifier, load_tooltip_layout
 from sap_ai.desktop.session import DesktopSession, SessionResult
 from sap_ai.desktop.state import Action, Board, DesktopPolicy, Phase
 from sap_ai.desktop.strategy import STRATEGIES, make_policy
+from sap_ai.desktop.levels import LevelMemory
 from sap_ai.desktop.vision import Perceptor, Rect, VisionProfile
 from sap_ai.sim.evaluation import positive_int
 
@@ -266,12 +267,13 @@ def parse_args(argv=None):
     return args
 
 
-def run_desktop_session(args, profile, perceptor, window, should_stop, session_info=None, identifier=None):
+def run_desktop_session(args, profile, perceptor, window, should_stop, session_info=None, identifier=None,
+                        level_memory=None):
     """Run one arena with the existing receipt and recording contract."""
     if identifier is None:
         identifier = species_identifier(args, profile)
     runtime = DesktopRuntime(profile, perceptor, window, execute=args.execute, should_stop=should_stop,
-                             identifier=identifier)
+                             identifier=identifier, level_memory=level_memory)
     strategy = getattr(args, "strategy", "conservative")
     policy = make_policy(strategy, sale_funded_rolls=getattr(args, "sale_funded_rolls", None))
     recorder = FrameRecorder(args.record_dir, args.record_limit) if args.record_dir else None
@@ -591,13 +593,16 @@ def run_autopilot(args, profile, perceptor, open_window, should_stop):
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     directory = Path(args.log).parent / "autopilot" / f"{stamp}-{uuid4().hex[:8]}"
     # One identifier per arena: species and tracked levels survive recoveries.
-    memory = {"identifier": species_identifier(args, profile), "arenas": 0, "pilot": None}
+    memory = {"identifier": species_identifier(args, profile), "levels": LevelMemory(),
+              "arenas": 0, "pilot": None}
 
     def run_session(window, number, info):
         identifier = memory["identifier"]
-        if identifier is not None and memory["pilot"].summary["completed_arenas"] != memory["arenas"]:
+        if memory["pilot"].summary["completed_arenas"] != memory["arenas"]:
             memory["arenas"] = memory["pilot"].summary["completed_arenas"]
-            identifier.reset_arena()
+            memory["levels"].reset()
+            if identifier is not None:
+                identifier.reset_arena()
         session_dir = directory / f"session-{number:04d}"
         session_dir.mkdir(parents=True, exist_ok=True)
         session_args = argparse.Namespace(**vars(args))
@@ -607,7 +612,8 @@ def run_autopilot(args, profile, perceptor, open_window, should_stop):
                                    if args.record_dir else None)
         session_args.arenas = 0  # the autopilot prints its own summary
         info.setdefault("gameplay_acks", 0)
-        return run_desktop_session(session_args, profile, perceptor, window, should_stop, info, identifier)
+        return run_desktop_session(session_args, profile, perceptor, window, should_stop,
+                                   info, identifier, memory["levels"])
 
     def restart_client(window):
         try:
